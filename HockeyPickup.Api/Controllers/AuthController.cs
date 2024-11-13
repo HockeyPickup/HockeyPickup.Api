@@ -74,5 +74,41 @@ public class AuthController : ControllerBase
 
         return Ok(new { message = "Logged out successfully" });
     }
+
+    [HttpPost("register")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new RegisterResponse
+            {
+                Success = false,
+                Message = "Invalid registration data",
+                Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+            });
+        }
+
+        var (success, errors) = await _userService.RegisterUserAsync(request);
+
+        if (!success)
+        {
+            return BadRequest(new RegisterResponse
+            {
+                Success = false,
+                Message = "Registration failed",
+                Errors = errors
+            });
+        }
+
+        return Ok(new RegisterResponse
+        {
+            Success = true,
+            Message = errors.Any() ? "Registration successful but there were some warnings" : "Registration successful. Please check your email to confirm your account.",
+            Errors = errors
+        });
+    }
 }
+
 #pragma warning restore IDE0057 // Use range operator
