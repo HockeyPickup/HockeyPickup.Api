@@ -1,7 +1,13 @@
-﻿using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Models.Domain;
-using HockeyPickup.Api.Services;
 using Microsoft.AspNetCore.Identity;
+
+namespace HockeyPickup.Api.Services;
+
+public interface IUserService
+{
+    Task<(User user, string[] roles)?> ValidateCredentialsAsync(string username, string password);
+}
 
 public class UserService : IUserService
 {

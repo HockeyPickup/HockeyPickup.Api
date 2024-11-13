@@ -1,5 +1,3 @@
-using HotChocolate;
-using HotChocolate.Types;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Data.Repositories;
 

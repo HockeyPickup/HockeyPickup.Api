@@ -1,3 +1,4 @@
+#pragma warning disable IDE0057 // Use range operator
 using Azure.Messaging.ServiceBus;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -29,10 +31,10 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddControllers()
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.PropertyNamingPolicy = null; // This keeps PascalCase
-            });
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNamingPolicy = null; // This keeps PascalCase
+        });
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
@@ -101,36 +103,69 @@ public class Program
             .AddCheck<DatabaseHealthCheck>("Database")
             .AddCheck<ServiceBusHealthCheck>("ServiceBus", failureStatus: HealthStatus.Degraded, tags: new[] { "servicebus", "messaging" });
 
-        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+        builder.Services.AddIdentity<AspNetUser, AspNetRole>(options =>
+        {
+            options.SignIn.RequireConfirmedEmail = true;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequiredLength = 8;
+        })
+        .AddEntityFrameworkStores<HockeyPickupContext>()
+        .AddDefaultTokenProviders();
+
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSecretKey"]!)),
+                ValidateIssuer = true,
+                ValidIssuer = builder.Configuration["JwtIssuer"],
+                ValidateAudience = true,
+                ValidAudience = builder.Configuration["JwtAudience"],
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
                 {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSecretKey"]!)),
-                    ValidateIssuer = true,
-                    ValidIssuer = builder.Configuration["JwtIssuer"],
-                    ValidateAudience = true,
-                    ValidAudience = builder.Configuration["JwtAudience"],
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
-        builder.Services
-            .AddIdentity<AspNetUser, AspNetRole>(options =>
-            {
-                options.SignIn.RequireConfirmedEmail = true;
-                options.Password.RequireDigit = true;
-                options.Password.RequireLowercase = true;
-                options.Password.RequireUppercase = true;
-                options.Password.RequireNonAlphanumeric = true;
-                options.Password.RequiredLength = 8;
-            })
-            .AddEntityFrameworkStores<HockeyPickupContext>()
-            .AddDefaultTokenProviders();
-        builder.Services.AddScoped<IJwtService, JwtService>();
+                    Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    Console.WriteLine("Token validated successfully");
+                    return Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    Console.WriteLine($"Challenge issued: {context.Error}, {context.ErrorDescription}");
+                    return Task.CompletedTask;
+                },
+                OnMessageReceived = context =>
+                {
+                    Console.WriteLine($"Token received: {context.Token?.Substring(0, Math.Min(20, context.Token?.Length ?? 0))}...");
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+        builder.Services.AddDistributedMemoryCache();
+
+        builder.Services.AddSingleton<IJwtService, JwtService>();
         builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddScoped<IServiceBus, ResilientServiceBus>();
+        builder.Services.AddSingleton<IServiceBus, ResilientServiceBus>();
+        builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
 
         var app = builder.Build();
 
@@ -159,7 +194,15 @@ public class Program
 
         app.UsePathBase("/api");
         app.UseRouting();
-        app.UseWebSockets();
+        app.Use(async (context, next) =>
+        {
+            var endpoint = context.GetEndpoint();
+            var routePattern = endpoint?.Metadata.GetMetadata<RoutePattern>();
+            Console.WriteLine($"Request Path: {context.Request.Path}");
+            Console.WriteLine($"Endpoint: {endpoint?.DisplayName}");
+            await next();
+        });
+
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseTokenRenewal();
@@ -196,8 +239,6 @@ public class Program
                 return Task.CompletedTask;
             });
         });
-
-        app.MapControllers();
 
         app.Run();
     }
@@ -357,3 +398,4 @@ public class CustomModelDocumentFilter<T> : IDocumentFilter where T : class
         context.SchemaGenerator.GenerateSchema(typeof(T), context.SchemaRepository);
     }
 }
+#pragma warning restore IDE0057 // Use range operator

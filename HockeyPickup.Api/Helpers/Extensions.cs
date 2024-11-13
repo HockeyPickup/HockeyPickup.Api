@@ -1,0 +1,16 @@
+#pragma warning disable IDE0057 // Use range operator
+
+namespace HockeyPickup.Api.Helpers;
+
+public static class HttpContextExtensions
+{
+    public static string? GetBearerToken(this HttpContext context)
+    {
+        var authorization = context.Request.Headers.Authorization.ToString();
+        if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
+            return null;
+
+        return authorization.Substring("Bearer ".Length);
+    }
+}
+#pragma warning restore IDE0057 // Use range operator

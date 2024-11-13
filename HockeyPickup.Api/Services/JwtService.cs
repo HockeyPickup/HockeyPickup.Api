@@ -1,10 +1,27 @@
-﻿using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
 namespace HockeyPickup.Api.Services;
+
+public record TokenInfo
+{
+    public bool IsValid { get; init; }
+    public DateTime? ValidTo { get; init; }
+    public string? UserId { get; init; }
+    public string? Email { get; init; }
+    // Add any other claims we want to expose
+}
+
+public interface IJwtService
+{
+    (string token, DateTime expiration) GenerateToken(string userId, string username, IEnumerable<string> roles);
+    TokenInfo ValidateToken(string token);
+    ClaimsPrincipal GetPrincipalFromToken(string token);
+    DateTime GetTokenExpiration(string token);
+}
 
 public class JwtService : IJwtService
 {
@@ -48,14 +65,14 @@ public class JwtService : IJwtService
         return (new JwtSecurityTokenHandler().WriteToken(token), expiration);
     }
 
-    public bool ValidateToken(string token)
+    public TokenInfo ValidateToken(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
 
         try
         {
-            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
@@ -65,13 +82,21 @@ public class JwtService : IJwtService
                 ValidAudience = _audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
-            }, out var validatedToken);
+            };
 
-            return true;
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var validatedToken);
+
+            return new TokenInfo
+            {
+                IsValid = true,
+                ValidTo = validatedToken.ValidTo,
+                UserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                Email = principal.FindFirst(ClaimTypes.Email)?.Value
+            };
         }
         catch
         {
-            return false;
+            return null;
         }
     }
 

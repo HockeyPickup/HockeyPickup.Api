@@ -1,8 +1,9 @@
-﻿// Data/Entities/AspNetUser.cs - Updated to match exactly
-using HockeyPickup.Api.Data.Entities;
+// Data/Entities/AspNetUser.cs - Updated to match exactly
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Migrations;
 using System.ComponentModel.DataAnnotations.Schema;
+
+namespace HockeyPickup.Api.Data.Entities;
 
 public partial class AspNetUser : IdentityUser<string>
 {
