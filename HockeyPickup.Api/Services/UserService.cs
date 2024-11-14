@@ -13,7 +13,7 @@ public interface IUserService
     Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request);
     Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
     Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
-    Task<ServiceResult> InitiatePasswordResetAsync(string email, string frontendurl);
+    Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
 }
 
 public class UserService : IUserService
@@ -33,7 +33,7 @@ public class UserService : IUserService
         _logger = logger;
     }
 
-    public async Task<ServiceResult> InitiatePasswordResetAsync(string email, string frontendUrl)
+    public async Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendUrl)
     {
         try
         {
@@ -46,12 +46,12 @@ public class UserService : IUserService
             var encodedToken = WebUtility.UrlEncode(resetToken);
             var resetUrl = $"{frontendUrl.TrimEnd('/')}/reset-password?token={encodedToken}&email={WebUtility.UrlEncode(user.Email)}";
 
-            // Send reset email via service bus
+            // Send forgot password email via service bus
             await _serviceBus.SendAsync(new ServiceBusCommsMessage
             {
                 Metadata = new Dictionary<string, string>
             {
-                { "Type", "PasswordReset" },
+                { "Type", "ForgotPassword" },
                 { "CommunicationEventId", Guid.NewGuid().ToString() }
             },
                 CommunicationMethod = new Dictionary<string, string>
@@ -69,7 +69,7 @@ public class UserService : IUserService
                 { "ResetUrl", resetUrl }
             }
             },
-            subject: "PasswordReset",
+            subject: "ForgotPassword",
             correlationId: Guid.NewGuid().ToString(),
             queueName: _configuration["ServiceBusCommsQueueName"]);
 
@@ -77,7 +77,7 @@ public class UserService : IUserService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating password reset for {Email}", email);
+            _logger.LogError(ex, "Error initiating forgot password for {Email}", email);
             return ServiceResult.CreateFailure("An error occurred while processing your request");
         }
     }

@@ -4,7 +4,6 @@ using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Security.Claims;
@@ -191,7 +190,7 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Invalid request data" });
 
-        var result = await _userService.InitiatePasswordResetAsync(request.Email, request.FrontendUrl);
+        var result = await _userService.InitiateForgotPasswordAsync(request.Email, request.FrontendUrl);
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Message });
 
@@ -199,5 +198,4 @@ public class AuthController : ControllerBase
         return Ok(new { message = "If the email exists, a password reset link will be sent" });
     }
 }
-
 #pragma warning restore IDE0057 // Use range operator
