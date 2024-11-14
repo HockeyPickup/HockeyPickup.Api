@@ -13,6 +13,7 @@ public interface IUserService
     Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request);
     Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
     Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
+    Task<ServiceResult> InitiatePasswordResetAsync(string email, string frontendurl);
 }
 
 public class UserService : IUserService
@@ -30,6 +31,55 @@ public class UserService : IUserService
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public async Task<ServiceResult> InitiatePasswordResetAsync(string email, string frontendUrl)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return ServiceResult.CreateSuccess(); // Silent failure for security
+
+            // Generate password reset token
+            var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var encodedToken = WebUtility.UrlEncode(resetToken);
+            var resetUrl = $"{frontendUrl.TrimEnd('/')}/reset-password?token={encodedToken}&email={WebUtility.UrlEncode(user.Email)}";
+
+            // Send reset email via service bus
+            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            {
+                Metadata = new Dictionary<string, string>
+            {
+                { "Type", "PasswordReset" },
+                { "CommunicationEventId", Guid.NewGuid().ToString() }
+            },
+                CommunicationMethod = new Dictionary<string, string>
+            {
+                { "Email", user.Email }
+            },
+                RelatedEntities = new Dictionary<string, string>
+            {
+                { "UserId", user.Id },
+                { "FirstName", user.FirstName },
+                { "LastName", user.LastName }
+            },
+                MessageData = new Dictionary<string, string>
+            {
+                { "ResetUrl", resetUrl }
+            }
+            },
+            subject: "PasswordReset",
+            correlationId: Guid.NewGuid().ToString(),
+            queueName: _configuration["ServiceBusCommsQueueName"]);
+
+            return ServiceResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating password reset for {Email}", email);
+            return ServiceResult.CreateFailure("An error occurred while processing your request");
+        }
     }
 
     public async Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request)

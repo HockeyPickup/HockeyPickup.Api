@@ -4,9 +4,13 @@ using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Security.Claims;
+using ForgotPasswordRequest = HockeyPickup.Api.Models.Requests.ForgotPasswordRequest;
+using LoginRequest = HockeyPickup.Api.Models.Requests.LoginRequest;
+using RegisterRequest = HockeyPickup.Api.Models.Requests.RegisterRequest;
 
 namespace HockeyPickup.Api.Controllers;
 
@@ -162,21 +166,37 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
         if (!ModelState.IsValid)
-            BadRequest(new { message = "Invalid Request Data" });
+            return BadRequest(new { message = "Invalid Request Data" });
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { message = "User not authenticated" });
+            return NotFound(new { message = "User not found" });
 
         var result = await _userService.ChangePasswordAsync(userId, request);
-
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Message });
 
         return Ok(new { message = "Password changed successfully" });
+    }
+
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid request data" });
+
+        var result = await _userService.InitiatePasswordResetAsync(request.Email, request.FrontendUrl);
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Message });
+
+        // Always return success even if email doesn't exist (security best practice)
+        return Ok(new { message = "If the email exists, a password reset link will be sent" });
     }
 }
 
