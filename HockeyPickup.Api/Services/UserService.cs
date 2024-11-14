@@ -223,6 +223,13 @@ public class UserService : IUserService
     {
         try
         {
+            var inviteCode = _configuration["RegistrationInviteCode"];
+            if (string.IsNullOrEmpty(inviteCode) || request.InviteCode != inviteCode)
+            {
+                _logger.LogWarning("Invalid registration invite code: {InviteCode}", request.InviteCode);
+                return ServiceResult.CreateFailure("Invalid registration invite code");
+            }
+
             // Check if user exists
             var existingUser = await _userManager.FindByEmailAsync(request.Email);
 

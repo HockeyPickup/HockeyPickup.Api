@@ -17,6 +17,14 @@ public record RegisterRequest
     public required string FrontendUrl { get; init; } = string.Empty;
 
     [Required]
+    [Description("Invitation code required for registration")]
+    [StringLength(50)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("InviteCode")]
+    [JsonProperty(nameof(InviteCode), Required = Required.Always)]
+    public required string InviteCode { get; init; }
+
+    [Required]
     [Description("Email address for registration")]
     [MaxLength(256)]
     [EmailAddress]

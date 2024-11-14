@@ -21,7 +21,9 @@ Create a new file at the root of the HockeyPickup.Api project named `appsettings
 
 2. Get the `<ServiceBusConnectionString>` from Azure portal. Currently Service Bus is not available to run locally.
 
-3. Create a `<JWTBase64Key>`: `$ openssl rand -base64 32`
+3. `<InviteCode>` can be any string, required to register a new account.
+
+4. Create a `<JWTBase64Key>`: `$ openssl rand -base64 32`
 
 ```json
 {
@@ -53,7 +55,8 @@ Create a new file at the root of the HockeyPickup.Api project named `appsettings
   "JwtIssuer": "HockeyPickupApi",
   "JwtAudience": "https://api.hockeypickup.com/api/",
   "ServiceBusCommsQueueName": "comms-dev",
-  "ServiceBusHealthCheckQueueName": "health-dev"
+  "ServiceBusHealthCheckQueueName": "health-dev",
+  "RegistrationInviteCode": "<InviteCode>"
   }
 }
 ```
