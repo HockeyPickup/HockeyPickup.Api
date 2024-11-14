@@ -224,5 +224,26 @@ public class AuthController : ControllerBase
 
         return Ok(new { message = "Password has been reset successfully" });
     }
+
+    [Authorize]
+    [HttpPost("save-user")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SaveUser([FromBody] SaveUserRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid request data" });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return NotFound(new { message = "User not found" });
+
+        var result = await _userService.SaveUserAsync(userId, request);
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Message });
+
+        return Ok(new { message = "User saved successfully" });
+    }
 }
 #pragma warning restore IDE0057 // Use range operator

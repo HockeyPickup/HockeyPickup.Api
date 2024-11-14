@@ -15,6 +15,7 @@ public interface IUserService
     Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
     Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
     Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<ServiceResult> SaveUserAsync(string userId, SaveUserRequest request);
 }
 
 public class UserService : IUserService
@@ -32,6 +33,45 @@ public class UserService : IUserService
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public async Task<ServiceResult> SaveUserAsync(string userId, SaveUserRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult.CreateFailure("User not found");
+
+            UpdateUserProperties(user, request);
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to save user");
+
+            return ServiceResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving user {UserId}", userId);
+            return ServiceResult.CreateFailure("An error occurred while saving user");
+        }
+    }
+
+    private void UpdateUserProperties(AspNetUser user, SaveUserRequest request)
+    {
+        if (request.FirstName != null) user.FirstName = request.FirstName;
+        if (request.LastName != null) user.LastName = request.LastName;
+        if (request.PayPalEmail != null) user.PayPalEmail = request.PayPalEmail;
+        if (request.VenmoAccount != null) user.VenmoAccount = request.VenmoAccount;
+        if (request.MobileLast4 != null) user.MobileLast4 = request.MobileLast4;
+        if (request.EmergencyName != null) user.EmergencyName = request.EmergencyName;
+        if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
+        if (request.NotificationPreference.HasValue) user.NotificationPreference = (int) request.NotificationPreference.Value;
+        if (request.Active.HasValue) user.Active = request.Active.Value;
+        if (request.Preferred.HasValue) user.Preferred = request.Preferred.Value;
+        if (request.PreferredPlus.HasValue) user.PreferredPlus = request.PreferredPlus.Value;
+        if (request.LockerRoom13.HasValue) user.LockerRoom13 = request.LockerRoom13.Value;
     }
 
     public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request)
