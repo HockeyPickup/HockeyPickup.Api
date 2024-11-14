@@ -30,3 +30,13 @@ public record RegisterRequest
     [StringLength(50)]
     public string LastName { get; init; } = string.Empty;
 }
+
+public record ConfirmEmailRequest
+{
+    [Required]
+    public string Token { get; init; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    public string Email { get; init; } = string.Empty;
+}

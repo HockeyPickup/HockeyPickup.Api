@@ -3,9 +3,9 @@ using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace HockeyPickup.Api.Controllers;
 
@@ -107,6 +107,53 @@ public class AuthController : ControllerBase
             Success = true,
             Message = errors.Any() ? "Registration successful but there were some warnings" : "Registration successful. Please check your email to confirm your account.",
             Errors = errors
+        });
+    }
+
+    [HttpPost("confirm-email")]
+    [ProducesResponseType(typeof(ConfirmEmailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ConfirmEmailResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new ConfirmEmailResponse
+            {
+                Success = false,
+                Message = "Invalid request data"
+            });
+        }
+
+        // Handle both encoded and non-encoded tokens
+        var token = request.Token;
+        if (token.Contains("%"))
+        {
+            try
+            {
+                token = WebUtility.UrlDecode(token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to decode potentially URL-encoded token");
+                // Continue with original token if decode fails
+            }
+        }
+
+        var (success, message) = await _userService.ConfirmEmailAsync(request.Email, token);
+
+        if (!success)
+        {
+            return BadRequest(new ConfirmEmailResponse
+            {
+                Success = false,
+                Message = message
+            });
+        }
+
+        return Ok(new ConfirmEmailResponse
+        {
+            Success = true,
+            Message = message
         });
     }
 }

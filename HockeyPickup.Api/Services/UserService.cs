@@ -10,6 +10,7 @@ public interface IUserService
 {
     Task<(User user, string[] roles)?> ValidateCredentialsAsync(string username, string password);
     Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request);
+    Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
 }
 
 public class UserService : IUserService
@@ -29,21 +30,60 @@ public class UserService : IUserService
         _logger = logger;
     }
 
+    public async Task<(bool success, string message)> ConfirmEmailAsync(string email, string token)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            return (false, "Invalid verification link");
+        }
+
+        if (user.EmailConfirmed)
+        {
+            return (false, "Email is already confirmed");
+        }
+
+        var result = await _userManager.ConfirmEmailAsync(user, token);
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning("Email confirmation failed for user {Email}. Errors: {Errors}",
+                email, string.Join(", ", result.Errors.Select(e => e.Description)));
+
+            return (false, "Email confirmation failed. The link may have expired.");
+        }
+
+        return (true, "Email confirmed successfully. You can now log in.");
+    }
+
     public async Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request)
     {
         // Check if user exists
-        if (await _userManager.FindByEmailAsync(request.Email) != null)
+        var existingUser = await _userManager.FindByEmailAsync(request.Email);
+
+        if (existingUser != null)
         {
-            return (false, new[] { "User with this email already exists" });
+            // If email is already confirmed, don't allow re-registration
+            if (existingUser.EmailConfirmed)
+            {
+                return (false, new[] { "User with this email already exists" });
+            }
+
+            // Email exists but isn't confirmed - delete the old registration
+            _logger.LogInformation("Removing unconfirmed registration for {Email} to allow re-registration", request.Email);
+            await _userManager.DeleteAsync(existingUser);
         }
 
+        // Create new user
         var user = new AspNetUser
         {
             UserName = request.Email,
             Email = request.Email,
             FirstName = request.FirstName,
             LastName = request.LastName,
-            EmailConfirmed = false
+            EmailConfirmed = false,
+            LockoutEnabled = false,
+            PayPalEmail = request.Email,
+            NotificationPreference = (int) NotificationPreference.OnlyMyBuySell
         };
 
         var result = await _userManager.CreateAsync(user, request.Password);
@@ -55,9 +95,7 @@ public class UserService : IUserService
 
         // Generate email confirmation token
         var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
         var encodedToken = WebUtility.UrlEncode(confirmationToken);
-
         var confirmationUrl = $"{request.FrontendUrl.TrimEnd('/')}/confirm-email?token={encodedToken}&email={WebUtility.UrlEncode(user.Email)}";
 
         try

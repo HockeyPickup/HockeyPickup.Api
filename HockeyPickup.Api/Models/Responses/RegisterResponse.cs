@@ -6,3 +6,9 @@ public record RegisterResponse
     public string Message { get; init; } = string.Empty;
     public IEnumerable<string> Errors { get; init; } = Enumerable.Empty<string>();
 }
+
+public record ConfirmEmailResponse
+{
+    public bool Success { get; init; }
+    public string Message { get; init; } = string.Empty;
+}
