@@ -10,6 +10,7 @@ using System.Security.Claims;
 using ForgotPasswordRequest = HockeyPickup.Api.Models.Requests.ForgotPasswordRequest;
 using LoginRequest = HockeyPickup.Api.Models.Requests.LoginRequest;
 using RegisterRequest = HockeyPickup.Api.Models.Requests.RegisterRequest;
+using ResetPasswordRequest = HockeyPickup.Api.Models.Requests.ResetPasswordRequest;
 
 namespace HockeyPickup.Api.Controllers;
 
@@ -130,17 +131,14 @@ public class AuthController : ControllerBase
 
         // Handle both encoded and non-encoded tokens
         var token = request.Token;
-        if (token.Contains("%"))
+        try
         {
-            try
-            {
-                token = WebUtility.UrlDecode(token);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to decode potentially URL-encoded token");
-                // Continue with original token if decode fails
-            }
+            token = WebUtility.UrlDecode(token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to decode potentially URL-encoded token");
+            // Continue with original token if decode fails
         }
 
         var (success, message) = await _userService.ConfirmEmailAsync(request.Email, token);
@@ -196,6 +194,35 @@ public class AuthController : ControllerBase
 
         // Always return success even if email doesn't exist (security best practice)
         return Ok(new { message = "If the email exists, a password reset link will be sent" });
+    }
+
+    [HttpPost("reset-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid request data" });
+
+        // Handle both encoded and non-encoded tokens
+        var token = request.Token;
+        try
+        {
+            token = WebUtility.UrlDecode(token);
+            request.Token = token; // Overwrite the passed in token
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to decode potentially URL-encoded token");
+            // Continue with original token if decode fails
+        }
+
+
+        var result = await _userService.ResetPasswordAsync(request);
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Message });
+
+        return Ok(new { message = "Password has been reset successfully" });
     }
 }
 #pragma warning restore IDE0057 // Use range operator

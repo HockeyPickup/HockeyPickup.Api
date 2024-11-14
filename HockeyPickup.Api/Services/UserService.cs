@@ -14,6 +14,7 @@ public interface IUserService
     Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
     Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
     Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
+    Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
 }
 
 public class UserService : IUserService
@@ -31,6 +32,38 @@ public class UserService : IUserService
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+                return ServiceResult.CreateFailure("Invalid reset attempt");
+
+            if (!request.NewPassword.IsPasswordComplex())
+                return ServiceResult.CreateFailure("Password does not meet complexity requirements");
+
+            var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+
+            if (!result.Succeeded)
+                return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to reset password");
+
+            // Since we're resetting the password, we might want to ensure the email is confirmed
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                await _userManager.UpdateAsync(user);
+            }
+
+            return ServiceResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password for {Email}", request.Email);
+            return ServiceResult.CreateFailure("An error occurred while resetting the password");
+        }
     }
 
     public async Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendUrl)
