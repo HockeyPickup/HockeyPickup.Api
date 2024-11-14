@@ -183,12 +183,3 @@ public class TokenRenewalMiddleware
         await _next(context);
     }
 }
-
-// Extension method for cleaner startup configuration
-public static class TokenRenewalMiddlewareExtensions
-{
-    public static IApplicationBuilder UseTokenRenewal(this IApplicationBuilder builder)
-    {
-        return builder.UseMiddleware<TokenRenewalMiddleware>();
-    }
-}

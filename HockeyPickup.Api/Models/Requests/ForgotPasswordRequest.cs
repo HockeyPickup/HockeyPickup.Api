@@ -1,14 +1,27 @@
+using Newtonsoft.Json;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace HockeyPickup.Api.Models.Requests;
 
 public class ForgotPasswordRequest
 {
     [Required]
+    [Description("Frontend URL for password reset link")]
+    [MaxLength(2048)]
     [Url]
-    public string FrontendUrl { get; init; } = string.Empty;
+    [DataType(DataType.Url)]
+    [JsonPropertyName("FrontendUrl")]
+    [JsonProperty(nameof(FrontendUrl), Required = Required.Always)]
+    public required string FrontendUrl { get; init; } = string.Empty;
 
     [Required]
+    [Description("Email address for password reset")]
+    [MaxLength(256)]
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    [DataType(DataType.EmailAddress)]
+    [JsonPropertyName("Email")]
+    [JsonProperty(nameof(Email), Required = Required.Always)]
+    public required string Email { get; set; } = string.Empty;
 }

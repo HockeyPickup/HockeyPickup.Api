@@ -1,4 +1,5 @@
 #pragma warning disable IDE0057 // Use range operator
+using System.ComponentModel;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
@@ -16,6 +17,14 @@ namespace HockeyPickup.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
+[Consumes("application/json")]
+[Produces("application/json")]
+[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status406NotAcceptable)]
+[ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+[ProducesResponseType(StatusCodes.Status409Conflict)]
 public class AuthController : ControllerBase
 {
     private readonly IJwtService _jwtService;
@@ -32,34 +41,36 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [Description("Authenticates user and returns JWT token")]
+    [Produces(typeof(LoginResponse))]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
-        try
-        {
-            var result = await _userService.ValidateCredentialsAsync(request.Username, request.Password);
-            if (result == null)
-                return Unauthorized(new { message = "Invalid login attempt." });
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Invalid request data" });
 
-            var (user, roles) = result.Value;
-            var (token, expiration) = _jwtService.GenerateToken(user.Id, user.Username, roles);
+        var result = await _userService.ValidateCredentialsAsync(request.Username, request.Password);
+        if (!result.IsSuccess)
+            return Unauthorized(new { message = result.Message });
 
-            return new LoginResponse
-            {
-                Token = token,
-                Expiration = expiration
-            };
-        }
-        catch (InvalidOperationException ex) when (ex.Message == "Email not confirmed")
+        var (user, roles) = result.Data;
+        var (token, expiration) = _jwtService.GenerateToken(user.Id, user.Username, roles);
+
+        return new LoginResponse
         {
-            return BadRequest(new { message = "You must confirm your registration by email." });
-        }
+            Token = token,
+            Expiration = expiration
+        };
     }
 
     [Authorize]
     [HttpPost("logout")]
+    [Description("Invalidates the current JWT token")]
+    [Produces(typeof(object))]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Logout()
     {
@@ -81,8 +92,10 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [Description("Registers a new user account")]
+    [Produces(typeof(RegisterResponse))]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         if (!ModelState.IsValid)
@@ -95,27 +108,26 @@ public class AuthController : ControllerBase
             });
         }
 
-        var (success, errors) = await _userService.RegisterUserAsync(request);
+        var result = await _userService.RegisterUserAsync(request);
 
-        if (!success)
-        {
-            return BadRequest(new RegisterResponse
+        return result.IsSuccess
+            ? Ok(new RegisterResponse
+            {
+                Success = true,
+                Message = result.Message ?? "Registration successful. Please check your email to confirm your account.",
+                Errors = Enumerable.Empty<string>()
+            })
+            : BadRequest(new RegisterResponse
             {
                 Success = false,
                 Message = "Registration failed",
-                Errors = errors
+                Errors = new[] { result.Message }
             });
-        }
-
-        return Ok(new RegisterResponse
-        {
-            Success = true,
-            Message = errors.Any() ? "Registration successful but there were some warnings" : "Registration successful. Please check your email to confirm your account.",
-            Errors = errors
-        });
     }
 
     [HttpPost("confirm-email")]
+    [Description("Confirms user's email address using token from email")]
+    [Produces(typeof(ConfirmEmailResponse))]
     [ProducesResponseType(typeof(ConfirmEmailResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ConfirmEmailResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request)
@@ -129,40 +141,29 @@ public class AuthController : ControllerBase
             });
         }
 
-        // Handle both encoded and non-encoded tokens
-        var token = request.Token;
-        try
-        {
-            token = WebUtility.UrlDecode(token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to decode potentially URL-encoded token");
-            // Continue with original token if decode fails
-        }
+        var token = WebUtility.UrlDecode(request.Token);
+        var result = await _userService.ConfirmEmailAsync(request.Email, token);
 
-        var (success, message) = await _userService.ConfirmEmailAsync(request.Email, token);
-
-        if (!success)
-        {
-            return BadRequest(new ConfirmEmailResponse
+        return result.IsSuccess
+            ? Ok(new ConfirmEmailResponse
+            {
+                Success = true,
+                Message = result.Message
+            })
+            : BadRequest(new ConfirmEmailResponse
             {
                 Success = false,
-                Message = message
+                Message = result.Message
             });
-        }
-
-        return Ok(new ConfirmEmailResponse
-        {
-            Success = true,
-            Message = message
-        });
     }
 
     [Authorize]
     [HttpPost("change-password")]
+    [Description("Changes password for authenticated user")]
+    [Produces(typeof(object))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
@@ -181,6 +182,8 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot-password")]
+    [Description("Initiates password reset process by sending email with reset token")]
+    [Produces(typeof(object))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
@@ -197,6 +200,8 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("reset-password")]
+    [Description("Resets password using token from email")]
+    [Produces(typeof(object))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
@@ -204,21 +209,9 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Invalid request data" });
 
-        // Handle both encoded and non-encoded tokens
-        var token = request.Token;
-        try
-        {
-            token = WebUtility.UrlDecode(token);
-            request.Token = token; // Overwrite the passed in token
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to decode potentially URL-encoded token");
-            // Continue with original token if decode fails
-        }
-
-
+        request.Token = WebUtility.UrlDecode(request.Token);
         var result = await _userService.ResetPasswordAsync(request);
+
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Message });
 
@@ -227,8 +220,11 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("save-user")]
+    [Description("Updates user profile information")]
+    [Produces(typeof(object))]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SaveUser([FromBody] SaveUserRequest request)
     {

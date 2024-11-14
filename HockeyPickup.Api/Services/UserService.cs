@@ -9,9 +9,9 @@ namespace HockeyPickup.Api.Services;
 
 public interface IUserService
 {
-    Task<(User user, string[] roles)?> ValidateCredentialsAsync(string username, string password);
-    Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request);
-    Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
+    Task<ServiceResult<(User user, string[] roles)>> ValidateCredentialsAsync(string username, string password);
+    Task<ServiceResult> RegisterUserAsync(RegisterRequest request);
+    Task<ServiceResult> ConfirmEmailAsync(string email, string token);
     Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
     Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
     Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
@@ -190,123 +190,134 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<(bool success, string message)> ConfirmEmailAsync(string email, string token)
+    public async Task<ServiceResult> ConfirmEmailAsync(string email, string token)
     {
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user == null)
-        {
-            return (false, "Invalid verification link");
-        }
-
-        if (user.EmailConfirmed)
-        {
-            return (false, "Email is already confirmed");
-        }
-
-        var result = await _userManager.ConfirmEmailAsync(user, token);
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("Email confirmation failed for user {Email}. Errors: {Errors}",
-                email, string.Join(", ", result.Errors.Select(e => e.Description)));
-
-            return (false, "Email confirmation failed. The link may have expired.");
-        }
-
-        return (true, "Email confirmed successfully. You can now log in.");
-    }
-
-    public async Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request)
-    {
-        // Check if user exists
-        var existingUser = await _userManager.FindByEmailAsync(request.Email);
-
-        if (existingUser != null)
-        {
-            // If email is already confirmed, don't allow re-registration
-            if (existingUser.EmailConfirmed)
-            {
-                return (false, new[] { "User with this email already exists" });
-            }
-
-            // Email exists but isn't confirmed - delete the old registration
-            _logger.LogInformation("Removing unconfirmed registration for {Email} to allow re-registration", request.Email);
-            await _userManager.DeleteAsync(existingUser);
-        }
-
-        // Create new user
-        var user = new AspNetUser
-        {
-            UserName = request.Email,
-            Email = request.Email,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            EmailConfirmed = false,
-            LockoutEnabled = false,
-            PayPalEmail = request.Email,
-            NotificationPreference = (int) NotificationPreference.OnlyMyBuySell
-        };
-
-        var result = await _userManager.CreateAsync(user, request.Password);
-
-        if (!result.Succeeded)
-        {
-            return (false, result.Errors.Select(e => e.Description).ToArray());
-        }
-
-        // Generate email confirmation token
-        var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-        var encodedToken = WebUtility.UrlEncode(confirmationToken);
-        var confirmationUrl = $"{request.FrontendUrl.TrimEnd('/')}/confirm-email?token={encodedToken}&email={WebUtility.UrlEncode(user.Email)}";
-
         try
         {
-            // Send confirmation email via service bus
-            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return ServiceResult.CreateFailure("Invalid verification link");
+
+            if (user.EmailConfirmed)
+                return ServiceResult.CreateFailure("Email is already confirmed");
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+            if (!result.Succeeded)
             {
-                Metadata = new Dictionary<string, string>
+                _logger.LogWarning("Email confirmation failed for user {Email}. Errors: {Errors}",
+                    email, string.Join(", ", result.Errors.Select(e => e.Description)));
+
+                return ServiceResult.CreateFailure("Email confirmation failed. The link may have expired.");
+            }
+
+            return ServiceResult.CreateSuccess("Email confirmed successfully. You can now log in.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error confirming email for {Email}", email);
+            return ServiceResult.CreateFailure("An error occurred while confirming email");
+        }
+    }
+
+    public async Task<ServiceResult> RegisterUserAsync(RegisterRequest request)
+    {
+        try
+        {
+            // Check if user exists
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+
+            if (existingUser != null)
+            {
+                // If email is already confirmed, don't allow re-registration
+                if (existingUser.EmailConfirmed)
+                    return ServiceResult.CreateFailure("User with this email already exists");
+
+                // Email exists but isn't confirmed - delete the old registration
+                _logger.LogInformation("Removing unconfirmed registration for {Email} to allow re-registration", request.Email);
+                await _userManager.DeleteAsync(existingUser);
+            }
+
+            // Create new user
+            var user = new AspNetUser
+            {
+                UserName = request.Email,
+                Email = request.Email,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                EmailConfirmed = false,
+                LockoutEnabled = false,
+                PayPalEmail = request.Email,
+                NotificationPreference = (int) NotificationPreference.OnlyMyBuySell
+            };
+
+            var result = await _userManager.CreateAsync(user, request.Password);
+
+            if (!result.Succeeded)
+                return ServiceResult.CreateFailure(string.Join(", ", result.Errors.Select(e => e.Description)));
+
+            // Generate email confirmation token
+            var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var encodedToken = WebUtility.UrlEncode(confirmationToken);
+            var confirmationUrl = $"{request.FrontendUrl.TrimEnd('/')}/confirm-email?token={encodedToken}&email={WebUtility.UrlEncode(user.Email)}";
+
+            try
+            {
+                // Send confirmation email via service bus
+                await _serviceBus.SendAsync(new ServiceBusCommsMessage
+                {
+                    Metadata = new Dictionary<string, string>
                 {
                     { "Type", "RegisterConfirmation" },
                     { "CommunicationEventId", Guid.NewGuid().ToString() }
                 },
-                CommunicationMethod = new Dictionary<string, string>
+                    CommunicationMethod = new Dictionary<string, string>
                 {
                     { "Email", user.Email }
                 },
-                RelatedEntities = new Dictionary<string, string>
+                    RelatedEntities = new Dictionary<string, string>
                 {
                     { "UserId", user.Id },
                     { "FirstName", user.FirstName },
                     { "LastName", user.LastName }
                 },
-                MessageData = new Dictionary<string, string>
+                    MessageData = new Dictionary<string, string>
                 {
                     { "ConfirmationUrl", confirmationUrl }
                 }
-            },
-            subject: "RegisterConfirmation",
-            correlationId: Guid.NewGuid().ToString(),
-            queueName: _configuration["ServiceBusCommsQueueName"]);
+                },
+                subject: "RegisterConfirmation",
+                correlationId: Guid.NewGuid().ToString(),
+                queueName: _configuration["ServiceBusCommsQueueName"]);
 
-            return (true, Array.Empty<string>());
+                return ServiceResult.CreateSuccess();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send registration confirmation message for {Email}", user.Email);
+                return ServiceResult.CreateSuccess("Registration successful but confirmation email could not be sent");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send registration confirmation message for {Email}", user.Email);
-            return (true, new[] { "Registration successful but confirmation email could not be sent" });
+            _logger.LogError(ex, "Error registering user with email {Email}", request.Email);
+            return ServiceResult.CreateFailure("An error occurred during registration");
         }
     }
 
-    public async Task<(User user, string[] roles)?> ValidateCredentialsAsync(string username, string password)
+    public async Task<ServiceResult<(User user, string[] roles)>> ValidateCredentialsAsync(string username, string password)
     {
-        var aspNetUser = await _userManager.FindByNameAsync(username);
-        if (aspNetUser == null)
-            return null;
-
-        var result = await _signInManager.CheckPasswordSignInAsync(aspNetUser, password, false);
-        if (result.Succeeded)
+        try
         {
+            var aspNetUser = await _userManager.FindByNameAsync(username);
+            if (aspNetUser == null)
+                return ServiceResult<(User user, string[] roles)>.CreateFailure("Invalid credentials");
+
+            var result = await _signInManager.CheckPasswordSignInAsync(aspNetUser, password, false);
+            if (!result.Succeeded)
+                return ServiceResult<(User user, string[] roles)>.CreateFailure("Invalid credentials");
+
             if (!await _userManager.IsEmailConfirmedAsync(aspNetUser))
-                throw new InvalidOperationException("Email not confirmed");
+                return ServiceResult<(User user, string[] roles)>.CreateFailure("Email not confirmed");
 
             // Get user roles
             var roles = await _userManager.GetRolesAsync(aspNetUser);
@@ -323,14 +334,14 @@ public class UserService : IUserService
             await _serviceBus.SendAsync(new ServiceBusCommsMessage
             {
                 Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "SignedIn" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
+            {
+                { "Type", "SignedIn" },
+                { "CommunicationEventId", Guid.NewGuid().ToString() }
+            },
                 CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email }
-                },
+            {
+                { "Email", user.Email }
+            },
                 RelatedEntities = [],
                 MessageData = [],
             },
@@ -338,9 +349,12 @@ public class UserService : IUserService
             correlationId: Guid.NewGuid().ToString(),
             queueName: _configuration["ServiceBusCommsQueueName"]);
 
-            return (user, roles.ToArray());
+            return ServiceResult<(User user, string[] roles)>.CreateSuccess((user, roles.ToArray()));
         }
-
-        return null;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating credentials for username {Username}", username);
+            return ServiceResult<(User user, string[] roles)>.CreateFailure("An error occurred while validating credentials");
+        }
     }
 }

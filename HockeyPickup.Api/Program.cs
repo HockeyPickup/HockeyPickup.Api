@@ -38,6 +38,7 @@ public class Program
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddOpenApiDocument();
         builder.Services.AddSwaggerGen(o =>
         {
             var baseUrl = "/api";
@@ -205,7 +206,7 @@ public class Program
 
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseTokenRenewal();
+        app.UseMiddleware<TokenRenewalMiddleware>();
 
         app.UseEndpoints(e =>
         {

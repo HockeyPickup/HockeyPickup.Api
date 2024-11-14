@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using HockeyPickup.Api.Data.Entities;
@@ -84,14 +84,14 @@ public class UserBasicResponse
     [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
     [GraphQLName("PositionPreference")]
     [GraphQLDescription("User's preferred position")]
-    public PositionPreference PositionPreference { get; set; }
+    public PositionPreference? PositionPreference { get; set; }
 
     [Description("User's notification preferences")]
     [JsonPropertyName("NotificationPreference")]
     [JsonProperty(nameof(NotificationPreference), Required = Required.Default)]
     [GraphQLName("NotificationPreference")]
     [GraphQLDescription("User's notification preferences")]
-    public NotificationPreference NotificationPreference { get; set; }
+    public NotificationPreference? NotificationPreference { get; set; }
 }
 
 public class UserDetailedResponse : UserBasicResponse
