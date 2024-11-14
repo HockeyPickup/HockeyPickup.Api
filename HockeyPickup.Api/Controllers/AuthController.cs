@@ -6,6 +6,7 @@ using HockeyPickup.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.Security.Claims;
 
 namespace HockeyPickup.Api.Controllers;
 
@@ -155,6 +156,27 @@ public class AuthController : ControllerBase
             Success = true,
             Message = message
         });
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+            BadRequest(new { message = "Invalid Request Data" });
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { message = "User not authenticated" });
+
+        var result = await _userService.ChangePasswordAsync(userId, request);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Message });
+
+        return Ok(new { message = "Password changed successfully" });
     }
 }
 

@@ -1,4 +1,5 @@
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using Microsoft.AspNetCore.Identity;
@@ -11,6 +12,7 @@ public interface IUserService
     Task<(User user, string[] roles)?> ValidateCredentialsAsync(string username, string password);
     Task<(bool success, string[] errors)> RegisterUserAsync(RegisterRequest request);
     Task<(bool success, string message)> ConfirmEmailAsync(string email, string token);
+    Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
 }
 
 public class UserService : IUserService
@@ -28,6 +30,41 @@ public class UserService : IUserService
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public async Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult.CreateFailure("User not found");
+
+            // Note: With UserManager we can use its built-in password verification
+            var checkPassword = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+            if (!checkPassword)
+                return ServiceResult.CreateFailure("Current password is incorrect");
+
+            if (request.NewPassword == request.CurrentPassword)
+                return ServiceResult.CreateFailure("New password must be different from current password");
+
+            if (!request.NewPassword.IsPasswordComplex())
+                return ServiceResult.CreateFailure("Password does not meet complexity requirements");
+
+            // Use UserManager's password change method
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!result.Succeeded)
+                return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to change password");
+
+            await _userManager.UpdateAsync(user);
+
+            return ServiceResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password for user {UserId}", userId);
+            return ServiceResult.CreateFailure("An error occurred while changing the password");
+        }
     }
 
     public async Task<(bool success, string message)> ConfirmEmailAsync(string email, string token)
