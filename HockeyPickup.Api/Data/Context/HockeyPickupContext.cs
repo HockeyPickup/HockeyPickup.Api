@@ -2,9 +2,11 @@ using HockeyPickup.Api.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HockeyPickup.Api.Data.Context;
 
+[ExcludeFromCodeCoverage]
 public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetRole, string>
 {
     public HockeyPickupContext(DbContextOptions<HockeyPickupContext> options) : base(options)

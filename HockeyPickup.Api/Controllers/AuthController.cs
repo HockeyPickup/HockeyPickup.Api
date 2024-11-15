@@ -191,11 +191,10 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Invalid request data" });
 
-        var result = await _userService.InitiateForgotPasswordAsync(request.Email, request.FrontendUrl);
-        if (!result.IsSuccess)
-            return BadRequest(new { message = result.Message });
+        // Call service but ignore failure for security
+        await _userService.InitiateForgotPasswordAsync(request.Email, request.FrontendUrl);
 
-        // Always return success even if email doesn't exist (security best practice)
+        // Always return success to prevent email enumeration
         return Ok(new { message = "If the email exists, a password reset link will be sent" });
     }
 
