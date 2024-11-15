@@ -1,7 +1,7 @@
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Data.Repositories;
 
-namespace HockeyPickup.Api.GraphQL;
+namespace HockeyPickup.Api.Data.GraphQL;
 
 // Type classes for GraphQL
 public class UserBasicType : ObjectType<UserBasicResponse>

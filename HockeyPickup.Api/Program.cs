@@ -2,8 +2,8 @@
 using Azure.Messaging.ServiceBus;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Data.GraphQL;
 using HockeyPickup.Api.Data.Repositories;
-using HockeyPickup.Api.GraphQL;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Services;
