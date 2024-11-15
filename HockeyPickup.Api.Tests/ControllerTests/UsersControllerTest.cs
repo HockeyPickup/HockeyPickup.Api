@@ -9,7 +9,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
-namespace HockeyPickup.Api.Tests.Controllers;
+namespace HockeyPickup.Api.Tests.ControllerTests;
 
 public class UsersControllerTest
 {
@@ -166,7 +166,7 @@ public class UsersControllerTest
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => true),
                 It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
     }
 

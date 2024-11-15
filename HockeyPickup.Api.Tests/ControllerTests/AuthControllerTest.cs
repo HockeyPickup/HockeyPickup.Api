@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using System.Net;
 using HockeyPickup.Api.Data.Entities;
 
-namespace HockeyPickup.Api.Tests.Controllers;
+namespace HockeyPickup.Api.Tests.ControllerTests;
 
 public partial class AuthControllerTest
 {
@@ -509,7 +509,7 @@ public partial class AuthControllerTest
 
         _mockUserService
             .Setup(x => x.RegisterUserAsync(request))
-            .ReturnsAsync(ServiceResult<(User, string[])>.CreateSuccess(resultData, null)); // Null message
+            .ReturnsAsync(ServiceResult<(User, string[])>.CreateSuccess(resultData, null!)); // Null message
 
         // Act
         var result = await _controller.Register(request);

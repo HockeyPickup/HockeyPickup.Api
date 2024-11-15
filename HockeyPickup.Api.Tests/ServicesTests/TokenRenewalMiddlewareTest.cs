@@ -7,7 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using HockeyPickup.Api.Services;
 using Microsoft.IdentityModel.Tokens;
 
-namespace HockeyPickup.Api.Tests.Services;
+namespace HockeyPickup.Api.Tests.ServicesTests;
 
 public class TokenRenewalMiddlewareTests
 {
@@ -129,7 +129,7 @@ public class TokenRenewalMiddlewareTests
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((o, t) => true),
                 It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
     }
 

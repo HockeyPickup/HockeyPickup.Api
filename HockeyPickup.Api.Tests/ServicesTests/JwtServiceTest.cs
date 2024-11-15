@@ -7,7 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-namespace HockeyPickup.Api.Tests.Services;
+namespace HockeyPickup.Api.Tests.ServicesTests;
 
 public class JwtServiceTest
 {
