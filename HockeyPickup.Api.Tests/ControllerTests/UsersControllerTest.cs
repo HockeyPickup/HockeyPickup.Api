@@ -138,7 +138,6 @@ public class UsersControllerTest
         returnedUsers.Should().BeEquivalentTo(basicUsers);
     }
 
-    /* 
     [Fact]
     public async Task GetUsers_RepositoryThrowsException_Returns500()
     {
@@ -162,14 +161,14 @@ public class UsersControllerTest
 
         // Verify error was logged
         _mockLogger.Verify(
-            x => x.LogError(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => true),
                 It.IsAny<Exception>(),
-                "Error retrieving users"
-            ),
-            Times.Once
-        );
+                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+            Times.Once);
     }
-    */
 
     [Fact]
     public async Task GetUsers_NoRoleClaim_ReturnsBasicUsers()
