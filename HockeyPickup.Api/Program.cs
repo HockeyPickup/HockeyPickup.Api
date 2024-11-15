@@ -4,10 +4,10 @@ using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.GraphQL;
+using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing.Patterns;
@@ -15,7 +15,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
@@ -38,7 +37,27 @@ public class Program
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddOpenApiDocument();
+        builder.Services.AddOpenApiDocument(o =>
+        {
+            o.PostProcess = doc =>
+            {
+                doc.Info.Title = "HockeyPickup.Api";
+                doc.Info.Version = "v1";
+                doc.Info.Description = "HockeyPickup APIs using strict OpenAPI specification.";
+
+                // Add SecurityDefinitions for Swagger UI authorization
+                doc.SecurityDefinitions.Add("Bearer", new NSwag.OpenApiSecurityScheme
+                {
+                    Description = "Please enter a valid HockeyPickup.Api token",
+                    Name = "Authorization",
+                    In = NSwag.OpenApiSecurityApiKeyLocation.Header,
+                    Type = NSwag.OpenApiSecuritySchemeType.Http,
+                    BearerFormat = "JWT",
+                    Scheme = "Bearer"
+                });
+            };
+            o.OperationProcessors.Add(new AuthorizeCheckOperationProcessor());
+        });
         builder.Services.AddSwaggerGen(o =>
         {
             var baseUrl = "/api";
@@ -69,12 +88,26 @@ public class Program
             });
             o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
-                Description = "Please enter a valid HockeyPickup.API token",
+                Description = "Please enter a valid HockeyPickup.Api token",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,
                 BearerFormat = "JWT",
                 Scheme = "Bearer"
+            });
+            o.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    new string[] { }
+                }
             });
             o.OperationFilter<AuthorizeCheckOperationFilter>();
         });
@@ -352,51 +385,6 @@ public class ServiceBusHealthCheck : IHealthCheck
             _logger.LogError(ex, "Service Bus health check failed");
             return HealthCheckResult.Unhealthy("Service Bus connection failed", ex);
         }
-    }
-}
-
-[ExcludeFromCodeCoverage]
-public class AuthorizeCheckOperationFilter : IOperationFilter
-{
-    public void Apply(OpenApiOperation operation, OperationFilterContext context)
-    {
-        // Check if the endpoint (action) has the Authorize attribute
-        var hasAuthorizeAttribute = context.MethodInfo.DeclaringType.GetCustomAttributes(true)
-            .OfType<AuthorizeAttribute>().Any() ||
-            context.MethodInfo.GetCustomAttributes(true).OfType<AuthorizeAttribute>().Any();
-
-        if (hasAuthorizeAttribute)
-        {
-            // If the endpoint has [Authorize] attribute, display the "Authorize" button
-            operation.Responses.TryAdd("401", new OpenApiResponse { Description = "Unauthorized" });
-
-            operation.Security = new List<OpenApiSecurityRequirement>
-            {
-                new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[] {}
-                    }
-                }
-            };
-        }
-    }
-}
-
-[ExcludeFromCodeCoverage]
-public class CustomModelDocumentFilter<T> : IDocumentFilter where T : class
-{
-    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
-    {
-        context.SchemaGenerator.GenerateSchema(typeof(T), context.SchemaRepository);
     }
 }
 #pragma warning restore IDE0057 // Use range operator
