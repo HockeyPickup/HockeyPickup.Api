@@ -58,7 +58,8 @@ public class UsersControllerTest
                 LastName = "Doe",
                 IsPreferred = true,
                 IsPreferredPlus = false,
-                Rating = 4.5m
+                Rating = 4.5m,
+                Active = true
             },
             new() {
                 Id = "2",
@@ -68,7 +69,8 @@ public class UsersControllerTest
                 LastName = "Smith",
                 IsPreferred = true,
                 IsPreferredPlus = true,
-                Rating = 4.8m
+                Rating = 4.8m,
+                Active = true
             }
         };
     }
@@ -84,7 +86,8 @@ public class UsersControllerTest
                 FirstName = "John",
                 LastName = "Doe",
                 IsPreferred = true,
-                IsPreferredPlus = false
+                IsPreferredPlus = false,
+                Active = true
             },
             new() {
                 Id = "2",
@@ -93,7 +96,8 @@ public class UsersControllerTest
                 FirstName = "Jane",
                 LastName = "Smith",
                 IsPreferred = true,
-                IsPreferredPlus = true
+                IsPreferredPlus = true,
+                Active = true
             }
         };
     }

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using HockeyPickup.Api.Models.Requests;
+using System.Net;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -482,7 +483,7 @@ public partial class UserServiceTest
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public async Task RegisterUserAsync_EmptyInviteCodeConfig_ReturnsFailure(string configValue)
+    public async Task RegisterUserAsync_EmptyInviteCodeConfig_ReturnsFailure(string? configValue)
     {
         // Arrange
         var request = CreateValidRegisterRequest();
@@ -508,5 +509,1222 @@ public partial class UserServiceTest
 
         // Verify user was not created
         _mockUserManager.Verify(x => x.CreateAsync(It.IsAny<AspNetUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterUserAsync_TopLevelException_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidRegisterRequest();
+
+        _mockConfiguration.Setup(x => x["RegistrationInviteCode"])
+            .Returns("valid-code");
+
+        // Force a top-level exception by making UserManager throw
+        var thrownException = new InvalidOperationException("Database connection failed");
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.RegisterUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred during registration");
+
+        // Verify error was logged with correct exception and message
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => string.Equals(o.ToString(),
+                $"Error registering user with email {request.Email}")),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}
+
+public partial class UserServiceTest
+{
+    [Fact]
+    public async Task ConfirmEmailAsync_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var token = "valid-token";
+
+        var user = new AspNetUser
+        {
+            Email = email,
+            EmailConfirmed = false
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.ConfirmEmailAsync(user, token))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.ConfirmEmailAsync(email, token);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be("Email confirmed successfully. You can now log in.");
+
+        _mockUserManager.Verify(x => x.ConfirmEmailAsync(user, token), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailAsync_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var email = "nonexistent@example.com";
+        var token = "valid-token";
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.ConfirmEmailAsync(email, token);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Invalid verification link");
+
+        // Verify confirmation was never attempted
+        _mockUserManager.Verify(x => x.ConfirmEmailAsync(It.IsAny<AspNetUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailAsync_AlreadyConfirmed_ReturnsFailure()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var token = "valid-token";
+
+        var user = new AspNetUser
+        {
+            Email = email,
+            EmailConfirmed = true
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _service.ConfirmEmailAsync(email, token);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Email is already confirmed");
+
+        // Verify confirmation was never attempted
+        _mockUserManager.Verify(x => x.ConfirmEmailAsync(It.IsAny<AspNetUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailAsync_InvalidToken_ReturnsFailure()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var token = "invalid-token";
+
+        var user = new AspNetUser
+        {
+            Email = email,
+            EmailConfirmed = false
+        };
+
+        var errors = new[]
+        {
+            new IdentityError { Description = "Invalid token" }
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.ConfirmEmailAsync(user, token))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ConfirmEmailAsync(email, token);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Email confirmation failed. The link may have expired.");
+
+        // Verify warning was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Warning,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            null,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ConfirmEmailAsync_Exception_ReturnsFailure()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var token = "valid-token";
+        var thrownException = new InvalidOperationException("Database error");
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.ConfirmEmailAsync(email, token);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred while confirming email");
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}
+
+public partial class UserServiceTest
+{
+    private static ChangePasswordRequest CreateValidChangePasswordRequest()
+    {
+        return new ChangePasswordRequest
+        {
+            CurrentPassword = "OldP@ssword123",
+            NewPassword = "NewP@ssword123",
+            ConfirmNewPassword = "NewP@ssword123"
+        };
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify all operations were performed
+        _mockUserManager.Verify(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword), Times.Once);
+        _mockUserManager.Verify(x => x.UpdateAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "nonexistent-user";
+        var request = CreateValidChangePasswordRequest();
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+
+        // Verify no password operations were performed
+        _mockUserManager.Verify(x => x.ChangePasswordAsync(It.IsAny<AspNetUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _mockUserManager.Verify(x => x.UpdateAsync(It.IsAny<AspNetUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IncorrectCurrentPassword_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Current password is incorrect");
+
+        // Verify no password change was attempted
+        _mockUserManager.Verify(x => x.ChangePasswordAsync(It.IsAny<AspNetUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_NewPasswordSameAsCurrent_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var currentPassword = "CurrentP@ssword123";
+        var request = new ChangePasswordRequest
+        {
+            CurrentPassword = currentPassword,
+            NewPassword = currentPassword,
+            ConfirmNewPassword = currentPassword
+        };
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("New password must be different from current password");
+
+        // Verify no password change was attempted
+        _mockUserManager.Verify(x => x.ChangePasswordAsync(It.IsAny<AspNetUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("simple")]  // Too simple
+    [InlineData("onlylowercase123")]  // No uppercase
+    [InlineData("ONLYUPPERCASE123")]  // No lowercase
+    [InlineData("NoSpecialChars123")] // No special characters
+    [InlineData("No@Numbers")]        // No numbers
+    public async Task ChangePasswordAsync_InvalidPasswordComplexity_ReturnsFailure(string newPassword)
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = new ChangePasswordRequest
+        {
+            CurrentPassword = "OldP@ssword123",
+            NewPassword = newPassword,
+            ConfirmNewPassword = newPassword
+        };
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Password does not meet complexity requirements");
+
+        // Verify no password change was attempted
+        _mockUserManager.Verify(x => x.ChangePasswordAsync(It.IsAny<AspNetUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IdentityChangeFailure_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        var errors = new[]
+        {
+            new IdentityError { Description = "Password change failed" }
+        };
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Password change failed");
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_Exception_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+        var thrownException = new InvalidOperationException("Database error");
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred while changing the password");
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IdentityErrorWithoutDescription_ReturnsGenericFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        var errors = new[]
+        {
+            new IdentityError { Description = null! }  // Null description
+        };
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to change password");  // Default message when description is null
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IdentityFailureWithNoErrors_ReturnsGenericFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed());  // Empty errors collection
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to change password");
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IdentityFailureWithNullError_ReturnsGenericFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        var errors = new IdentityError[] { null! };  // Null error object
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to change password");
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IdentityFailureWithNullDescription_ReturnsGenericFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        var errors = new[]
+        {
+            new IdentityError { Description = null! }  // Error with null description
+        };
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to change password");
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_IdentityFailureWithDescription_ReturnsErrorMessage()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateValidChangePasswordRequest();
+
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.CheckPasswordAsync(user, request.CurrentPassword))
+            .ReturnsAsync(true);
+
+        var errors = new[]
+        {
+            new IdentityError { Description = "Specific error message" }
+        };
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ChangePasswordAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Specific error message");
+    }
+}
+
+public partial class UserServiceTest
+{
+    [Fact]
+    public async Task InitiateForgotPasswordAsync_ValidEmail_ReturnsSuccess()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var frontendUrl = "https://example.com";
+        var userId = "test-user-id";
+        var firstName = "Test";
+        var lastName = "User";
+        var resetToken = "password-reset-token";
+
+        var user = new AspNetUser
+        {
+            Id = userId,
+            Email = email,
+            FirstName = firstName,
+            LastName = lastName
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(user))
+            .ReturnsAsync(resetToken);
+
+        // Act
+        var result = await _service.InitiateForgotPasswordAsync(email, frontendUrl);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify service bus message was sent with correct data
+        _mockServiceBus.Verify(x => x.SendAsync(
+            It.Is<ServiceBusCommsMessage>(m =>
+                m.Metadata["Type"] == "ForgotPassword" &&
+                m.CommunicationMethod["Email"] == email &&
+                m.RelatedEntities["UserId"] == userId &&
+                m.RelatedEntities["FirstName"] == firstName &&
+                m.RelatedEntities["LastName"] == lastName &&
+                m.MessageData["ResetUrl"].Contains(WebUtility.UrlEncode(resetToken)) &&
+                m.MessageData["ResetUrl"].Contains(WebUtility.UrlEncode(email)) &&
+                m.MessageData["ResetUrl"].StartsWith(frontendUrl.TrimEnd('/'))),
+            "ForgotPassword",
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task InitiateForgotPasswordAsync_UserNotFound_ReturnsSuccessForSecurity()
+    {
+        // Arrange
+        var email = "nonexistent@example.com";
+        var frontendUrl = "https://example.com";
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.InitiateForgotPasswordAsync(email, frontendUrl);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();  // Should still return success for security
+
+        // Verify no service bus message was sent
+        _mockServiceBus.Verify(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task InitiateForgotPasswordAsync_ServiceBusFailure_ReturnsFailure()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var frontendUrl = "https://example.com";
+        var userId = "test-user-id";
+        var resetToken = "password-reset-token";
+
+        var user = new AspNetUser
+        {
+            Id = userId,
+            Email = email
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(user))
+            .ReturnsAsync(resetToken);
+
+        var serviceBusException = new Exception("Service bus error");
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(serviceBusException);
+
+        // Act
+        var result = await _service.InitiateForgotPasswordAsync(email, frontendUrl);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred while processing your request");
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            serviceBusException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task InitiateForgotPasswordAsync_Exception_ReturnsFailure()
+    {
+        // Arrange
+        var email = "test@example.com";
+        var frontendUrl = "https://example.com";
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.InitiateForgotPasswordAsync(email, frontendUrl);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred while processing your request");
+
+        // Verify error was logged with correct content
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("https://example.com/")]     // With trailing slash
+    [InlineData("https://example.com")]      // Without trailing slash
+    public async Task InitiateForgotPasswordAsync_DifferentUrlFormats_HandlesCorrectly(string frontendUrl)
+    {
+        // Arrange
+        var email = "test@example.com";
+        var resetToken = "password-reset-token";
+        var user = new AspNetUser { Email = email };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(user))
+            .ReturnsAsync(resetToken);
+
+        string capturedUrl = null!;
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>(
+                (message, _, _, _, _) => capturedUrl = message.MessageData["ResetUrl"])
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _service.InitiateForgotPasswordAsync(email, frontendUrl);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify URL format
+        capturedUrl.Should().NotBeNull();
+        capturedUrl.Should().StartWith(frontendUrl.TrimEnd('/'));
+        capturedUrl.Should().Contain("/reset-password");
+        capturedUrl.Should().Contain($"token={WebUtility.UrlEncode(resetToken)}");
+        capturedUrl.Should().Contain($"email={WebUtility.UrlEncode(email)}");
+    }
+}
+
+public partial class UserServiceTest
+{
+    private static ResetPasswordRequest CreateValidResetPasswordRequest()
+    {
+        return new ResetPasswordRequest
+        {
+            Email = "test@example.com",
+            Token = "valid-reset-token",
+            NewPassword = "NewP@ssword123",
+            ConfirmPassword = "NewP@ssword123"
+        };
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+        var user = new AspNetUser
+        {
+            Email = request.Email,
+            EmailConfirmed = true
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(user, request.Token, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify password was reset
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(user, request.Token, request.NewPassword), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Invalid reset attempt");
+
+        // Verify reset was never attempted
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<AspNetUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("simple")]  // Too simple
+    [InlineData("onlylowercase123")]  // No uppercase
+    [InlineData("ONLYUPPERCASE123")]  // No lowercase
+    [InlineData("NoSpecialChars123")] // No special characters
+    [InlineData("No@Numbers")]        // No numbers
+    public async Task ResetPasswordAsync_InvalidPasswordComplexity_ReturnsFailure(string newPassword)
+    {
+        // Arrange
+        var request = new ResetPasswordRequest
+        {
+            Email = "test@example.com",
+            Token = "valid-reset-token",
+            NewPassword = newPassword,
+            ConfirmPassword = newPassword
+        };
+
+        var user = new AspNetUser { Email = request.Email };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Password does not meet complexity requirements");
+
+        // Verify reset was never attempted
+        _mockUserManager.Verify(x => x.ResetPasswordAsync(It.IsAny<AspNetUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_InvalidToken_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+        var user = new AspNetUser { Email = request.Email };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync(user);
+
+        var errors = new[] { new IdentityError { Description = "Invalid token" } };
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(user, request.Token, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Invalid token");
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_UnconfirmedEmail_ConfirmsEmailOnSuccess()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+        var user = new AspNetUser
+        {
+            Email = request.Email,
+            EmailConfirmed = false  // Unconfirmed email
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(user, request.Token, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        user.EmailConfirmed.Should().BeTrue();  // Should be set to true
+
+        // Verify user was updated
+        _mockUserManager.Verify(x => x.UpdateAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_AlreadyConfirmedEmail_DoesNotUpdateUser()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+        var user = new AspNetUser
+        {
+            Email = request.Email,
+            EmailConfirmed = true  // Already confirmed
+        };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(user, request.Token, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify user was not updated
+        _mockUserManager.Verify(x => x.UpdateAsync(It.IsAny<AspNetUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_Exception_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred while resetting the password");
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}
+
+public partial class UserServiceTest
+{
+    private static SaveUserRequest CreateSaveUserRequest()
+    {
+        return new SaveUserRequest
+        {
+            FirstName = "John",
+            LastName = "Doe",
+            PayPalEmail = "john.pay@example.com",
+            VenmoAccount = "johndoe",
+            MobileLast4 = "1234",
+            EmergencyName = "Jane Doe",
+            EmergencyPhone = "555-1234",
+            NotificationPreference = NotificationPreference.OnlyMyBuySell,
+            Active = true,
+            Preferred = true,
+            PreferredPlus = false,
+            LockerRoom13 = false
+        };
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateSaveUserRequest();
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify all properties were updated
+        user.FirstName.Should().Be(request.FirstName);
+        user.LastName.Should().Be(request.LastName);
+        user.PayPalEmail.Should().Be(request.PayPalEmail);
+        user.VenmoAccount.Should().Be(request.VenmoAccount);
+        user.MobileLast4.Should().Be(request.MobileLast4);
+        user.EmergencyName.Should().Be(request.EmergencyName);
+        user.EmergencyPhone.Should().Be(request.EmergencyPhone);
+        user.NotificationPreference.Should().Be((int) request.NotificationPreference!.Value);
+        user.Active.Should().Be(request.Active!.Value);
+        user.Preferred.Should().Be(request.Preferred!.Value);
+        user.PreferredPlus.Should().Be(request.PreferredPlus!.Value);
+        user.LockerRoom13.Should().Be(request.LockerRoom13!.Value);
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_PartialUpdate_OnlyUpdatesProvidedFields()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var user = new AspNetUser
+        {
+            Id = userId,
+            FirstName = "Original",
+            LastName = "Name",
+            PayPalEmail = "original@pay.com",
+            NotificationPreference = (int) NotificationPreference.None
+        };
+
+        var request = new SaveUserRequest
+        {
+            FirstName = "NewFirst",  // Only updating FirstName
+            PayPalEmail = "new@pay.com"  // And PayPalEmail
+        };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify updated fields
+        user.FirstName.Should().Be("NewFirst");
+        user.PayPalEmail.Should().Be("new@pay.com");
+
+        // Verify untouched fields
+        user.LastName.Should().Be("Name");
+        user.NotificationPreference.Should().Be((int) NotificationPreference.None);
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "nonexistent-user";
+        var request = CreateSaveUserRequest();
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+
+        // Verify update was never attempted
+        _mockUserManager.Verify(x => x.UpdateAsync(It.IsAny<AspNetUser>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_UpdateFails_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateSaveUserRequest();
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        var errors = new[] { new IdentityError { Description = "Update failed" } };
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Update failed");
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_Exception_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateSaveUserRequest();
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("An error occurred while saving user");
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_NullableEnumUpdate_HandlesCorrectly()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var user = new AspNetUser
+        {
+            Id = userId,
+            NotificationPreference = (int) NotificationPreference.None
+        };
+
+        var request = new SaveUserRequest
+        {
+            NotificationPreference = NotificationPreference.None
+        };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        user.NotificationPreference.Should().Be((int) NotificationPreference.None);
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_NullableBooleansUpdate_HandlesCorrectly()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var user = new AspNetUser
+        {
+            Id = userId,
+            Active = false,
+            Preferred = false,
+            PreferredPlus = false
+        };
+
+        var request = new SaveUserRequest
+        {
+            Active = true,
+            Preferred = true,
+            PreferredPlus = null  // Not updating PreferredPlus
+        };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        user.Active.Should().BeTrue();
+        user.Preferred.Should().BeTrue();
+        user.PreferredPlus.Should().BeFalse();  // Should remain unchanged
+    }
+
+    [Fact]
+    public async Task SaveUserAsync_UpdateFailsWithEmptyErrors_ReturnsGenericFailure()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = CreateSaveUserRequest();
+        var user = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Failed(Array.Empty<IdentityError>()));  // Empty error array
+
+        // Act
+        var result = await _service.SaveUserAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to save user");  // Default message when no errors
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_FailureWithEmptyErrors_ReturnsGenericFailure()
+    {
+        // Arrange
+        var request = CreateValidResetPasswordRequest();
+        var user = new AspNetUser { Email = request.Email };
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.ResetPasswordAsync(user, request.Token, request.NewPassword))
+            .ReturnsAsync(IdentityResult.Failed(Array.Empty<IdentityError>()));  // Empty error array
+
+        // Act
+        var result = await _service.ResetPasswordAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to reset password");  // Default message when no errors
     }
 }
