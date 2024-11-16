@@ -1,4 +1,4 @@
-﻿using HockeyPickup.Api.Data.Context;
+using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,6 +28,7 @@ public class UserRepository : IUserRepository
                 LastName = u.LastName,
                 IsPreferred = u.Preferred,
                 IsPreferredPlus = u.PreferredPlus,
+                Active = u.Active
             })
             .ToListAsync();
     }
@@ -46,6 +47,7 @@ public class UserRepository : IUserRepository
                 Rating = u.Rating,
                 IsPreferred = u.Preferred,
                 IsPreferredPlus = u.PreferredPlus,
+                Active = u.Active
             })
             .ToListAsync();
     }

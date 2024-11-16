@@ -208,6 +208,7 @@ public class User
             Email = Email,
             FirstName = FirstName,
             LastName = LastName,
+            Active = Active,
             IsPreferred = Preferred,
             IsPreferredPlus = PreferredPlus,
             NotificationPreference = (NotificationPreference) NotificationPreference,

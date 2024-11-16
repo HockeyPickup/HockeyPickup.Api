@@ -57,6 +57,14 @@ public class UserBasicResponse
     public string? LastName { get; set; }
 
     [Required]
+    [Description("Indicates if user account is active")]
+    [JsonPropertyName("Active")]
+    [JsonProperty(nameof(Active), Required = Required.Always)]
+    [GraphQLName("Active")]
+    [GraphQLDescription("Indicates if the user account is active")]
+    public required bool Active { get; set; }
+
+    [Required]
     [Description("Indicates if the user has preferred status")]
     [JsonPropertyName("IsPreferred")]
     [JsonProperty(nameof(IsPreferred), Required = Required.Always)]

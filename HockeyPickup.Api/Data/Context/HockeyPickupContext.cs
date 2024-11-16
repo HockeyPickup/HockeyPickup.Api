@@ -29,14 +29,14 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.Id).HasMaxLength(128).IsRequired();
             entity.Property(e => e.Email).HasMaxLength(256);
             entity.Property(e => e.EmailConfirmed);
-            entity.Property(e => e.PasswordHash).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.SecurityStamp).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.PhoneNumber).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.PasswordHash).HasColumnType("TEXT");
+            entity.Property(e => e.SecurityStamp).HasColumnType("TEXT");
+            entity.Property(e => e.PhoneNumber).HasColumnType("TEXT");
             entity.Property(e => e.PhoneNumberConfirmed);
             entity.Property(e => e.TwoFactorEnabled);
             entity.Property(e => e.LockoutEndDateUtc)
                         .HasColumnName("LockoutEndDateUtc")
-                        .HasColumnType("datetime");
+                        .HasColumnType("TEXT");
 
             // Ignore LockoutEnd as it's handled through LockoutEndDateUtc
             entity.Ignore(e => e.LockoutEnd);
@@ -45,25 +45,25 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.UserName).HasMaxLength(256).IsRequired();
 
             // Custom columns
-            entity.Property(e => e.FirstName).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.LastName).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.FirstName).HasColumnType("TEXT");
+            entity.Property(e => e.LastName).HasColumnType("TEXT");
             entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
-            entity.Property(e => e.PayPalEmail).HasColumnType("nvarchar(max)").HasDefaultValue("");
+            entity.Property(e => e.PayPalEmail).HasColumnType("TEXT").HasDefaultValue("");
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
-            entity.Property(e => e.VenmoAccount).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.MobileLast4).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.Rating).HasColumnType("decimal(18,2)").HasDefaultValue(0);
+            entity.Property(e => e.VenmoAccount).HasColumnType("TEXT");
+            entity.Property(e => e.MobileLast4).HasColumnType("TEXT");
+            entity.Property(e => e.Rating).HasColumnType("REAL").HasDefaultValue(0);
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
-            entity.Property(e => e.EmergencyName).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.EmergencyPhone).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.EmergencyName).HasColumnType("TEXT");
+            entity.Property(e => e.EmergencyPhone).HasColumnType("TEXT");
             entity.Property(e => e.LockerRoom13).HasDefaultValue(false);
 
             // New Identity columns
             entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
             entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
-            entity.Property(e => e.ConcurrencyStamp).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.DateCreated).HasColumnType("datetime");
+            entity.Property(e => e.ConcurrencyStamp).HasColumnType("TEXT");
+            entity.Property(e => e.DateCreated).HasColumnType("TEXT");
         });
 
         modelBuilder.Entity<AspNetRole>(entity =>
@@ -74,7 +74,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.Id).HasMaxLength(128).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
             entity.Property(e => e.NormalizedName).HasMaxLength(256);
-            entity.Property(e => e.ConcurrencyStamp).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ConcurrencyStamp).HasColumnType("TEXT");
         });
 
         modelBuilder.Entity<IdentityUserRole<string>>(entity =>
@@ -118,8 +118,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.HasKey(e => e.Id).HasName("PK_dbo.AspNetUserClaims");
 
             entity.Property(e => e.UserId).HasMaxLength(128);
-            entity.Property(e => e.ClaimType).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.ClaimValue).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ClaimType).HasColumnType("TEXT");
+            entity.Property(e => e.ClaimValue).HasColumnType("TEXT");
 
             entity.HasOne<AspNetUser>()
                 .WithMany()
@@ -133,8 +133,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.RoleId).HasMaxLength(128);
-            entity.Property(e => e.ClaimType).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.ClaimValue).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.ClaimType).HasColumnType("TEXT");
+            entity.Property(e => e.ClaimValue).HasColumnType("TEXT");
 
             entity.HasOne<AspNetRole>()
                 .WithMany()
@@ -150,7 +150,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.UserId).HasMaxLength(128);
             entity.Property(e => e.LoginProvider).HasMaxLength(128);
             entity.Property(e => e.Name).HasMaxLength(128);
-            entity.Property(e => e.Value).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Value).HasColumnType("TEXT");
 
             entity.HasOne<AspNetUser>()
                 .WithMany()
