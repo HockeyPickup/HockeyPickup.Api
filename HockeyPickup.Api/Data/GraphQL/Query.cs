@@ -48,12 +48,15 @@ public class Query
     public async Task<IEnumerable<object>> Users([Service] IUserRepository userRepository)
     {
         var isAdmin = _httpContextAccessor.HttpContext?.User?.IsInRole("Admin") ?? false;
-
         if (isAdmin)
         {
-            return await userRepository.GetDetailedUsersAsync();
+            var detailedUsers = await userRepository.GetDetailedUsersAsync();
+            return detailedUsers;
         }
-
-        return await userRepository.GetBasicUsersAsync();
+        else
+        {
+            var basicUsers = await userRepository.GetBasicUsersAsync();
+            return basicUsers;
+        }
     }
 }

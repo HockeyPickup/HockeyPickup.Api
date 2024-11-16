@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Migrations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HockeyPickup.Api.Data.Entities;
 
+[ExcludeFromCodeCoverage]
 public partial class AspNetUser : IdentityUser<string>
 {
     private DateTime? _lockoutEndDateUtc;
@@ -59,6 +61,7 @@ public partial class AspNetUser : IdentityUser<string>
     public virtual ICollection<AspNetRole> Roles { get; set; } = new List<AspNetRole>();
 }
 
+[ExcludeFromCodeCoverage]
 public partial class SchemaComplete : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

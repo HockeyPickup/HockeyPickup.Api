@@ -4,11 +4,13 @@ using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace HockeyPickup.Api.Models.Domain;
 
 [SwaggerSchema]
+[ExcludeFromCodeCoverage]
 public class User
 {
     [Required]

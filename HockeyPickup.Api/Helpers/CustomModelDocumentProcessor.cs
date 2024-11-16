@@ -1,8 +1,10 @@
 using NSwag.Generation.Processors.Contexts;
 using NSwag.Generation.Processors;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HockeyPickup.Api.Helpers;
 
+[ExcludeFromCodeCoverage]
 public class CustomModelDocumentProcessor<T> : IDocumentProcessor where T : class
 {
     public void Process(DocumentProcessorContext context)
