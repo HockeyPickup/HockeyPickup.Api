@@ -334,7 +334,12 @@ public class UserService : IUserService
             {
                 Id = aspNetUser.Id,
                 Username = aspNetUser.UserName,
-                Email = aspNetUser.Email
+                Email = aspNetUser.Email,
+                FirstName = aspNetUser.FirstName,
+                LastName = aspNetUser.LastName,
+                Preferred = aspNetUser.Preferred,
+                PreferredPlus = aspNetUser.PreferredPlus,
+                NotificationPreference = aspNetUser.NotificationPreference
             };
 
             // Post a ServiceBus message

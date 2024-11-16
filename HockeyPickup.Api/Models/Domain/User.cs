@@ -1,10 +1,14 @@
+using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Models.Responses;
 using Newtonsoft.Json;
+using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace HockeyPickup.Api.Models.Domain;
 
+[SwaggerSchema]
 public class User
 {
     [Required]
@@ -29,6 +33,20 @@ public class User
     [JsonPropertyName("Username")]
     [JsonProperty(nameof(Username), Required = Required.Default)]
     public string? Username { get; set; }
+
+    [Description("First name of the user")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("FirstName")]
+    [JsonProperty(nameof(FirstName), Required = Required.Default)]
+    public string? FirstName { get; set; }
+
+    [Description("Last name of the user")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("LastName")]
+    [JsonProperty(nameof(LastName), Required = Required.Default)]
+    public string? LastName { get; set; }
 
     [Required]
     [Description("Indicates if email has been confirmed")]
@@ -89,27 +107,18 @@ public class User
     [JsonProperty(nameof(AccessFailedCount), Required = Required.Always)]
     public int AccessFailedCount { get; set; }
 
-    [Required]
-    [Description("User's display name")]
-    [MaxLength(256)]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("UserName")]
-    [JsonProperty(nameof(UserName), Required = Required.Always)]
-    public string UserName { get; set; } = null!;
+    [Description("User's preferred position")]
+    [Range(0, int.MaxValue)]
+    [JsonPropertyName("PositionPreference")]
+    [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
+    public int PositionPreference { get; set; }
 
-    [Description("User's first name")]
-    [MaxLength(256)]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("FirstName")]
-    [JsonProperty(nameof(FirstName), Required = Required.Default)]
-    public string? FirstName { get; set; }
 
-    [Description("User's last name")]
-    [MaxLength(256)]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("LastName")]
-    [JsonProperty(nameof(LastName), Required = Required.Default)]
-    public string? LastName { get; set; }
+    [Description("Current team assignment")]
+    [Range(0, int.MaxValue)]
+    [JsonPropertyName("TeamAssignment")]
+    [JsonProperty(nameof(TeamAssignment), Required = Required.Default)]
+    public int TeamAssignment { get; set; }
 
     [Required]
     [Description("User's notification preferences")]
@@ -189,4 +198,21 @@ public class User
     [JsonPropertyName("LockerRoom13")]
     [JsonProperty(nameof(LockerRoom13), Required = Required.Always)]
     public bool LockerRoom13 { get; set; }
+
+    internal UserBasicResponse ToUserBasicResponse()
+    {
+        return new UserBasicResponse
+        {
+            Id = Id,
+            UserName = Username,
+            Email = Email,
+            FirstName = FirstName,
+            LastName = LastName,
+            IsPreferred = Preferred,
+            IsPreferredPlus = PreferredPlus,
+            NotificationPreference = (NotificationPreference) NotificationPreference,
+            PositionPreference = (PositionPreference) PositionPreference,
+            TeamAssignment = (TeamAssignment) TeamAssignment,
+        };
+    }
 }

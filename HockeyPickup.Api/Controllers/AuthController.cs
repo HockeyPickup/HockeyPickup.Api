@@ -61,7 +61,8 @@ public class AuthController : ControllerBase
         return new LoginResponse
         {
             Token = token,
-            Expiration = expiration
+            Expiration = expiration,
+            UserBasicResponse = user.ToUserBasicResponse()
         };
     }
 

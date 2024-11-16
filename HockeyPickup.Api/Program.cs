@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Data;
@@ -57,6 +58,8 @@ public class Program
                 });
             };
             o.OperationProcessors.Add(new AuthorizeCheckOperationProcessor());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ServiceBusCommsMessage>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<User>());
         });
         builder.Services.AddSwaggerGen(o =>
         {
@@ -67,6 +70,7 @@ public class Program
             });
             o.EnableAnnotations();
             o.DocumentFilter<CustomModelDocumentFilter<ServiceBusCommsMessage>>();
+            o.DocumentFilter<CustomModelDocumentFilter<User>>();
 
             o.SwaggerDoc("v1", new OpenApiInfo()
             {
