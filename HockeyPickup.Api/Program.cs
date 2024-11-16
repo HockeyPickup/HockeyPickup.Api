@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Data;
@@ -300,6 +299,8 @@ public class DatabaseHealthCheck : IHealthCheck
         {
             using var scope = _scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<HockeyPickupContext>();
+
+            _logger.LogDebug($"Attempting health check on database: {dbContext.Database.GetDbConnection().Database}");
 
             // Just check if we can connect
             if (await dbContext.Database.CanConnectAsync(cancellationToken))
