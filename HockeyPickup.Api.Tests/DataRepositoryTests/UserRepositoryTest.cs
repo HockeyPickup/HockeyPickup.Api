@@ -6,44 +6,64 @@ using HockeyPickup.Api.Models.Responses;
 using Microsoft.Extensions.Logging;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
+using Microsoft.AspNetCore.Identity;
 
 namespace HockeyPickup.Api.Tests.Data.Repositories;
 
 // Test-specific DbContext
-public class TestHockeyPickupContext : DbContext
+public class TestHockeyPickupContext : HockeyPickupContext
 {
-    public TestHockeyPickupContext(DbContextOptions<TestHockeyPickupContext> options) : base(options)
+    public TestHockeyPickupContext(DbContextOptions<HockeyPickupContext> options)
+        : base(options)
     {
     }
 
-    public DbSet<AspNetUser> Users { get; set; } = null!;
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Start with a clean slate - don't call base.OnModelCreating
+
+        // Configure only AspNetUser
         modelBuilder.Entity<AspNetUser>(entity =>
         {
             entity.ToTable("AspNetUsers");
             entity.HasKey(e => e.Id);
 
+            // Basic properties needed for tests
             entity.Property(e => e.Id).HasMaxLength(128);
             entity.Property(e => e.UserName).HasMaxLength(256);
             entity.Property(e => e.Email).HasMaxLength(256);
-            entity.Property(e => e.FirstName).HasMaxLength(256);
-            entity.Property(e => e.LastName).HasMaxLength(256);
-            entity.Property(e => e.PayPalEmail).HasMaxLength(256);
-            entity.Property(e => e.VenmoAccount).HasMaxLength(256);
-            entity.Property(e => e.MobileLast4).HasMaxLength(4);
-            entity.Property(e => e.EmergencyName).HasMaxLength(256);
-            entity.Property(e => e.EmergencyPhone).HasMaxLength(20);
-            entity.Property(e => e.Rating).HasColumnType("REAL");
+            entity.Property(e => e.FirstName);
+            entity.Property(e => e.LastName);
+            entity.Property(e => e.Rating);
+            entity.Property(e => e.Active).HasDefaultValue(true);
+            entity.Property(e => e.Preferred).HasDefaultValue(false);
+            entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
 
-            entity.Property(e => e.Active);
-            entity.Property(e => e.Preferred);
-            entity.Property(e => e.PreferredPlus);
-            entity.Property(e => e.LockerRoom13);
-
-            entity.Property(e => e.NotificationPreference);
+            // Ignore ALL navigation properties and Identity-related properties
+            entity.Ignore(e => e.Roles);
+            entity.Ignore(e => e.LockoutEnd);
+            entity.Ignore(e => e.AccessFailedCount);
+            entity.Ignore(e => e.ConcurrencyStamp);
+            entity.Ignore(e => e.EmailConfirmed);
+            entity.Ignore(e => e.LockoutEnabled);
+            entity.Ignore(e => e.LockoutEndDateUtc);
+            entity.Ignore(e => e.NormalizedEmail);
+            entity.Ignore(e => e.NormalizedUserName);
+            entity.Ignore(e => e.PasswordHash);
+            entity.Ignore(e => e.PhoneNumber);
+            entity.Ignore(e => e.PhoneNumberConfirmed);
+            entity.Ignore(e => e.SecurityStamp);
+            entity.Ignore(e => e.TwoFactorEnabled);
         });
+
+        // Explicitly ignore all Identity-related types
+        modelBuilder.Ignore<IdentityRole>();
+        modelBuilder.Ignore<IdentityUserRole<string>>();
+        modelBuilder.Ignore<IdentityUserClaim<string>>();
+        modelBuilder.Ignore<IdentityUserLogin<string>>();
+        modelBuilder.Ignore<IdentityUserToken<string>>();
+        modelBuilder.Ignore<IdentityRoleClaim<string>>();
+        modelBuilder.Ignore<AspNetRole>();
     }
 }
 
@@ -57,11 +77,12 @@ public class UserRepositoryTest : IDisposable
     {
         _mockLogger = new Mock<ILogger<UserRepository>>();
 
-        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
-            .UseSqlite("DataSource=:memory:")
-            .Options;
+        // Create the options builder for HockeyPickupContext
+        var optionsBuilder = new DbContextOptionsBuilder<HockeyPickupContext>();
+        optionsBuilder.UseSqlite("DataSource=:memory:");
 
-        _context = new HockeyPickupContext(options); // Use the actual context
+        // Create the test context with the correct options type
+        _context = new TestHockeyPickupContext(optionsBuilder.Options);
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
 
