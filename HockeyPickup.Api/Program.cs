@@ -150,6 +150,7 @@ public class Program
             options.Password.RequiredLength = 8;
         })
         .AddEntityFrameworkStores<HockeyPickupContext>()
+        .AddUserStore<CustomUserStore>()
         .AddDefaultTokenProviders();
 
         builder.Services.AddAuthentication(options =>
