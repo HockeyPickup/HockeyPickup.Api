@@ -76,7 +76,12 @@ public class ResilientServiceBus : IServiceBus
             }
         };
 
-        var connectionString = _configuration.GetConnectionString("ServiceBusConnectionString");
+        var connectionString = Environment.GetEnvironmentVariable("ServiceBusConnectionString");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            // If the environment variable is not set, try to get it from the configuration
+            connectionString = _configuration.GetConnectionString("ServiceBusConnectionString");
+        }
         if (!string.IsNullOrEmpty(connectionString))
         {
             _client = new ServiceBusClient(connectionString, clientOptions);

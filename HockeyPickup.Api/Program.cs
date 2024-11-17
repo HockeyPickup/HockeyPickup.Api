@@ -343,7 +343,14 @@ public class ServiceBusHealthCheck : IHealthCheck
     {
         try
         {
-            var connectionString = _configuration.GetConnectionString("ServiceBusConnectionString");
+            // Try to get the connection string from the environment variables
+            var connectionString = Environment.GetEnvironmentVariable("ServiceBusConnectionString");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                // If the environment variable is not set, try to get it from the configuration
+                connectionString = _configuration.GetConnectionString("ServiceBusConnectionString");
+            }
+
             var queueName = _configuration["ServiceBusHealthCheckQueueName"]!;
 
             _logger.LogDebug($"Attempting health check on queue: {queueName}");
