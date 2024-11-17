@@ -112,7 +112,7 @@ public partial class UserServiceTest
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data.user.Id.Should().Be(userId);
-        result.Data.user.Username.Should().Be(username);
+        result.Data.user.UserName.Should().Be(username);
         result.Data.user.Email.Should().Be(username);
         result.Data.roles.Should().BeEquivalentTo(roles);
 

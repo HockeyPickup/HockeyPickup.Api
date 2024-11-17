@@ -51,12 +51,12 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(new { message = "Invalid request data" });
 
-        var result = await _userService.ValidateCredentialsAsync(request.Username, request.Password);
+        var result = await _userService.ValidateCredentialsAsync(request.UserName, request.Password);
         if (!result.IsSuccess)
             return Unauthorized(new { message = result.Message });
 
         var (user, roles) = result.Data;
-        var (token, expiration) = _jwtService.GenerateToken(user.Id, user.Username, roles);
+        var (token, expiration) = _jwtService.GenerateToken(user.Id, user.UserName, roles);
 
         return new LoginResponse
         {

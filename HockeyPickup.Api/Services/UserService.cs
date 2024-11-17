@@ -333,7 +333,7 @@ public class UserService : IUserService
             var user = new User
             {
                 Id = aspNetUser.Id,
-                Username = aspNetUser.UserName,
+                UserName = aspNetUser.UserName,
                 Email = aspNetUser.Email,
                 FirstName = aspNetUser.FirstName,
                 LastName = aspNetUser.LastName,
@@ -365,7 +365,7 @@ public class UserService : IUserService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating credentials for username {Username}", username);
+            _logger.LogError(ex, "Error validating credentials for username {UserName}", username);
             return ServiceResult<(User user, string[] roles)>.CreateFailure("An error occurred while validating credentials");
         }
     }

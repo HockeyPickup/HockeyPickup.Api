@@ -46,11 +46,11 @@ public partial class AuthControllerTest
         // Arrange
         var request = new LoginRequest
         {
-            Username = "user@example.com",
+            UserName = "user@example.com",
             Password = "validPassword123!"
         };
 
-        var user = new User { Id = "123", Username = "user@example.com" };
+        var user = new User { Id = "123", UserName = "user@example.com" };
         var roles = new[] { "User" };
         var resultData = (user, roles);
 
@@ -58,11 +58,11 @@ public partial class AuthControllerTest
         var expiration = DateTime.UtcNow.AddHours(1);
 
         _mockUserService
-            .Setup(x => x.ValidateCredentialsAsync(request.Username, request.Password))
+            .Setup(x => x.ValidateCredentialsAsync(request.UserName, request.Password))
             .ReturnsAsync(ServiceResult<(User user, string[] roles)>.CreateSuccess(resultData));
 
         _mockJwtService
-            .Setup(x => x.GenerateToken(user.Id, user.Username, roles))
+            .Setup(x => x.GenerateToken(user.Id, user.UserName, roles))
             .Returns((token, expiration));
 
         // Act
@@ -81,10 +81,10 @@ public partial class AuthControllerTest
         // Arrange
         var request = new LoginRequest
         {
-            Username = "invalid-email",
+            UserName = "invalid-email",
             Password = "pass"
         };
-        _controller.ModelState.AddModelError("Username", "Invalid email format");
+        _controller.ModelState.AddModelError("UserName", "Invalid email format");
         _controller.ModelState.AddModelError("Password", "Password must be at least 8 characters");
 
         // Act
@@ -111,12 +111,12 @@ public partial class AuthControllerTest
         // Arrange
         var request = new LoginRequest
         {
-            Username = "user@example.com",
+            UserName = "user@example.com",
             Password = "wrongPassword123!"
         };
 
         _mockUserService
-            .Setup(x => x.ValidateCredentialsAsync(request.Username, request.Password))
+            .Setup(x => x.ValidateCredentialsAsync(request.UserName, request.Password))
             .ReturnsAsync(ServiceResult<(User user, string[] roles)>.CreateFailure("Invalid credentials"));
 
         // Act
@@ -143,12 +143,12 @@ public partial class AuthControllerTest
         // Arrange
         var request = new LoginRequest
         {
-            Username = "user@example.com",
+            UserName = "user@example.com",
             Password = "password123!"
         };
 
         _mockUserService
-            .Setup(x => x.ValidateCredentialsAsync(request.Username, request.Password))
+            .Setup(x => x.ValidateCredentialsAsync(request.UserName, request.Password))
             .ThrowsAsync(new Exception("Database error"));
 
         // Act & Assert
@@ -161,10 +161,10 @@ public partial class AuthControllerTest
         // Arrange
         var request = new LoginRequest
         {
-            Username = "",
+            UserName = "",
             Password = ""
         };
-        _controller.ModelState.AddModelError("Username", "Username is required");
+        _controller.ModelState.AddModelError("UserName", "UserName is required");
         _controller.ModelState.AddModelError("Password", "Password is required");
 
         // Act
@@ -505,7 +505,7 @@ public partial class AuthControllerTest
     {
         // Arrange
         var request = CreateValidRegisterRequest();
-        var resultData = (new User { Id = "123", Username = request.Email }, new[] { "User" });
+        var resultData = (new User { Id = "123", UserName = request.Email }, new[] { "User" });
 
         _mockUserService
             .Setup(x => x.RegisterUserAsync(request))

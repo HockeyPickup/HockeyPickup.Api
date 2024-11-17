@@ -8,13 +8,13 @@ namespace HockeyPickup.Api.Models.Requests;
 public record LoginRequest
 {
     [Required]
-    [Description("Username for login (email address)")]
+    [Description("UserName for login (email address)")]
     [MaxLength(256)]
     [EmailAddress]
     [DataType(DataType.EmailAddress)]
-    [JsonPropertyName("Username")]
-    [JsonProperty(nameof(Username), Required = Required.Always)]
-    public required string Username { get; init; }
+    [JsonPropertyName("UserName")]
+    [JsonProperty(nameof(UserName), Required = Required.Always)]
+    public required string UserName { get; init; }
 
     [Required]
     [Description("User's password")]

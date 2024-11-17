@@ -20,13 +20,13 @@ public class UserBasicResponse
     public required string Id { get; set; }
 
     [Required]
-    [Description("Username of the user")]
+    [Description("UserName of the user")]
     [MaxLength(256)]
     [DataType(DataType.Text)]
     [JsonPropertyName("UserName")]
     [JsonProperty(nameof(UserName), Required = Required.Always)]
     [GraphQLName("UserName")]
-    [GraphQLDescription("Username of the user")]
+    [GraphQLDescription("UserName of the user")]
     public required string UserName { get; set; }
 
     [Description("Email address of the user")]

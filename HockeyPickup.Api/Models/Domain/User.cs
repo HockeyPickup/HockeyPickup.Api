@@ -32,9 +32,9 @@ public class User
     [Description("User's username")]
     [MaxLength(256)]
     [DataType(DataType.Text)]
-    [JsonPropertyName("Username")]
-    [JsonProperty(nameof(Username), Required = Required.Default)]
-    public string? Username { get; set; }
+    [JsonPropertyName("UserName")]
+    [JsonProperty(nameof(UserName), Required = Required.Default)]
+    public string? UserName { get; set; }
 
     [Description("First name of the user")]
     [MaxLength(256)]
@@ -206,7 +206,7 @@ public class User
         return new UserBasicResponse
         {
             Id = Id,
-            UserName = Username,
+            UserName = UserName,
             Email = Email,
             FirstName = FirstName,
             LastName = LastName,
