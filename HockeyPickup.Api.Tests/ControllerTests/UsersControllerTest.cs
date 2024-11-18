@@ -11,7 +11,7 @@ using System.Text.Json;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;
 
-public class UsersControllerTest
+public partial class UsersControllerTest
 {
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<ILogger<UsersController>> _mockLogger;
@@ -22,6 +22,11 @@ public class UsersControllerTest
         _mockUserRepository = new Mock<IUserRepository>();
         _mockLogger = new Mock<ILogger<UsersController>>();
         _controller = new UsersController(_mockUserRepository.Object, _mockLogger.Object);
+    }
+
+    private class ApiErrorResponse
+    {
+        public string Message { get; set; } = string.Empty;
     }
 
     private void SetupUserRole(string role)
@@ -210,5 +215,117 @@ public class UsersControllerTest
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedUsers = okResult.Value.Should().BeAssignableTo<IEnumerable<UserBasicResponse>>().Subject;
         returnedUsers.Should().BeEquivalentTo(basicUsers);
+    }
+}
+
+public partial class UsersControllerTest
+{
+    private void SetupUser(string userId)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Name, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+    }
+
+    [Fact]
+    public async Task GetUser_ValidUser_ReturnsOkWithUser()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        SetupUser(userId);
+
+        var expectedUser = new UserBasicResponse
+        {
+            Id = userId,
+            UserName = "testuser",
+            Email = "test@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            IsPreferred = true,
+            IsPreferredPlus = false,
+            Active = true
+        };
+
+        _mockUserRepository
+            .Setup(x => x.GetUserAsync(userId))
+            .ReturnsAsync(expectedUser);
+
+        // Act
+        var result = await _controller.GetUser();
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedUser = okResult.Value.Should().BeOfType<UserBasicResponse>().Subject;
+        returnedUser.Should().BeEquivalentTo(expectedUser);
+    }
+
+    [Fact]
+    public async Task GetUser_NoUserIdClaim_ReturnsNotFound()
+    {
+        // Arrange
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity())
+            }
+        };
+
+        // Act
+        var result = await _controller.GetUser();
+
+        // Assert
+        var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        var response = JsonSerializer.Deserialize<ApiErrorResponse>(
+            JsonSerializer.Serialize(notFoundResult.Value),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+        response.Should().NotBeNull();
+        response!.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task GetUser_RepositoryThrowsException_Returns500()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        SetupUser(userId);
+
+        _mockUserRepository
+            .Setup(x => x.GetUserAsync(userId))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.GetUser();
+
+        // Assert
+        var statusCodeResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+
+        var response = JsonSerializer.Deserialize<ApiErrorResponse>(
+            JsonSerializer.Serialize(statusCodeResult.Value),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+        response.Should().NotBeNull();
+        response!.Message.Should().Be("An error occurred while retrieving user");
+
+        // Verify error was logged
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
     }
 }

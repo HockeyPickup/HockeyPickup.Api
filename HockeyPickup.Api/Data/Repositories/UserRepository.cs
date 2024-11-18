@@ -51,4 +51,22 @@ public class UserRepository : IUserRepository
             })
             .ToListAsync();
     }
+
+    public async Task<UserBasicResponse> GetUserAsync(string userId)
+    {
+        return await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => new UserBasicResponse
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                Email = u.Email,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                IsPreferred = u.Preferred,
+                IsPreferredPlus = u.PreferredPlus,
+                Active = u.Active
+            })
+            .FirstOrDefaultAsync();
+    }
 }

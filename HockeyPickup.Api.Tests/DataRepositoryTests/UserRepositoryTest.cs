@@ -67,7 +67,7 @@ public class TestHockeyPickupContext : HockeyPickupContext
     }
 }
 
-public class UserRepositoryTest : IDisposable
+public partial class UserRepositoryTest
 {
     private readonly Mock<ILogger<UserRepository>> _mockLogger;
     private readonly HockeyPickupContext _context;
@@ -130,10 +130,19 @@ public class UserRepositoryTest : IDisposable
         _repository = new UserRepository(_context, _mockLogger.Object);
     }
 
-    public void Dispose()
+    protected virtual void Dispose(bool disposing)
     {
-        _context.Database.CloseConnection();
-        _context.Dispose();
+        if (disposing)
+        {
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
+        }
+    }
+
+    protected void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -227,5 +236,85 @@ public class UserRepositoryTest : IDisposable
 
         // Assert
         result.Should().BeEmpty();
+    }
+}
+
+public partial class UserRepositoryTest
+{
+    [Fact]
+    public async Task GetUserAsync_UserExists_ReturnsUserResponse()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        await _context.Users.AddAsync(new AspNetUser
+        {
+            Id = userId,
+            UserName = "testuser",
+            Email = "test@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Preferred = true,
+            PreferredPlus = false,
+            Active = true
+        });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetUserAsync(userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(userId);
+        result.UserName.Should().Be("testuser");
+        result.Email.Should().Be("test@example.com");
+        result.FirstName.Should().Be("Test");
+        result.LastName.Should().Be("User");
+        result.IsPreferred.Should().BeTrue();
+        result.IsPreferredPlus.Should().BeFalse();
+        result.Active.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetUserAsync_UserDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        var userId = "nonexistent-id";
+
+        // Act
+        var result = await _repository.GetUserAsync(userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetUserAsync_MultipleUsers_ReturnsCorrectUser()
+    {
+        // Arrange
+        var targetUserId = "target-user-id";
+        await _context.Users.AddRangeAsync(
+            new AspNetUser { Id = "other-id-1", UserName = "other1" },
+            new AspNetUser
+            {
+                Id = targetUserId,
+                UserName = "target",
+                Email = "target@example.com",
+                FirstName = "Target",
+                LastName = "User",
+                Preferred = true,
+                PreferredPlus = true,
+                Active = true
+            },
+            new AspNetUser { Id = "other-id-2", UserName = "other2" }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetUserAsync(targetUserId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(targetUserId);
+        result.UserName.Should().Be("target");
     }
 }

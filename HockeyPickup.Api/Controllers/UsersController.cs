@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Security.Claims;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,7 @@ public class UsersController : ControllerBase
         _logger = logger;
     }
 
+    [Authorize]
     [HttpGet]
     [Description("Returns list of users - basic info for regular users, detailed for admins")]
     [Produces(typeof(IEnumerable<UserBasicResponse>))]
@@ -51,6 +53,32 @@ public class UsersController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving users");
             return StatusCode(500, new { message = "An error occurred while retrieving users" });
+        }
+    }
+
+    [Authorize]
+    [HttpGet("current")]
+    [Description("Returns the user object for the signed in user")]
+    [Produces(typeof(UserBasicResponse))]
+    [ProducesResponseType(typeof(UserBasicResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UserBasicResponse>> GetUser()
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return NotFound(new { message = "User not found" });
+
+            return Ok(await _userRepository.GetUserAsync(userId));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving user");
+            return StatusCode(500, new { message = "An error occurred while retrieving user" });
         }
     }
 }
