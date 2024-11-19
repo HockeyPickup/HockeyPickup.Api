@@ -33,9 +33,9 @@ public class Program
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.PropertyNamingPolicy = null; // This keeps PascalCase
-        });
+        })
+        .ConfigureValidation();
 
-        builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddOpenApiDocument(o =>
         {
@@ -57,8 +57,12 @@ public class Program
                 });
             };
             o.OperationProcessors.Add(new AuthorizeCheckOperationProcessor());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ErrorDetail>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ServiceBusCommsMessage>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<User>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<AspNetUser>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ApiResponse>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ApiDataResponse<object>>());
         });
         builder.Services.AddSwaggerGen(o =>
         {
@@ -69,7 +73,11 @@ public class Program
             });
             o.EnableAnnotations();
             o.DocumentFilter<CustomModelDocumentFilter<ServiceBusCommsMessage>>();
+            o.DocumentFilter<CustomModelDocumentFilter<ErrorDetail>>();
             o.DocumentFilter<CustomModelDocumentFilter<User>>();
+            o.DocumentFilter<CustomModelDocumentFilter<AspNetUser>>();
+            o.DocumentFilter<CustomModelDocumentFilter<ApiResponse>>();
+            o.DocumentFilter<CustomModelDocumentFilter<ApiDataResponse<object>>>();
 
             o.SwaggerDoc("v1", new OpenApiInfo()
             {
@@ -244,6 +252,7 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<TokenRenewalMiddleware>();
+        app.UseMiddleware<GlobalExceptionMiddleware>();
 
         app.UseEndpoints(e =>
         {

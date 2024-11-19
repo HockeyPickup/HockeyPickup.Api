@@ -10,7 +10,7 @@ namespace HockeyPickup.Api.Services;
 public interface IUserService
 {
     Task<ServiceResult<(User user, string[] roles)>> ValidateCredentialsAsync(string username, string password);
-    Task<ServiceResult> RegisterUserAsync(RegisterRequest request);
+    Task<ServiceResult<AspNetUser>> RegisterUserAsync(RegisterRequest request);
     Task<ServiceResult> ConfirmEmailAsync(string email, string token);
     Task<ServiceResult> ChangePasswordAsync(string userId, ChangePasswordRequest request);
     Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
@@ -219,7 +219,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<ServiceResult> RegisterUserAsync(RegisterRequest request)
+    public async Task<ServiceResult<AspNetUser>> RegisterUserAsync(RegisterRequest request)
     {
         try
         {
@@ -227,7 +227,7 @@ public class UserService : IUserService
             if (string.IsNullOrEmpty(inviteCode) || request.InviteCode != inviteCode)
             {
                 _logger.LogWarning("Invalid registration invite code: {InviteCode}", request.InviteCode);
-                return ServiceResult.CreateFailure("Invalid registration invite code");
+                return ServiceResult<AspNetUser>.CreateFailure("Invalid registration invite code");
             }
 
             // Check if user exists
@@ -237,7 +237,7 @@ public class UserService : IUserService
             {
                 // If email is already confirmed, don't allow re-registration
                 if (existingUser.EmailConfirmed)
-                    return ServiceResult.CreateFailure("User with this email already exists");
+                    return ServiceResult<AspNetUser>.CreateFailure("User with this email already exists");
 
                 // Email exists but isn't confirmed - delete the old registration
                 _logger.LogInformation("Removing unconfirmed registration for {Email} to allow re-registration", request.Email);
@@ -260,7 +260,7 @@ public class UserService : IUserService
             var result = await _userManager.CreateAsync(user, request.Password);
 
             if (!result.Succeeded)
-                return ServiceResult.CreateFailure(string.Join(", ", result.Errors.Select(e => e.Description)));
+                return ServiceResult<AspNetUser>.CreateFailure(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             // Generate email confirmation token
             var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -296,18 +296,18 @@ public class UserService : IUserService
                 correlationId: Guid.NewGuid().ToString(),
                 queueName: _configuration["ServiceBusCommsQueueName"]);
 
-                return ServiceResult.CreateSuccess();
+                return ServiceResult<AspNetUser>.CreateSuccess(user, "Registration successful");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send registration confirmation message for {Email}", user.Email);
-                return ServiceResult.CreateSuccess("Registration successful but confirmation email could not be sent");
+                return ServiceResult<AspNetUser>.CreateSuccess(user, "Registration successful but confirmation email could not be sent");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error registering user with email {Email}", request.Email);
-            return ServiceResult.CreateFailure("An error occurred during registration");
+            return ServiceResult<AspNetUser>.CreateFailure("An error occurred during registration");
         }
     }
 

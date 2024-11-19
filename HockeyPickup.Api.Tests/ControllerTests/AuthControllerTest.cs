@@ -352,130 +352,56 @@ public partial class AuthControllerTest
     {
         // Arrange
         var request = CreateValidRegisterRequest();
+        var user = new AspNetUser
+        {
+            UserName = request.Email,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName
+        };
 
         _mockUserService
             .Setup(x => x.RegisterUserAsync(request))
-            .ReturnsAsync(ServiceResult.CreateSuccess("Registration successful"));
+            .ReturnsAsync(ServiceResult<AspNetUser>.CreateSuccess(user, "Registration successful"));
 
         // Act
         var result = await _controller.Register(request);
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<RegisterResponse>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiDataResponse<AspNetUser>>().Subject;
 
         response.Success.Should().BeTrue();
         response.Message.Should().Be("Registration successful");
+        response.Data.Should().NotBeNull();
+        response.Data.Email.Should().Be(request.Email);
         response.Errors.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Register_InvalidModelState_ReturnsBadRequest()
-    {
-        // Arrange
-        var request = new RegisterRequest
-        {
-            Email = "invalid-email",
-            Password = "weak",
-            ConfirmPassword = "different",
-            FirstName = "Test",
-            LastName = "User",
-            FrontendUrl = "not-a-url",
-            InviteCode = "VALID-INVITE-123"
-        };
-
-        _controller.ModelState.AddModelError("Email", "Invalid email format");
-        _controller.ModelState.AddModelError("Password", "Password must be at least 8 characters and contain special characters");
-        _controller.ModelState.AddModelError("ConfirmPassword", "Passwords don't match");
-        _controller.ModelState.AddModelError("FrontendUrl", "Invalid URL format");
-
-        // Act
-        var result = await _controller.Register(request);
-
-        // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<RegisterResponse>().Subject;
-
-        response.Success.Should().BeFalse();
-        response.Message.Should().Be("Invalid registration data");
-        response.Errors.Should().HaveCount(4)
-            .And.Contain("Invalid email format")
-            .And.Contain("Password must be at least 8 characters and contain special characters")
-            .And.Contain("Passwords don't match")
-            .And.Contain("Invalid URL format");
     }
 
     [Fact]
     public async Task Register_ServiceFailure_ReturnsBadRequest()
     {
         // Arrange
-        var request = CreateValidRegisterRequest() with { Email = "existing@example.com" };
-
-        _mockUserService
-            .Setup(x => x.RegisterUserAsync(request))
-            .ReturnsAsync(ServiceResult.CreateFailure("Email already exists"));
-
-        // Act
-        var result = await _controller.Register(request);
-
-        // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<RegisterResponse>().Subject;
-
-        response.Success.Should().BeFalse();
-        response.Message.Should().Be("Registration failed");
-        response.Errors.Should().ContainSingle()
-            .And.Contain("Email already exists");
-    }
-
-    [Fact]
-    public async Task Register_ServiceSuccessWithNoMessage_ReturnsDefaultSuccessMessage()
-    {
-        // Arrange
         var request = CreateValidRegisterRequest();
 
         _mockUserService
             .Setup(x => x.RegisterUserAsync(request))
-            .ReturnsAsync(ServiceResult.CreateSuccess("")); // Empty string for message
-
-        // Act
-        var result = await _controller.Register(request);
-
-        // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<RegisterResponse>().Subject;
-
-        response.Success.Should().BeTrue();
-        response.Message.Should().Be(""); // Empty string is passed through
-        response.Errors.Should().BeEmpty();
-    }
-
-    [Theory]
-    [InlineData("", "Password must be provided")]
-    [InlineData("weak", "Password must contain special characters")]
-    [InlineData("Strong1!", "Password must be at least 8 characters")]
-    public async Task Register_InvalidPassword_ReturnsBadRequest(string password, string expectedError)
-    {
-        // Arrange
-        var request = CreateValidRegisterRequest() with
-        {
-            Password = password,
-            ConfirmPassword = password
-        };
-
-        _controller.ModelState.AddModelError("Password", expectedError);
+            .ReturnsAsync(ServiceResult<AspNetUser>.CreateFailure("Email already exists"));
 
         // Act
         var result = await _controller.Register(request);
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<RegisterResponse>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<AspNetUser>>().Subject;
 
         response.Success.Should().BeFalse();
-        response.Message.Should().Be("Invalid registration data");
-        response.Errors.Should().Contain(expectedError);
+        response.Message.Should().Be("Email already exists");
+        response.Data.Should().BeNull();
+        response.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Email already exists");
     }
+
 
     [Fact]
     public async Task Register_InvalidInviteCode_ReturnsBadRequest()
@@ -485,42 +411,20 @@ public partial class AuthControllerTest
 
         _mockUserService
             .Setup(x => x.RegisterUserAsync(request))
-            .ReturnsAsync(ServiceResult.CreateFailure("Invalid invitation code"));
+            .ReturnsAsync(ServiceResult<AspNetUser>.CreateFailure("Invalid invitation code"));
 
         // Act
         var result = await _controller.Register(request);
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<RegisterResponse>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<AspNetUser>>().Subject;
 
         response.Success.Should().BeFalse();
-        response.Message.Should().Be("Registration failed");
+        response.Message.Should().Be("Invalid invitation code");
+        response.Data.Should().BeNull();
         response.Errors.Should().ContainSingle()
-            .And.Contain("Invalid invitation code");
-    }
-
-    [Fact]
-    public async Task Register_SuccessWithNullMessage_ReturnsDefaultMessage()
-    {
-        // Arrange
-        var request = CreateValidRegisterRequest();
-        var resultData = (new User { Id = "123", UserName = request.Email }, new[] { "User" });
-
-        _mockUserService
-            .Setup(x => x.RegisterUserAsync(request))
-            .ReturnsAsync(ServiceResult<(User, string[])>.CreateSuccess(resultData, null!)); // Null message
-
-        // Act
-        var result = await _controller.Register(request);
-
-        // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<RegisterResponse>().Subject;
-
-        response.Success.Should().BeTrue();
-        response.Message.Should().Be("Registration successful. Please check your email to confirm your account.");
-        response.Errors.Should().BeEmpty();
+            .Which.Message.Should().Be("Invalid invitation code");
     }
 }
 

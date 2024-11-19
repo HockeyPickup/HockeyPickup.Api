@@ -12,6 +12,7 @@ using ForgotPasswordRequest = HockeyPickup.Api.Models.Requests.ForgotPasswordReq
 using LoginRequest = HockeyPickup.Api.Models.Requests.LoginRequest;
 using RegisterRequest = HockeyPickup.Api.Models.Requests.RegisterRequest;
 using ResetPasswordRequest = HockeyPickup.Api.Models.Requests.ResetPasswordRequest;
+using HockeyPickup.Api.Data.Entities;
 
 namespace HockeyPickup.Api.Controllers;
 
@@ -94,36 +95,14 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [Description("Registers a new user account")]
-    [Produces(typeof(RegisterResponse))]
-    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status400BadRequest)]
+    [Produces(typeof(ApiDataResponse<AspNetUser>))]
+    [ProducesResponseType(typeof(ApiDataResponse<AspNetUser>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<AspNetUser>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(new RegisterResponse
-            {
-                Success = false,
-                Message = "Invalid registration data",
-                Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
-            });
-        }
-
         var result = await _userService.RegisterUserAsync(request);
-
-        return result.IsSuccess
-            ? Ok(new RegisterResponse
-            {
-                Success = true,
-                Message = result.Message ?? "Registration successful. Please check your email to confirm your account.",
-                Errors = Enumerable.Empty<string>()
-            })
-            : BadRequest(new RegisterResponse
-            {
-                Success = false,
-                Message = "Registration failed",
-                Errors = new[] { result.Message }
-            });
+        var response = ApiDataResponse<AspNetUser>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
     [HttpPost("confirm-email")]
