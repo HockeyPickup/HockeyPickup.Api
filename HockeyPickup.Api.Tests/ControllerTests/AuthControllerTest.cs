@@ -455,33 +455,10 @@ public partial class AuthControllerTest
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<ConfirmEmailResponse>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse>().Subject;
 
         response.Success.Should().BeTrue();
         response.Message.Should().Be("Email confirmed successfully");
-    }
-
-    [Fact]
-    public async Task ConfirmEmail_InvalidModelState_ReturnsBadRequest()
-    {
-        // Arrange
-        var request = new ConfirmEmailRequest
-        {
-            Email = "invalid-email",
-            Token = "valid-token"
-        };
-
-        _controller.ModelState.AddModelError("Email", "Invalid email format");
-
-        // Act
-        var result = await _controller.ConfirmEmail(request);
-
-        // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<ConfirmEmailResponse>().Subject;
-
-        response.Success.Should().BeFalse();
-        response.Message.Should().Be("Invalid request data");
     }
 
     [Fact]
@@ -500,64 +477,10 @@ public partial class AuthControllerTest
 
         // Assert
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<ConfirmEmailResponse>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiResponse>().Subject;
 
         response.Success.Should().BeFalse();
         response.Message.Should().Be("Invalid or expired token");
-    }
-
-    [Fact]
-    public async Task ConfirmEmail_EncodedToken_DecodesCorrectly()
-    {
-        // Arrange
-        var encodedToken = WebUtility.UrlEncode("token+with+special/chars=");
-        var request = CreateValidConfirmEmailRequest() with { Token = encodedToken };
-        var decodedToken = "token+with+special/chars=";
-
-        _mockUserService
-            .Setup(x => x.ConfirmEmailAsync(request.Email, decodedToken))
-            .ReturnsAsync(ServiceResult.CreateSuccess("Email confirmed successfully"));
-
-        // Act
-        var result = await _controller.ConfirmEmail(request);
-
-        // Assert
-        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<ConfirmEmailResponse>().Subject;
-
-        response.Success.Should().BeTrue();
-        response.Message.Should().Be("Email confirmed successfully");
-
-        // Verify the service was called with the decoded token
-        _mockUserService.Verify(x => x.ConfirmEmailAsync(request.Email, decodedToken), Times.Once);
-    }
-
-    [Theory]
-    [InlineData("", "test@example.com", "Token is required")]
-    [InlineData("valid-token", "", "Email is required")]
-    public async Task ConfirmEmail_MissingRequiredFields_ReturnsBadRequest(
-        string token, string email, string expectedError)
-    {
-        // Arrange
-        var request = new ConfirmEmailRequest
-        {
-            Email = email,
-            Token = token
-        };
-
-        _controller.ModelState.AddModelError(
-            string.IsNullOrEmpty(token) ? "Token" : "Email",
-            expectedError);
-
-        // Act
-        var result = await _controller.ConfirmEmail(request);
-
-        // Assert
-        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<ConfirmEmailResponse>().Subject;
-
-        response.Success.Should().BeFalse();
-        response.Message.Should().Be("Invalid request data");
     }
 }
 

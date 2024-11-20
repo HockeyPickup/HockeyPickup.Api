@@ -33,6 +33,18 @@ public class ApiResponse : IApiResponse
     [JsonPropertyName("Errors")]
     [JsonProperty(nameof(Errors), Required = Required.Always)]
     public List<ErrorDetail> Errors { get; set; } = [];
+
+    public static ApiResponse FromServiceResult(ServiceResult result)
+    {
+        return new ApiResponse
+        {
+            Success = result.IsSuccess,
+            Message = result.Message,
+            Errors = result.IsSuccess
+                ? []
+                : [new ErrorDetail { Code = "SERVICE_ERROR", Message = result.Message }]
+        };
+    }
 }
 
 [Description("Generic API response wrapper with typed data payload")]

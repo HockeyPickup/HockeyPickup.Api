@@ -107,34 +107,14 @@ public class AuthController : ControllerBase
 
     [HttpPost("confirm-email")]
     [Description("Confirms user's email address using token from email")]
-    [Produces(typeof(ConfirmEmailResponse))]
-    [ProducesResponseType(typeof(ConfirmEmailResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ConfirmEmailResponse), StatusCodes.Status400BadRequest)]
+    [Produces(typeof(ApiResponse))]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(new ConfirmEmailResponse
-            {
-                Success = false,
-                Message = "Invalid request data"
-            });
-        }
-
-        var token = WebUtility.UrlDecode(request.Token);
-        var result = await _userService.ConfirmEmailAsync(request.Email, token);
-
-        return result.IsSuccess
-            ? Ok(new ConfirmEmailResponse
-            {
-                Success = true,
-                Message = result.Message
-            })
-            : BadRequest(new ConfirmEmailResponse
-            {
-                Success = false,
-                Message = result.Message
-            });
+        var result = await _userService.ConfirmEmailAsync(request.Email, request.Token);
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
     [Authorize]
