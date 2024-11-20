@@ -14,6 +14,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Net;
 using HockeyPickup.Api.Data.Entities;
+using GreenDonut;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;
 
@@ -69,41 +70,19 @@ public partial class AuthControllerTest
         var actionResult = await _controller.Login(request);
 
         // Assert
-        actionResult.Should().NotBeNull();
-        actionResult.Value.Should().BeOfType<LoginResponse>();
-        actionResult.Value.Token.Should().Be(token);
-        actionResult.Value.Expiration.Should().Be(expiration);
+        var okResult = actionResult.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiDataResponse<LoginResponse>>().Subject;
+
+        response.Success.Should().BeTrue();
+        response.Data.Should().NotBeNull();
+        response.Data!.Token.Should().Be(token);
+        response.Data.Expiration.Should().Be(expiration);
+        response.Errors.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task Login_InvalidModelState_ReturnsBadRequest()
-    {
-        // Arrange
-        var request = new LoginRequest
-        {
-            UserName = "invalid-email",
-            Password = "pass"
-        };
-        _controller.ModelState.AddModelError("UserName", "Invalid email format");
-        _controller.ModelState.AddModelError("Password", "Password must be at least 8 characters");
-
-        // Act
-        var actionResult = await _controller.Login(request);
-
-        // Assert
-        actionResult.Result.Should().BeOfType<BadRequestObjectResult>();
-        var badRequestResult = actionResult.Result as BadRequestObjectResult;
-        badRequestResult.Should().NotBeNull();
-        badRequestResult!.Value.Should().NotBeNull();
-
-        // Verify the error message
-        var response = JsonSerializer.Deserialize<Dictionary<string, string>>(
-            JsonSerializer.Serialize(badRequestResult.Value)
-        );
-        response.Should().NotBeNull();
-        response!.Should().ContainKey("message");
-        response["message"].Should().Be("Invalid request data");
-    }
+    // Remove this test as it's handled by framework validation
+    // [Fact]
+    // public async Task Login_InvalidModelState_ReturnsBadRequest()
 
     [Fact]
     public async Task Login_InvalidCredentials_ReturnsUnauthorized()
@@ -123,18 +102,14 @@ public partial class AuthControllerTest
         var actionResult = await _controller.Login(request);
 
         // Assert
-        actionResult.Result.Should().BeOfType<UnauthorizedObjectResult>();
-        var unauthorizedResult = actionResult.Result as UnauthorizedObjectResult;
-        unauthorizedResult.Should().NotBeNull();
-        unauthorizedResult!.Value.Should().NotBeNull();
+        var unauthorizedResult = actionResult.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        var response = unauthorizedResult.Value.Should().BeOfType<ApiDataResponse<LoginResponse>>().Subject;
 
-        // Verify the error message
-        var response = JsonSerializer.Deserialize<Dictionary<string, string>>(
-            JsonSerializer.Serialize(unauthorizedResult.Value)
-        );
-        response.Should().NotBeNull();
-        response!.Should().ContainKey("message");
-        response["message"].Should().Be("Invalid credentials");
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be("Invalid credentials");
+        response.Data.Should().BeNull();
+        response.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be("Invalid credentials");
     }
 
     [Fact]
@@ -153,40 +128,11 @@ public partial class AuthControllerTest
 
         // Act & Assert
         await Assert.ThrowsAsync<Exception>(() => _controller.Login(request));
-    }
-
-    [Fact]
-    public async Task Login_EmptyCredentials_ReturnsBadRequest()
-    {
-        // Arrange
-        var request = new LoginRequest
-        {
-            UserName = "",
-            Password = ""
-        };
-        _controller.ModelState.AddModelError("UserName", "UserName is required");
-        _controller.ModelState.AddModelError("Password", "Password is required");
-
-        // Act
-        var actionResult = await _controller.Login(request);
-
-        // Assert
-        actionResult.Result.Should().BeOfType<BadRequestObjectResult>();
-        var badRequestResult = actionResult.Result as BadRequestObjectResult;
-        badRequestResult.Should().NotBeNull();
-        badRequestResult!.Value.Should().NotBeNull();
-
-        // Verify the error message
-        var response = JsonSerializer.Deserialize<Dictionary<string, string>>(
-            JsonSerializer.Serialize(badRequestResult.Value)
-        );
-        response.Should().NotBeNull();
-        response!.Should().ContainKey("message");
-        response["message"].Should().Be("Invalid request data");
+        // Note: In production, this would be caught by the GlobalExceptionMiddleware
+        // and return a 500 error with an ApiDataResponse
     }
 }
-
-public partial class AuthControllerTest
+    public partial class AuthControllerTest
 {
     private void SetupAuthentication(bool isAuthenticated = true)
     {

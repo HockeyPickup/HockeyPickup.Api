@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
-using HockeyPickup.Api.Models.Domain;
 
 namespace HockeyPickup.Api.Models.Responses;
 

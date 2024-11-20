@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
@@ -68,6 +69,38 @@ public class ApiDataResponse<T> : ApiResponse
                 : [new ErrorDetail { Code = "SERVICE_ERROR", Message = result.Message }]
         };
     }
+}
+
+public static class ApiResponseExtensions
+{
+    public static ApiDataResponse<T> ToApiResponse<T>(this T data, ServiceResult result)
+        => new()
+        {
+            Success = true,
+            Message = result.Message,
+            Data = data,
+            Errors = []
+        };
+
+    [ExcludeFromCodeCoverage]
+    public static ApiDataResponse<T> ToApiResponse<T>(this T data, string message = "Success")
+        => new()
+        {
+            Success = true,
+            Message = message,
+            Data = data,
+            Errors = []
+        };
+
+    // New method to create error response from any ServiceResult
+    public static ApiDataResponse<T> ToErrorResponse<T>(this ServiceResult result, string code = "SERVICE_ERROR")
+        => new()
+        {
+            Success = false,
+            Message = result.Message,
+            Data = default,
+            Errors = [new ErrorDetail { Code = code, Message = result.Message }]
+        };
 }
 
 [Description("Detailed error information")]

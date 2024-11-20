@@ -43,28 +43,27 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [Description("Authenticates user and returns JWT token")]
-    [Produces(typeof(LoginResponse))]
-    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
+    [Produces(typeof(ApiDataResponse<LoginResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<LoginResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<LoginResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiDataResponse<LoginResponse>), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ApiDataResponse<LoginResponse>>> Login([FromBody] LoginRequest request)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(new { message = "Invalid request data" });
-
         var result = await _userService.ValidateCredentialsAsync(request.UserName, request.Password);
         if (!result.IsSuccess)
-            return Unauthorized(new { message = result.Message });
+        {
+            return Unauthorized(result.ToErrorResponse<LoginResponse>("AUTH_ERROR"));
+        }
 
         var (user, roles) = result.Data;
         var (token, expiration) = _jwtService.GenerateToken(user.Id, user.UserName, roles);
 
-        return new LoginResponse
+        return Ok(new LoginResponse
         {
             Token = token,
             Expiration = expiration,
             UserBasicResponse = user.ToUserBasicResponse()
-        };
+        }.ToApiResponse(result));
     }
 
     [Authorize]
