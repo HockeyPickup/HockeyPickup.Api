@@ -1,8 +1,10 @@
+# 🏒 HockeyPickup.Api
+
+[![Logo](static/JB_Puck_Logo.png)](https://hockeypickup.com)
+
 [![HockeyPickup.Api](https://github.com/HockeyPickup/HockeyPickup.Api/actions/workflows/master_hockeypickupapi.yml/badge.svg)](https://github.com/HockeyPickup/HockeyPickup.Api/actions/workflows/master_hockeypickupapi.yml)
 [![Coverage Status](https://coveralls.io/repos/github/HockeyPickup/HockeyPickup.Api/badge.svg)](https://coveralls.io/github/HockeyPickup/HockeyPickup.Api)
 [![CodeQL](https://github.com/HockeyPickup/HockeyPickup.Api/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/HockeyPickup/HockeyPickup.Api/actions/workflows/github-code-scanning/codeql)
-
-# 🏒 HockeyPickup.Api
 
 ## 🌈 Overview
 
