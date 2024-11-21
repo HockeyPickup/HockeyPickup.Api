@@ -26,6 +26,7 @@
     <PackageReference Include="Azure.Identity" Version="1.13.1" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <PackageReference Include="HotChocolate.AspNetCore" Version="14.1.0" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="14.1.0" />
     <PackageReference Include="HotChocolate.Data" Version="14.1.0" />
     <PackageReference Include="HotChocolate.Types" Version="14.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />

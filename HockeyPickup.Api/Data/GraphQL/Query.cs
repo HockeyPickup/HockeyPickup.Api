@@ -1,62 +1,37 @@
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Data.Repositories;
+using HotChocolate.Authorization;
 
 namespace HockeyPickup.Api.Data.GraphQL;
-
-// Type classes for GraphQL
-public class UserBasicType : ObjectType<UserBasicResponse>
-{
-    protected override void Configure(IObjectTypeDescriptor<UserBasicResponse> descriptor)
-    {
-        descriptor.Name("User");
-        // Fields will be automatically mapped
-    }
-}
-
-public class UserDetailedType : ObjectType<UserDetailedResponse>
-{
-    protected override void Configure(IObjectTypeDescriptor<UserDetailedResponse> descriptor)
-    {
-        descriptor.Name("UserDetailed");
-        // Fields will be automatically mapped
-    }
-}
-
-public class UserResponseType : UnionType
-{
-    protected override void Configure(IUnionTypeDescriptor descriptor)
-    {
-        descriptor
-            .Name("UserResponse")
-            .Description("Represents either a basic or detailed user response")
-            .Type<UserBasicType>()
-            .Type<UserDetailedType>();
-    }
-}
 
 public class Query
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<Query> _logger;
 
-    public Query(IHttpContextAccessor httpContextAccessor)
+    public Query(IHttpContextAccessor httpContextAccessor, ILogger<Query> logger)
     {
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
-    [GraphQLDescription("Retrieves a list of active users. Returns detailed information for admins.")]
-    [GraphQLType(typeof(ListType<UserResponseType>))]
-    public async Task<IEnumerable<object>> Users([Service] IUserRepository userRepository)
+    [Authorize]
+    [GraphQLDescription("Retrieves a list of active users.")]
+    [GraphQLType(typeof(IEnumerable<UserBasicResponse>))]
+    [GraphQLName("Users")]
+    public async Task<IEnumerable<UserBasicResponse>> Users([Service] IUserRepository userRepository)
     {
-        var isAdmin = _httpContextAccessor.HttpContext?.User?.IsInRole("Admin") ?? false;
-        if (isAdmin)
-        {
-            var detailedUsers = await userRepository.GetDetailedUsersAsync();
-            return detailedUsers;
-        }
-        else
-        {
-            var basicUsers = await userRepository.GetBasicUsersAsync();
-            return basicUsers;
-        }
+        var basicUsers = await userRepository.GetBasicUsersAsync();
+        return basicUsers;
+    }
+
+    [Authorize(Roles = ["Admin"])]
+    [GraphQLDescription("Retrieves a list of active users with additional properties.")]
+    [GraphQLType(typeof(IEnumerable<UserDetailedResponse>))]
+    [GraphQLName("UsersEx")]
+    public async Task<IEnumerable<UserDetailedResponse>> UsersEx([Service] IUserRepository userRepository)
+    {
+        var detailedUsers = await userRepository.GetDetailedUsersAsync();
+        return detailedUsers;
     }
 }

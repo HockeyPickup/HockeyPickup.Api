@@ -7,6 +7,8 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Services;
+using HotChocolate.Authorization;
+using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +21,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
+using IAuthorizationHandler = HotChocolate.Authorization.IAuthorizationHandler;
 
 namespace HockeyPickup.Api;
 
@@ -138,10 +141,11 @@ public class Program
         builder.Services.AddHttpContextAccessor();
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+        builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
-            .AddGraphQLServer()
             .AddQueryType<Query>()
-            .AddType<UserResponseType>();
+            .AddAuthorizationCore();
 
         builder.Services.AddHealthChecks()
             .AddCheck("Api", () => HealthCheckResult.Healthy("Api is healthy"))
@@ -407,6 +411,46 @@ public class ServiceBusHealthCheck : IHealthCheck
             _logger.LogError(ex, "Service Bus health check failed");
             return HealthCheckResult.Unhealthy("Service Bus connection failed", ex);
         }
+    }
+}
+
+[ExcludeFromCodeCoverage]
+public class GraphQLAuthHandler : IAuthorizationHandler
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public GraphQLAuthHandler(IHttpContextAccessor httpContextAccessor)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public ValueTask<AuthorizeResult> AuthorizeAsync(IMiddlewareContext context, AuthorizeDirective directive, CancellationToken cancellationToken)
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        var isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+
+        if (!isAuthenticated)
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+
+        if (directive.Roles?.Any() == true && !directive.Roles.Any(role => user.IsInRole(role)))
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+
+        return new ValueTask<AuthorizeResult>(AuthorizeResult.Allowed);
+    }
+
+    public ValueTask<AuthorizeResult> AuthorizeAsync(AuthorizationContext context, IReadOnlyList<AuthorizeDirective> directives, CancellationToken cancellationToken)
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        var isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+
+        if (!isAuthenticated)
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+
+        if (directives.Any(d => d.Roles?.Any() == true &&
+            !d.Roles.Any(role => user.IsInRole(role))))
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+
+        return new ValueTask<AuthorizeResult>(AuthorizeResult.Allowed);
     }
 }
 #pragma warning restore IDE0057 // Use range operator
