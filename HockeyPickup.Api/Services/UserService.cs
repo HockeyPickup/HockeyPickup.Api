@@ -335,7 +335,15 @@ public class UserService : IUserService
                 LastName = aspNetUser.LastName,
                 Preferred = aspNetUser.Preferred,
                 PreferredPlus = aspNetUser.PreferredPlus,
-                NotificationPreference = aspNetUser.NotificationPreference
+                NotificationPreference = aspNetUser.NotificationPreference,
+                Active = aspNetUser.Active,
+                EmergencyName = aspNetUser.EmergencyName,
+                EmergencyPhone = aspNetUser.EmergencyPhone,
+                LockerRoom13 = aspNetUser.LockerRoom13,
+                MobileLast4 = aspNetUser.MobileLast4,
+                PayPalEmail = aspNetUser.PayPalEmail,
+                VenmoAccount = aspNetUser.VenmoAccount,
+                Rating = aspNetUser.Rating
             };
 
             // Post a ServiceBus message
