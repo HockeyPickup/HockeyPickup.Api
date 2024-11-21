@@ -35,8 +35,6 @@ public class UsersController : ControllerBase
     [Produces(typeof(IEnumerable<UserBasicResponse>))]
     [ProducesResponseType(typeof(IEnumerable<UserBasicResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(IEnumerable<UserDetailedResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<object>>> GetUsers()
     {
@@ -61,9 +59,7 @@ public class UsersController : ControllerBase
     [Description("Returns the user object for the signed in user")]
     [Produces(typeof(UserBasicResponse))]
     [ProducesResponseType(typeof(UserBasicResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<UserBasicResponse>> GetUser()
     {

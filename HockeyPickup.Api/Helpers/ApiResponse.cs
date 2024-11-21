@@ -73,7 +73,7 @@ public class ApiDataResponse<T> : ApiResponse
 
 public static class ApiResponseExtensions
 {
-    public static ApiDataResponse<T> ToApiResponse<T>(this T data, ServiceResult result)
+    public static ApiDataResponse<T> ToApiDataResponse<T>(this T data, ServiceResult result)
         => new()
         {
             Success = true,
@@ -83,7 +83,7 @@ public static class ApiResponseExtensions
         };
 
     [ExcludeFromCodeCoverage]
-    public static ApiDataResponse<T> ToApiResponse<T>(this T data, string message = "Success")
+    public static ApiDataResponse<T> ToApiDataResponse<T>(this T data, string message = "Success")
         => new()
         {
             Success = true,

@@ -83,8 +83,8 @@ public class GraphQLTests
                                   Id = "user123",
                                   UserName = "adminUser",
                                   Active = true,
-                                  IsPreferred = true,
-                                  IsPreferredPlus = true,
+                                  Preferred = true,
+                                  PreferredPlus = true,
                                   Rating = 4.5m
                               }
                           });
@@ -118,8 +118,8 @@ public class GraphQLTests
                                   Id = "user123",
                                   UserName = "basicUser",
                                   Active = true,
-                                  IsPreferred = false,
-                                  IsPreferredPlus = false
+                                  Preferred = false,
+                                  PreferredPlus = false
                               }
                           });
 

@@ -61,8 +61,8 @@ public partial class UsersControllerTest
                 Email = "user1@example.com",
                 FirstName = "John",
                 LastName = "Doe",
-                IsPreferred = true,
-                IsPreferredPlus = false,
+                Preferred = true,
+                PreferredPlus = false,
                 Rating = 4.5m,
                 Active = true
             },
@@ -72,8 +72,8 @@ public partial class UsersControllerTest
                 Email = "user2@example.com",
                 FirstName = "Jane",
                 LastName = "Smith",
-                IsPreferred = true,
-                IsPreferredPlus = true,
+                Preferred = true,
+                PreferredPlus = true,
                 Rating = 4.8m,
                 Active = true
             }
@@ -90,8 +90,8 @@ public partial class UsersControllerTest
                 Email = "user1@example.com",
                 FirstName = "John",
                 LastName = "Doe",
-                IsPreferred = true,
-                IsPreferredPlus = false,
+                Preferred = true,
+                PreferredPlus = false,
                 Active = true
             },
             new() {
@@ -100,8 +100,8 @@ public partial class UsersControllerTest
                 Email = "user2@example.com",
                 FirstName = "Jane",
                 LastName = "Smith",
-                IsPreferred = true,
-                IsPreferredPlus = true,
+                Preferred = true,
+                PreferredPlus = true,
                 Active = true
             }
         };
@@ -250,8 +250,8 @@ public partial class UsersControllerTest
             Email = "test@example.com",
             FirstName = "Test",
             LastName = "User",
-            IsPreferred = true,
-            IsPreferredPlus = false,
+            Preferred = true,
+            PreferredPlus = false,
             Active = true
         };
 

@@ -68,10 +68,6 @@ public class UserService : IUserService
         if (request.EmergencyName != null) user.EmergencyName = request.EmergencyName;
         if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
         if (request.NotificationPreference.HasValue) user.NotificationPreference = (int) request.NotificationPreference.Value;
-        if (request.Active.HasValue) user.Active = request.Active.Value;
-        if (request.Preferred.HasValue) user.Preferred = request.Preferred.Value;
-        if (request.PreferredPlus.HasValue) user.PreferredPlus = request.PreferredPlus.Value;
-        if (request.LockerRoom13.HasValue) user.LockerRoom13 = request.LockerRoom13.Value;
     }
 
     public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request)

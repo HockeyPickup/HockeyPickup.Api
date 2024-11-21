@@ -75,7 +75,10 @@ public class SaveUserRequest
     [JsonProperty(nameof(NotificationPreference), Required = Required.Default)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public NotificationPreference? NotificationPreference { get; set; }
+}
 
+public class SaveUserRequestEx : SaveUserRequest
+{
     [Description("Whether the user account is active")]
     [JsonPropertyName("Active")]
     [JsonProperty(nameof(Active), Required = Required.Default)]
@@ -94,9 +97,17 @@ public class SaveUserRequest
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? PreferredPlus { get; set; }
 
-    [Description("Whether the user has locker room 13 access")]
+    [Description("Whether the user has Locker Room 13 access")]
     [JsonPropertyName("LockerRoom13")]
     [JsonProperty(nameof(LockerRoom13), Required = Required.Default)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? LockerRoom13 { get; set; }
+
+    [Description("User's rating")]
+    [Range(0, 5)]
+    [DataType(DataType.Currency)]
+    [JsonPropertyName("Rating")]
+    [JsonProperty(nameof(Rating), Required = Required.Default)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal Rating { get; set; }
 }

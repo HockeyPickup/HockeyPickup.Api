@@ -38,6 +38,17 @@ public class UserBasicResponse
     [GraphQLDescription("Email address of the user")]
     public string? Email { get; set; }
 
+    [Required]
+    [Description("User's PayPal email address")]
+    [MaxLength(256)]
+    [EmailAddress]
+    [DataType(DataType.EmailAddress)]
+    [JsonPropertyName("PayPalEmail")]
+    [JsonProperty(nameof(PayPalEmail), Required = Required.Always)]
+    [GraphQLName("PayPalEmail")]
+    [GraphQLDescription("User's PayPal email address")]
+    public string PayPalEmail { get; set; } = null!;
+
     [Description("First name of the user")]
     [MaxLength(256)]
     [DataType(DataType.Text)]
@@ -66,33 +77,19 @@ public class UserBasicResponse
 
     [Required]
     [Description("Indicates if the user has preferred status")]
-    [JsonPropertyName("IsPreferred")]
-    [JsonProperty(nameof(IsPreferred), Required = Required.Always)]
-    [GraphQLName("IsPreferred")]
+    [JsonPropertyName("Preferred")]
+    [JsonProperty(nameof(Preferred), Required = Required.Always)]
+    [GraphQLName("Preferred")]
     [GraphQLDescription("Indicates if the user has preferred status")]
-    public required bool IsPreferred { get; set; }
+    public required bool Preferred { get; set; }
 
     [Required]
     [Description("Indicates if the user has preferred plus status")]
-    [JsonPropertyName("IsPreferredPlus")]
-    [JsonProperty(nameof(IsPreferredPlus), Required = Required.Always)]
-    [GraphQLName("IsPreferredPlus")]
+    [JsonPropertyName("PreferredPlus")]
+    [JsonProperty(nameof(PreferredPlus), Required = Required.Always)]
+    [GraphQLName("PreferredPlus")]
     [GraphQLDescription("Indicates if the user has preferred plus status")]
-    public required bool IsPreferredPlus { get; set; }
-
-    [Description("Current team assignment")]
-    [JsonPropertyName("TeamAssignment")]
-    [JsonProperty(nameof(TeamAssignment), Required = Required.Default)]
-    [GraphQLName("TeamAssignment")]
-    [GraphQLDescription("Current team assignment")]
-    public TeamAssignment? TeamAssignment { get; set; }
-
-    [Description("User's preferred position")]
-    [JsonPropertyName("PositionPreference")]
-    [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
-    [GraphQLName("PositionPreference")]
-    [GraphQLDescription("User's preferred position")]
-    public PositionPreference? PositionPreference { get; set; }
+    public required bool PreferredPlus { get; set; }
 
     [Description("User's notification preferences")]
     [JsonPropertyName("NotificationPreference")]
@@ -100,6 +97,53 @@ public class UserBasicResponse
     [GraphQLName("NotificationPreference")]
     [GraphQLDescription("User's notification preferences")]
     public NotificationPreference? NotificationPreference { get; set; }
+
+    [Description("User's Venmo account")]
+    [MaxLength(255)]
+    [RegularExpression(@"^[^\\\./:\@\*\?\""<>\|]{1}[^\\/:\@\*\?\""<>\|]{0,254}$")]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("VenmoAccount")]
+    [JsonProperty(nameof(VenmoAccount), Required = Required.Default)]
+    [GraphQLName("VenmoAccount")]
+    [GraphQLDescription("User's Venmo account")]
+    public string? VenmoAccount { get; set; }
+
+    [Description("Last 4 digits of mobile number")]
+    [MaxLength(4)]
+    [RegularExpression(@"^(\d{4})$")]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("MobileLast4")]
+    [JsonProperty(nameof(MobileLast4), Required = Required.Default)]
+    [GraphQLName("MobileLast4")]
+    [GraphQLDescription("Last 4 digits of mobile number")]
+    public string? MobileLast4 { get; set; }
+
+    [Description("Emergency contact name")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("EmergencyName")]
+    [JsonProperty(nameof(EmergencyName), Required = Required.Default)]
+    [GraphQLName("EmergencyName")]
+    [GraphQLDescription("Emergency contact name")]
+    public string? EmergencyName { get; set; }
+
+    [Description("Emergency contact phone number")]
+    [Phone]
+    [MaxLength(20)]
+    [DataType(DataType.PhoneNumber)]
+    [JsonPropertyName("EmergencyPhone")]
+    [JsonProperty(nameof(EmergencyPhone), Required = Required.Default)]
+    [GraphQLName("EmergencyPhone")]
+    [GraphQLDescription("Emergency contact phone number")]
+    public string? EmergencyPhone { get; set; }
+
+    [Required]
+    [Description("Indicates if user has Locker Room 13 access")]
+    [JsonPropertyName("LockerRoom13")]
+    [JsonProperty(nameof(LockerRoom13), Required = Required.Always)]
+    [GraphQLName("LockerRoom13")]
+    [GraphQLDescription("Indicates if user has Locker Room 13 access")]
+    public bool LockerRoom13 { get; set; }
 }
 
 public class UserDetailedResponse : UserBasicResponse

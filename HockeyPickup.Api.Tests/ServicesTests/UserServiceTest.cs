@@ -1464,10 +1464,6 @@ public partial class UserServiceTest
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-1234",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
-            Active = true,
-            Preferred = true,
-            PreferredPlus = false,
-            LockerRoom13 = false
         };
     }
 
@@ -1500,10 +1496,6 @@ public partial class UserServiceTest
         user.EmergencyName.Should().Be(request.EmergencyName);
         user.EmergencyPhone.Should().Be(request.EmergencyPhone);
         user.NotificationPreference.Should().Be((int) request.NotificationPreference!.Value);
-        user.Active.Should().Be(request.Active!.Value);
-        user.Preferred.Should().Be(request.Preferred!.Value);
-        user.PreferredPlus.Should().Be(request.PreferredPlus!.Value);
-        user.LockerRoom13.Should().Be(request.LockerRoom13!.Value);
     }
 
     [Fact]
@@ -1647,42 +1639,6 @@ public partial class UserServiceTest
         // Assert
         result.IsSuccess.Should().BeTrue();
         user.NotificationPreference.Should().Be((int) NotificationPreference.None);
-    }
-
-    [Fact]
-    public async Task SaveUserAsync_NullableBooleansUpdate_HandlesCorrectly()
-    {
-        // Arrange
-        var userId = "test-user-id";
-        var user = new AspNetUser
-        {
-            Id = userId,
-            Active = false,
-            Preferred = false,
-            PreferredPlus = false
-        };
-
-        var request = new SaveUserRequest
-        {
-            Active = true,
-            Preferred = true,
-            PreferredPlus = null  // Not updating PreferredPlus
-        };
-
-        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
-            .ReturnsAsync(user);
-
-        _mockUserManager.Setup(x => x.UpdateAsync(user))
-            .ReturnsAsync(IdentityResult.Success);
-
-        // Act
-        var result = await _service.SaveUserAsync(userId, request);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        user.Active.Should().BeTrue();
-        user.Preferred.Should().BeTrue();
-        user.PreferredPlus.Should().BeFalse();  // Should remain unchanged
     }
 
     [Fact]

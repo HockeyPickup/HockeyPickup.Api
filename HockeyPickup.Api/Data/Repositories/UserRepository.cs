@@ -1,4 +1,5 @@
 using HockeyPickup.Api.Data.Context;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,9 +27,16 @@ public class UserRepository : IUserRepository
                 Email = u.Email,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
-                IsPreferred = u.Preferred,
-                IsPreferredPlus = u.PreferredPlus,
-                Active = u.Active
+                Preferred = u.Preferred,
+                PreferredPlus = u.PreferredPlus,
+                Active = u.Active,
+                LockerRoom13 = u.LockerRoom13,
+                EmergencyName = u.EmergencyName,
+                EmergencyPhone = u.EmergencyPhone,
+                MobileLast4 = u.MobileLast4,
+                VenmoAccount = u.VenmoAccount,
+                PayPalEmail = u.PayPalEmail,
+                NotificationPreference = (NotificationPreference) u.NotificationPreference
             })
             .ToListAsync();
     }
@@ -45,9 +53,16 @@ public class UserRepository : IUserRepository
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 Rating = u.Rating,
-                IsPreferred = u.Preferred,
-                IsPreferredPlus = u.PreferredPlus,
-                Active = u.Active
+                Preferred = u.Preferred,
+                PreferredPlus = u.PreferredPlus,
+                Active = u.Active,
+                LockerRoom13 = u.LockerRoom13,
+                EmergencyName = u.EmergencyName,
+                EmergencyPhone = u.EmergencyPhone,
+                MobileLast4 = u.MobileLast4,
+                VenmoAccount = u.VenmoAccount,
+                PayPalEmail = u.PayPalEmail,
+                NotificationPreference = (NotificationPreference) u.NotificationPreference
             })
             .ToListAsync();
     }
@@ -63,9 +78,16 @@ public class UserRepository : IUserRepository
                 Email = u.Email,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
-                IsPreferred = u.Preferred,
-                IsPreferredPlus = u.PreferredPlus,
-                Active = u.Active
+                Preferred = u.Preferred,
+                PreferredPlus = u.PreferredPlus,
+                Active = u.Active,
+                LockerRoom13 = u.LockerRoom13,
+                EmergencyName = u.EmergencyName,
+                EmergencyPhone = u.EmergencyPhone,
+                MobileLast4 = u.MobileLast4,
+                VenmoAccount = u.VenmoAccount,
+                PayPalEmail = u.PayPalEmail,
+                NotificationPreference = (NotificationPreference) u.NotificationPreference
             })
             .FirstOrDefaultAsync();
     }

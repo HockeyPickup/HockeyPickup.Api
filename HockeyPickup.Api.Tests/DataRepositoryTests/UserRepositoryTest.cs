@@ -171,9 +171,10 @@ public partial class UserRepositoryTest
             Email = "user1@example.com",
             FirstName = "Active",
             LastName = "User",
-            IsPreferred = true,
-            IsPreferredPlus = false,
-            Active = true
+            Preferred = true,
+            PreferredPlus = false,
+            Active = true,
+            NotificationPreference = NotificationPreference.All
         });
     }
 
@@ -204,9 +205,10 @@ public partial class UserRepositoryTest
             FirstName = "Preferred",
             LastName = "Plus",
             Rating = 5.0m,
-            IsPreferred = true,
-            IsPreferredPlus = true,
-            Active = true
+            Preferred = true,
+            PreferredPlus = true,
+            Active = true,
+            NotificationPreference = NotificationPreference.All
         });
     }
 
@@ -269,8 +271,8 @@ public partial class UserRepositoryTest
         result.Email.Should().Be("test@example.com");
         result.FirstName.Should().Be("Test");
         result.LastName.Should().Be("User");
-        result.IsPreferred.Should().BeTrue();
-        result.IsPreferredPlus.Should().BeFalse();
+        result.Preferred.Should().BeTrue();
+        result.PreferredPlus.Should().BeFalse();
         result.Active.Should().BeTrue();
     }
 

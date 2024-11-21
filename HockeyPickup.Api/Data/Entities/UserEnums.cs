@@ -1,20 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace HockeyPickup.Api.Data.Entities;
-
-public enum TeamAssignment
-{
-    Unassigned,
-    Light,
-    Dark
-}
-
-public enum PositionPreference
-{
-    None,
-    Forward,
-    Defense
-}
 
 public enum NotificationPreference
 {

@@ -107,19 +107,6 @@ public class User
     [JsonProperty(nameof(AccessFailedCount), Required = Required.Always)]
     public int AccessFailedCount { get; set; }
 
-    [Description("User's preferred position")]
-    [Range(0, int.MaxValue)]
-    [JsonPropertyName("PositionPreference")]
-    [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
-    public int PositionPreference { get; set; }
-
-
-    [Description("Current team assignment")]
-    [Range(0, int.MaxValue)]
-    [JsonPropertyName("TeamAssignment")]
-    [JsonProperty(nameof(TeamAssignment), Required = Required.Default)]
-    public int TeamAssignment { get; set; }
-
     [Required]
     [Description("User's notification preferences")]
     [Range(0, int.MaxValue)]
@@ -194,7 +181,7 @@ public class User
     public string? EmergencyPhone { get; set; }
 
     [Required]
-    [Description("Indicates if user has locker room 13 access")]
+    [Description("Indicates if user has Locker Room 13 access")]
     [JsonPropertyName("LockerRoom13")]
     [JsonProperty(nameof(LockerRoom13), Required = Required.Always)]
     public bool LockerRoom13 { get; set; }
@@ -209,11 +196,15 @@ public class User
             FirstName = FirstName,
             LastName = LastName,
             Active = Active,
-            IsPreferred = Preferred,
-            IsPreferredPlus = PreferredPlus,
+            Preferred = Preferred,
+            PreferredPlus = PreferredPlus,
             NotificationPreference = (NotificationPreference) NotificationPreference,
-            PositionPreference = (PositionPreference) PositionPreference,
-            TeamAssignment = (TeamAssignment) TeamAssignment,
+            VenmoAccount = VenmoAccount,
+            PayPalEmail = PayPalEmail,
+            MobileLast4 = MobileLast4,
+            EmergencyName = EmergencyName,
+            EmergencyPhone = EmergencyPhone,
+            LockerRoom13 = LockerRoom13,
         };
     }
 }

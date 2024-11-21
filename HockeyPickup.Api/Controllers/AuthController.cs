@@ -6,7 +6,6 @@ using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
 using System.Security.Claims;
 using ForgotPasswordRequest = HockeyPickup.Api.Models.Requests.ForgotPasswordRequest;
 using LoginRequest = HockeyPickup.Api.Models.Requests.LoginRequest;
@@ -45,7 +44,6 @@ public class AuthController : ControllerBase
     [Description("Authenticates user and returns JWT token")]
     [Produces(typeof(ApiDataResponse<LoginResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<LoginResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiDataResponse<LoginResponse>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiDataResponse<LoginResponse>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiDataResponse<LoginResponse>>> Login([FromBody] LoginRequest request)
     {
@@ -58,38 +56,39 @@ public class AuthController : ControllerBase
         var (user, roles) = result.Data;
         var (token, expiration) = _jwtService.GenerateToken(user.Id, user.UserName, roles);
 
-        return Ok(new LoginResponse
+        var loginResponse = new LoginResponse
         {
             Token = token,
             Expiration = expiration,
             UserBasicResponse = user.ToUserBasicResponse()
-        }.ToApiResponse(result));
+        };
+
+        return Ok(loginResponse.ToApiDataResponse(result));
     }
 
     [Authorize]
     [HttpPost("logout")]
     [Description("Invalidates the current JWT token")]
-    [Produces(typeof(object))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Logout()
+    [Produces(typeof(ApiResponse))]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> Logout()
     {
         var token = HttpContext.GetBearerToken();
         if (token == null)
         {
             _logger.LogWarning("No bearer token found during logout attempt");
-            return BadRequest(new { message = "No token found" });
+            return BadRequest(new ApiResponse { Message = "No token found", Success = false });
         }
 
         if (await _tokenBlacklist.IsTokenBlacklistedAsync(token))
         {
-            return BadRequest(new { message = "Token already invalidated" });
+            return BadRequest(new ApiResponse { Message = "Token already invalidated", Success = false });
         }
 
         await _tokenBlacklist.InvalidateTokenAsync(token);
 
-        return Ok(new { message = "Logged out successfully" });
+        return Ok(new ApiResponse { Message = "Logged out successfully", Success = true });
     }
 
     [HttpPost("register")]
@@ -97,7 +96,7 @@ public class AuthController : ControllerBase
     [Produces(typeof(ApiDataResponse<AspNetUser>))]
     [ProducesResponseType(typeof(ApiDataResponse<AspNetUser>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiDataResponse<AspNetUser>), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    public async Task<ActionResult<ApiDataResponse<AspNetUser>>> Register([FromBody] RegisterRequest request)
     {
         var result = await _userService.RegisterUserAsync(request);
         var response = ApiDataResponse<AspNetUser>.FromServiceResult(result);
@@ -109,7 +108,7 @@ public class AuthController : ControllerBase
     [Produces(typeof(ApiResponse))]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request)
+    public async Task<ActionResult<ApiResponse>> ConfirmEmail([FromBody] ConfirmEmailRequest request)
     {
         var result = await _userService.ConfirmEmailAsync(request.Email, request.Token);
         var response = ApiResponse.FromServiceResult(result);
@@ -119,85 +118,52 @@ public class AuthController : ControllerBase
     [Authorize]
     [HttpPost("change-password")]
     [Description("Changes password for authenticated user")]
-    [Produces(typeof(object))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse>> ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(new { message = "Invalid Request Data" });
-
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return NotFound(new { message = "User not found" });
-
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
         var result = await _userService.ChangePasswordAsync(userId, request);
-        if (!result.IsSuccess)
-            return BadRequest(new { message = result.Message });
-
-        return Ok(new { message = "Password changed successfully" });
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
     [HttpPost("forgot-password")]
     [Description("Initiates password reset process by sending email with reset token")]
-    [Produces(typeof(object))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    [Produces(typeof(ApiResponse))]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse>> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(new { message = "Invalid request data" });
-
         // Call service but ignore failure for security
-        await _userService.InitiateForgotPasswordAsync(request.Email, request.FrontendUrl);
-
-        // Always return success to prevent email enumeration
-        return Ok(new { message = "If the email exists, a password reset link will be sent" });
+        var result = await _userService.InitiateForgotPasswordAsync(request.Email, request.FrontendUrl);
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
     [HttpPost("reset-password")]
     [Description("Resets password using token from email")]
-    [Produces(typeof(object))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    [Produces(typeof(ApiResponse))]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse>> ResetPassword([FromBody] ResetPasswordRequest request)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(new { message = "Invalid request data" });
-
-        request.Token = WebUtility.UrlDecode(request.Token);
         var result = await _userService.ResetPasswordAsync(request);
-
-        if (!result.IsSuccess)
-            return BadRequest(new { message = result.Message });
-
-        return Ok(new { message = "Password has been reset successfully" });
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 
     [Authorize]
     [HttpPost("save-user")]
     [Description("Updates user profile information")]
-    [Produces(typeof(object))]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SaveUser([FromBody] SaveUserRequest request)
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse>> SaveUser([FromBody] SaveUserRequest request)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(new { message = "Invalid request data" });
-
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return NotFound(new { message = "User not found" });
-
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
         var result = await _userService.SaveUserAsync(userId, request);
-        if (!result.IsSuccess)
-            return BadRequest(new { message = result.Message });
-
-        return Ok(new { message = "User saved successfully" });
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 }
 #pragma warning restore IDE0057 // Use range operator
