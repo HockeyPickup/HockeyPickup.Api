@@ -13,6 +13,12 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     {
     }
 
+    public DbSet<Session>? Sessions { get; set; }
+    public DbSet<RegularSet>? RegularSets { get; set; }
+    public DbSet<Regular>? Regulars { get; set; }
+    public DbSet<BuySell>? BuySells { get; set; }
+    public DbSet<ActivityLog>? ActivityLogs { get; set; }
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<string>().HaveMaxLength(256);  // Default max length for string properties
@@ -165,6 +171,113 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             .HasMany(u => u.Roles)
             .WithMany(r => r.Users)
             .UsingEntity<IdentityUserRole<string>>();
+
+        modelBuilder.Entity<Session>(entity =>
+        {
+            entity.ToTable("Sessions");
+            entity.HasKey(e => e.SessionId).HasName("PK_dbo.Sessions");
+
+            entity.Property(e => e.CreateDateTime)
+                .HasColumnType("datetime")
+                .HasDefaultValue("1900-01-01T00:00:00.000");
+
+            entity.Property(e => e.UpdateDateTime)
+                .HasColumnType("datetime")
+                .HasDefaultValue("1900-01-01T00:00:00.000");
+
+            entity.Property(e => e.Note).HasColumnType("nvarchar(max)");
+
+            entity.Property(e => e.SessionDate)
+                .HasColumnType("datetime")
+                .HasDefaultValue("1900-01-01T00:00:00.000");
+
+            entity.HasOne(e => e.RegularSet)
+                .WithMany(r => r.Sessions)
+                .HasForeignKey(e => e.RegularSetId)
+                .HasConstraintName("FK_dbo.Sessions_dbo.RegularSets_RegularSetId");
+        });
+
+        // Configure BuySells
+        modelBuilder.Entity<BuySell>(entity =>
+        {
+            entity.ToTable("BuySells");
+            entity.HasKey(e => e.BuySellId).HasName("PK_dbo.BuySells");
+
+            entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
+            entity.Property(e => e.UpdateDateTime).HasColumnType("datetime");
+            entity.Property(e => e.BuyerNote).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.TeamAssignment).HasDefaultValue(0);
+            entity.Property(e => e.SellerNoteFlagged).HasDefaultValue(false);
+            entity.Property(e => e.BuyerNoteFlagged).HasDefaultValue(false);
+
+            entity.HasOne(e => e.Session)
+                .WithMany(s => s.BuySells)
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId");
+
+            entity.HasOne(e => e.Buyer)
+                .WithMany(u => u.BuyerTransactions)
+                .HasForeignKey(e => e.BuyerUserId)
+                .HasConstraintName("FK_dbo.BuySells_dbo.AspNetUsers_BuyerUserId");
+
+            entity.HasOne(e => e.Seller)
+                .WithMany(u => u.SellerTransactions)
+                .HasForeignKey(e => e.SellerUserId)
+                .HasConstraintName("FK_dbo.BuySells_dbo.AspNetUsers_SellerUserId");
+        });
+
+        // Configure RegularSets
+        modelBuilder.Entity<RegularSet>(entity =>
+        {
+            entity.ToTable("RegularSets");
+            entity.HasKey(e => e.RegularSetId).HasName("PK_dbo.RegularSets");
+
+            entity.Property(e => e.Description).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
+
+            entity.HasMany(e => e.Regulars)
+                    .WithOne(r => r.RegularSet)
+                    .HasForeignKey(r => r.RegularSetId)
+                    .HasConstraintName("FK_dbo.Regulars_dbo.RegularSets_RegularSetId");
+        });
+
+        // Configure Regulars (composite key)
+        modelBuilder.Entity<Regular>(entity =>
+        {
+            entity.ToTable("Regulars");
+            entity.HasKey(e => new { e.RegularSetId, e.UserId }).HasName("PK_dbo.Regulars");
+
+            entity.HasOne(e => e.RegularSet)
+                .WithMany(r => r.Regulars)
+                .HasForeignKey(e => e.RegularSetId);
+
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.Regulars)
+                .HasForeignKey(e => e.UserId);
+        });
+
+        // Configure ActivityLogs
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.ToTable("ActivityLogs");
+            entity.HasKey(e => e.ActivityLogId).HasName("PK_dbo.ActivityLogs");
+
+            entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
+            entity.Property(e => e.Activity).HasColumnType("nvarchar(max)");
+
+            entity.HasOne(e => e.Session)
+                .WithMany(s => s.ActivityLogs)
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_dbo.ActivityLogs_dbo.Sessions_SessionId");
+
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.ActivityLogs)
+                .HasForeignKey(e => e.UserId)
+                .HasConstraintName("FK_dbo.ActivityLogs_dbo.AspNetUsers_UserId");
+        });
 
         modelBuilder.HasAnnotation("Relational:IsStoredInDatabase", true);
     }

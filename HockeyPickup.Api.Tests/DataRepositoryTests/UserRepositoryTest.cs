@@ -8,21 +8,19 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
 using Microsoft.AspNetCore.Identity;
 
-namespace HockeyPickup.Api.Tests.Data.Repositories;
+namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
 // Test-specific DbContext
-public class TestHockeyPickupContext : HockeyPickupContext
+public class UserTestHockeyPickupContext : HockeyPickupContext
 {
-    public TestHockeyPickupContext(DbContextOptions<HockeyPickupContext> options)
+    public UserTestHockeyPickupContext(DbContextOptions<HockeyPickupContext> options)
         : base(options)
     {
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Start with a clean slate - don't call base.OnModelCreating
-
-        // Configure only AspNetUser
+        // Configure AspNetUser
         modelBuilder.Entity<AspNetUser>(entity =>
         {
             entity.ToTable("AspNetUsers");
@@ -38,9 +36,17 @@ public class TestHockeyPickupContext : HockeyPickupContext
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
+            entity.Property(e => e.PayPalEmail).HasDefaultValue("");
+            entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
 
-            // Ignore ALL navigation properties and Identity-related properties
+            // Ignore navigation properties
             entity.Ignore(e => e.Roles);
+            entity.Ignore(e => e.BuyerTransactions);
+            entity.Ignore(e => e.SellerTransactions);
+            entity.Ignore(e => e.ActivityLogs);
+            entity.Ignore(e => e.Regulars);
+
+            // Ignore Identity properties
             entity.Ignore(e => e.LockoutEnd);
             entity.Ignore(e => e.AccessFailedCount);
             entity.Ignore(e => e.ConcurrencyStamp);
@@ -54,6 +60,58 @@ public class TestHockeyPickupContext : HockeyPickupContext
             entity.Ignore(e => e.PhoneNumberConfirmed);
             entity.Ignore(e => e.SecurityStamp);
             entity.Ignore(e => e.TwoFactorEnabled);
+        });
+
+        // Configure BuySell entity
+        modelBuilder.Entity<BuySell>(entity =>
+        {
+            entity.HasKey(e => e.BuySellId);
+
+            // Ignore navigation properties
+            entity.Ignore(e => e.Buyer);
+            entity.Ignore(e => e.Seller);
+            entity.Ignore(e => e.Session);
+        });
+
+        // Configure Regular entity
+        modelBuilder.Entity<Regular>(entity =>
+        {
+            entity.HasKey(e => new { e.RegularSetId, e.UserId });
+
+            // Ignore navigation properties
+            entity.Ignore(e => e.RegularSet);
+            entity.Ignore(e => e.User);
+        });
+
+        // Configure RegularSet entity
+        modelBuilder.Entity<RegularSet>(entity =>
+        {
+            entity.HasKey(e => e.RegularSetId);
+
+            // Ignore navigation properties
+            entity.Ignore(e => e.Sessions);
+            entity.Ignore(e => e.Regulars);
+        });
+
+        // Configure Session entity
+        modelBuilder.Entity<Session>(entity =>
+        {
+            entity.HasKey(e => e.SessionId);
+
+            // Ignore navigation properties
+            entity.Ignore(e => e.RegularSet);
+            entity.Ignore(e => e.BuySells);
+            entity.Ignore(e => e.ActivityLogs);
+        });
+
+        // Configure ActivityLog entity
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.HasKey(e => e.ActivityLogId);
+
+            // Ignore navigation properties
+            entity.Ignore(e => e.Session);
+            entity.Ignore(e => e.User);
         });
 
         // Explicitly ignore all Identity-related types
@@ -82,7 +140,7 @@ public partial class UserRepositoryTest
         optionsBuilder.UseSqlite("DataSource=:memory:");
 
         // Create the test context with the correct options type
-        _context = new TestHockeyPickupContext(optionsBuilder.Options);
+        _context = new UserTestHockeyPickupContext(optionsBuilder.Options);
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
 
@@ -98,7 +156,8 @@ public partial class UserRepositoryTest
                 Active = true,
                 Preferred = true,
                 PreferredPlus = false,
-                Rating = 4.5m
+                Rating = 4.5m,
+                PayPalEmail = "user1@example.com"
             },
             new AspNetUser
             {
@@ -110,7 +169,8 @@ public partial class UserRepositoryTest
                 Active = false,
                 Preferred = false,
                 PreferredPlus = false,
-                Rating = 3.5m
+                Rating = 3.5m,
+                PayPalEmail = "user2@example.com"
             },
             new AspNetUser
             {
@@ -122,7 +182,8 @@ public partial class UserRepositoryTest
                 Active = true,
                 Preferred = true,
                 PreferredPlus = true,
-                Rating = 5.0m
+                Rating = 5.0m,
+                PayPalEmail = "user3@example.com"
             }
         });
         _context.SaveChanges();
@@ -169,6 +230,7 @@ public partial class UserRepositoryTest
             Id = "user1",
             UserName = "user1@example.com",
             Email = "user1@example.com",
+            PayPalEmail = "user1@example.com",
             FirstName = "Active",
             LastName = "User",
             Preferred = true,
@@ -202,6 +264,7 @@ public partial class UserRepositoryTest
             Id = "user3",
             UserName = "user3@example.com",
             Email = "user3@example.com",
+            PayPalEmail = "user3@example.com",
             FirstName = "Preferred",
             LastName = "Plus",
             Rating = 5.0m,

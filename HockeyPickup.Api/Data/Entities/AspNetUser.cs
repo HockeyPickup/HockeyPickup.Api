@@ -59,6 +59,12 @@ public partial class AspNetUser : IdentityUser<string>
 
     // Virtual navigation property
     public virtual ICollection<AspNetRole> Roles { get; set; } = new List<AspNetRole>();
+
+    // Navigation properties
+    public virtual ICollection<BuySell>? BuyerTransactions { get; set; }
+    public virtual ICollection<BuySell>? SellerTransactions { get; set; }
+    public virtual ICollection<ActivityLog>? ActivityLogs { get; set; }
+    public virtual ICollection<Regular>? Regulars { get; set; }
 }
 
 [ExcludeFromCodeCoverage]

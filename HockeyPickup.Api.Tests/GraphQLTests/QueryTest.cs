@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace HockeyPickup.Api.Tests.Data.GraphQL;
+namespace HockeyPickup.Api.Tests.GraphQLTests;
 
 public class GraphQLTests
 {
