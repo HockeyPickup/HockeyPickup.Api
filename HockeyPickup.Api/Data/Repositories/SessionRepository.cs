@@ -19,7 +19,6 @@ public class SessionRepository : ISessionRepository
     public async Task<IEnumerable<SessionBasicResponse>> GetBasicSessionsAsync()
     {
         return await _context.Sessions
-            .Where(s => s.Note == null || !EF.Functions.Like(s.Note, "%cancelled%"))
             .Select(s => new SessionBasicResponse
             {
                 SessionId = s.SessionId,
@@ -36,7 +35,6 @@ public class SessionRepository : ISessionRepository
     public async Task<IEnumerable<SessionDetailedResponse>> GetDetailedSessionsAsync()
     {
         var sessions = await _context.Sessions
-            .Where(s => s.Note == null || !EF.Functions.Like(s.Note, "%cancelled%"))
             .Include(s => s.BuySells)
                 .ThenInclude(b => b.Buyer)
             .Include(s => s.BuySells)
@@ -71,6 +69,8 @@ public class SessionRepository : ISessionRepository
 
     private static SessionDetailedResponse MapToDetailedResponse(Session session)
     {
+        if (session == null) return null;
+
         return new SessionDetailedResponse
         {
             SessionId = session.SessionId,
@@ -80,44 +80,72 @@ public class SessionRepository : ISessionRepository
             SessionDate = session.SessionDate,
             RegularSetId = session.RegularSetId,
             BuyDayMinimum = session.BuyDayMinimum,
-            BuySells = session.BuySells.Select(b => new BuySellResponse
-            {
-                BuySellId = b.BuySellId,
-                BuyerUserId = b.BuyerUserId,
-                SellerUserId = b.SellerUserId,
-                SellerNote = b.SellerNote,
-                BuyerNote = b.BuyerNote,
-                PaymentSent = b.PaymentSent,
-                PaymentReceived = b.PaymentReceived,
-                CreateDateTime = b.CreateDateTime,
-                TeamAssignment = b.TeamAssignment,
-                Buyer = b.Buyer != null ? MapToUserBasicResponse(b.Buyer) : null,
-                Seller = b.Seller != null ? MapToUserBasicResponse(b.Seller) : null
-            }).OrderBy(b => b.BuySellId).ToList(),
-            ActivityLogs = session.ActivityLogs.Select(a => new ActivityLogResponse
-            {
-                ActivityLogId = a.ActivityLogId,
-                UserId = a.UserId,
-                CreateDateTime = a.CreateDateTime,
-                Activity = a.Activity,
-                User = a.User != null ? MapToUserBasicResponse(a.User) : null
-            }).OrderByDescending(a => a.ActivityLogId).ToList(),
-            RegularSet = session.RegularSet != null ? new RegularSetResponse
-            {
-                RegularSetId = session.RegularSet.RegularSetId,
-                Description = session.RegularSet.Description,
-                DayOfWeek = session.RegularSet.DayOfWeek,
-                CreateDateTime = session.RegularSet.CreateDateTime,
-                Regulars = session.RegularSet.Regulars.Select(r => new RegularResponse
-                {
-                    RegularSetId = r.RegularSetId,
-                    UserId = r.UserId,
-                    TeamAssignment = r.TeamAssignment,
-                    PositionPreference = r.PositionPreference,
-                    User = r.User != null ? MapToUserBasicResponse(r.User) : null
-                }).ToList()
-            } : null
+            BuySells = MapBuySells(session.BuySells),
+            ActivityLogs = MapActivityLogs(session.ActivityLogs),
+            RegularSet = MapRegularSet(session.RegularSet)
         };
+    }
+
+    private static List<BuySellResponse> MapBuySells(ICollection<BuySell> buySells)
+    {
+        if (buySells == null) return new List<BuySellResponse>();
+
+        return buySells.Select(b => new BuySellResponse
+        {
+            BuySellId = b.BuySellId,
+            BuyerUserId = b.BuyerUserId,
+            SellerUserId = b.SellerUserId,
+            SellerNote = b.SellerNote,
+            BuyerNote = b.BuyerNote,
+            PaymentSent = b.PaymentSent,
+            PaymentReceived = b.PaymentReceived,
+            CreateDateTime = b.CreateDateTime,
+            TeamAssignment = b.TeamAssignment,
+            Buyer = MapToUserBasicResponse(b.Buyer),
+            Seller = MapToUserBasicResponse(b.Seller)
+        }).OrderBy(b => b.BuySellId).ToList();
+    }
+
+    private static List<ActivityLogResponse> MapActivityLogs(ICollection<ActivityLog> activityLogs)
+    {
+        if (activityLogs == null) return new List<ActivityLogResponse>();
+
+        return activityLogs.Select(a => new ActivityLogResponse
+        {
+            ActivityLogId = a.ActivityLogId,
+            UserId = a.UserId,
+            CreateDateTime = a.CreateDateTime,
+            Activity = a.Activity,
+            User = MapToUserBasicResponse(a.User)
+        }).OrderByDescending(a => a.CreateDateTime).ToList();
+    }
+
+    private static RegularSetResponse MapRegularSet(RegularSet regularSet)
+    {
+        if (regularSet == null) return null;
+
+        return new RegularSetResponse
+        {
+            RegularSetId = regularSet.RegularSetId,
+            Description = regularSet.Description,
+            DayOfWeek = regularSet.DayOfWeek,
+            CreateDateTime = regularSet.CreateDateTime,
+            Regulars = MapRegulars(regularSet.Regulars)
+        };
+    }
+
+    private static List<RegularResponse> MapRegulars(ICollection<Regular> regulars)
+    {
+        if (regulars == null) return new List<RegularResponse>();
+
+        return regulars.Select(r => new RegularResponse
+        {
+            RegularSetId = r.RegularSetId,
+            UserId = r.UserId,
+            TeamAssignment = r.TeamAssignment,
+            PositionPreference = r.PositionPreference,
+            User = MapToUserBasicResponse(r.User)
+        }).ToList();
     }
 
     private static UserBasicResponse? MapToUserBasicResponse(AspNetUser? user)

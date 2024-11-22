@@ -188,18 +188,6 @@ public class BasicSessionRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetBasicSessionsAsync_ReturnsNonCancelledSessions()
-    {
-        // Act
-        var result = await _repository.GetBasicSessionsAsync();
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.Should().NotContain(s => s.Note != null &&
-            s.Note.Contains("cancelled", StringComparison.OrdinalIgnoreCase));
-    }
-
-    [Fact]
     public async Task GetBasicSessionsAsync_MapsPropertiesCorrectly()
     {
         // Act
@@ -681,7 +669,7 @@ public class DetailedSessionRepositoryTests : IDisposable
             .GetMethod("MapToUserBasicResponse",
                 BindingFlags.NonPublic | BindingFlags.Static);
 
-        var nullResult = mapMethod!.Invoke(null, new object[] { null });
+        var nullResult = mapMethod!.Invoke(null, new object[] { null! });
         nullResult.Should().BeNull();
 
         var userResult = mapMethod!.Invoke(null, new object[] { user1 }) as UserBasicResponse;
@@ -736,7 +724,7 @@ public class DetailedSessionRepositoryTests : IDisposable
             Description = "Test Set",
             DayOfWeek = 1,
             CreateDateTime = _testDate,
-            Regulars = null  // Explicitly set Regulars to null
+            Regulars = null!  // Explicitly set Regulars to null
         };
         _context.RegularSets.Add(regularSet);
 
@@ -919,7 +907,7 @@ public class DetailedSessionRepositoryTests : IDisposable
             Description = "Test Set",
             DayOfWeek = 1,
             CreateDateTime = _testDate,
-            Regulars = null  // Explicitly set to null
+            Regulars = null!  // Explicitly set to null
         };
         await _context.RegularSets.AddAsync(regularSet);
 
@@ -972,5 +960,158 @@ public class DetailedSessionRepositoryTests : IDisposable
         result.Should().NotBeNull();
         result.RegularSet.Should().NotBeNull();
         result.RegularSet!.Regulars.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task MapBuySells_WithNullBuySellsCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 7,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session",
+            BuySells = null! // Explicitly set BuySells to null
+        };
+        _context.Sessions.Add(session);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetSessionAsync(7);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.BuySells.Should().NotBeNull();
+        result.BuySells.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task MapActivityLogs_WithNullActivityLogsCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 8,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session",
+            ActivityLogs = null! // Explicitly set ActivityLogs to null
+        };
+        _context.Sessions.Add(session);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetSessionAsync(8);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.ActivityLogs.Should().NotBeNull();
+        result.ActivityLogs.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task MapRegulars_WithNullRegularsCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var regularSet = new RegularSet
+        {
+            RegularSetId = 3,
+            Description = "Test Set",
+            DayOfWeek = 1,
+            CreateDateTime = DateTime.UtcNow,
+            Regulars = null! // Explicitly set Regulars to null
+        };
+        _context.RegularSets.Add(regularSet);
+
+        var session = new Session
+        {
+            SessionId = 9,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session",
+            RegularSetId = regularSet.RegularSetId,
+            RegularSet = regularSet
+        };
+        _context.Sessions.Add(session);
+        await _context.SaveChangesAsync();
+
+        // Clear tracking to ensure we're working with fresh entities
+        _context.ChangeTracker.Clear();
+
+        // Act
+        var result = await _repository.GetSessionAsync(9);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.RegularSet.Should().NotBeNull();
+        result.RegularSet!.Regulars.Should().NotBeNull();
+        result.RegularSet.Regulars.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MapToDetailedResponse_WithNullSession_ReturnsNull()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapToDetailedResponse",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public void MapBuySells_WithNullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapBuySells",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<BuySellResponse>());
+    }
+
+    [Fact]
+    public void MapActivityLogs_WithNullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapActivityLogs",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<ActivityLogResponse>());
+    }
+
+    [Fact]
+    public void MapRegulars_WithNullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapRegulars",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<RegularResponse>());
     }
 }
