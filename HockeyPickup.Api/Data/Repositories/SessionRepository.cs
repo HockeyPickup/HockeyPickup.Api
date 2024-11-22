@@ -30,7 +30,7 @@ public class SessionRepository : ISessionRepository
                 RegularSetId = s.RegularSetId,
                 BuyDayMinimum = s.BuyDayMinimum
             })
-            .ToListAsync();
+            .OrderByDescending(s => s.SessionDate).ToListAsync();
     }
 
     public async Task<IEnumerable<SessionDetailedResponse>> GetDetailedSessionsAsync()
@@ -46,7 +46,7 @@ public class SessionRepository : ISessionRepository
             .Include(s => s.RegularSet)
                 .ThenInclude(r => r.Regulars)
                     .ThenInclude(reg => reg.User)
-            .ToListAsync();
+            .OrderByDescending(s => s.SessionDate).ToListAsync();
 
         return sessions.Select(MapToDetailedResponse);
     }
@@ -93,7 +93,7 @@ public class SessionRepository : ISessionRepository
                 TeamAssignment = b.TeamAssignment,
                 Buyer = b.Buyer != null ? MapToUserBasicResponse(b.Buyer) : null,
                 Seller = b.Seller != null ? MapToUserBasicResponse(b.Seller) : null
-            }).ToList(),
+            }).OrderBy(b => b.BuySellId).ToList(),
             ActivityLogs = session.ActivityLogs.Select(a => new ActivityLogResponse
             {
                 ActivityLogId = a.ActivityLogId,
@@ -101,7 +101,7 @@ public class SessionRepository : ISessionRepository
                 CreateDateTime = a.CreateDateTime,
                 Activity = a.Activity,
                 User = a.User != null ? MapToUserBasicResponse(a.User) : null
-            }).ToList(),
+            }).OrderByDescending(a => a.ActivityLogId).ToList(),
             RegularSet = session.RegularSet != null ? new RegularSetResponse
             {
                 RegularSetId = session.RegularSet.RegularSetId,
