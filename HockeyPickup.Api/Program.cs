@@ -155,6 +155,18 @@ public class Program
             .AddCheck<DatabaseHealthCheck>("Database")
             .AddCheck<ServiceBusHealthCheck>("ServiceBus", failureStatus: HealthStatus.Degraded, tags: new[] { "servicebus", "messaging" });
 
+        // TODO: Remove this after v1 retirement
+        builder.Services.Configure<PasswordHasherOptions>(options =>
+        {
+            options.CompatibilityMode = PasswordHasherCompatibilityMode.IdentityV2;
+        });
+
+        // TODO: Remove this after v1 retirement
+        // Temporarily disable for transition period.
+        builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+        {
+            options.ValidationInterval = TimeSpan.MaxValue;
+        });
         builder.Services.AddIdentity<AspNetUser, AspNetRole>(options =>
         {
             options.SignIn.RequireConfirmedEmail = true;
@@ -167,13 +179,6 @@ public class Program
         .AddEntityFrameworkStores<HockeyPickupContext>()
         .AddUserStore<CustomUserStore>()
         .AddDefaultTokenProviders();
-
-        // TODO: Remove this after v1 retirement
-        // Temporarily disable for transition period.
-        builder.Services.Configure<SecurityStampValidatorOptions>(options =>
-        {
-            options.ValidationInterval = TimeSpan.MaxValue;
-        });
 
         builder.Services.AddAuthentication(options =>
         {
