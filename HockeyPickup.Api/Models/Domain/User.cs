@@ -186,6 +186,12 @@ public class User
     [JsonProperty(nameof(LockerRoom13), Required = Required.Always)]
     public bool LockerRoom13 { get; set; }
 
+    [Description("Date and time when lockout ends")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("DateCreated")]
+    [JsonProperty(nameof(DateCreated), Required = Required.Default)]
+    public DateTime? DateCreated { get; set; }
+
     internal UserBasicResponse ToUserBasicResponse()
     {
         return new UserBasicResponse
@@ -205,6 +211,7 @@ public class User
             EmergencyName = EmergencyName,
             EmergencyPhone = EmergencyPhone,
             LockerRoom13 = LockerRoom13,
+            DateCreated = DateCreated
         };
     }
 }

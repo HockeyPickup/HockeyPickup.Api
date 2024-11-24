@@ -168,7 +168,8 @@ public class SessionRepository : ISessionRepository
             MobileLast4 = user.MobileLast4,
             VenmoAccount = user.VenmoAccount,
             PayPalEmail = user.PayPalEmail,
-            NotificationPreference = (NotificationPreference) user.NotificationPreference
+            NotificationPreference = (NotificationPreference) user.NotificationPreference,
+            DateCreated = user.DateCreated
         };
     }
 }

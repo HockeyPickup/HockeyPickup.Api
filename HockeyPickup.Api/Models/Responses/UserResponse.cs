@@ -144,6 +144,14 @@ public class UserBasicResponse
     [GraphQLName("LockerRoom13")]
     [GraphQLDescription("Indicates if user has Locker Room 13 access")]
     public bool LockerRoom13 { get; set; }
+
+    [Description("Date and time when lockout ends")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("DateCreated")]
+    [JsonProperty(nameof(DateCreated), Required = Required.Default)]
+    [GraphQLName("DateCreated")]
+    [GraphQLDescription("User account creation date")]
+    public DateTime? DateCreated { get; set; }
 }
 
 public class UserDetailedResponse : UserBasicResponse

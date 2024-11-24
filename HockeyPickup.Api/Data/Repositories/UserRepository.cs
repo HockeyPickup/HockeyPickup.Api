@@ -36,7 +36,8 @@ public class UserRepository : IUserRepository
                 MobileLast4 = u.MobileLast4,
                 VenmoAccount = u.VenmoAccount,
                 PayPalEmail = u.PayPalEmail,
-                NotificationPreference = (NotificationPreference) u.NotificationPreference
+                NotificationPreference = (NotificationPreference) u.NotificationPreference,
+                DateCreated = u.DateCreated,
             })
             .ToListAsync();
     }
@@ -62,7 +63,8 @@ public class UserRepository : IUserRepository
                 MobileLast4 = u.MobileLast4,
                 VenmoAccount = u.VenmoAccount,
                 PayPalEmail = u.PayPalEmail,
-                NotificationPreference = (NotificationPreference) u.NotificationPreference
+                NotificationPreference = (NotificationPreference) u.NotificationPreference,
+                DateCreated = u.DateCreated,
             })
             .ToListAsync();
     }
@@ -87,7 +89,8 @@ public class UserRepository : IUserRepository
                 MobileLast4 = u.MobileLast4,
                 VenmoAccount = u.VenmoAccount,
                 PayPalEmail = u.PayPalEmail,
-                NotificationPreference = (NotificationPreference) u.NotificationPreference
+                NotificationPreference = (NotificationPreference) u.NotificationPreference,
+                DateCreated = u.DateCreated,
             })
             .FirstOrDefaultAsync();
     }

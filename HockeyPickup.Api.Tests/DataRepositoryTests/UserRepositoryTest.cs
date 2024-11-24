@@ -157,7 +157,8 @@ public partial class UserRepositoryTest
                 Preferred = true,
                 PreferredPlus = false,
                 Rating = 4.5m,
-                PayPalEmail = "user1@example.com"
+                PayPalEmail = "user1@example.com",
+                DateCreated = DateTime.Parse("02/25/1969")
             },
             new AspNetUser
             {
@@ -170,7 +171,8 @@ public partial class UserRepositoryTest
                 Preferred = false,
                 PreferredPlus = false,
                 Rating = 3.5m,
-                PayPalEmail = "user2@example.com"
+                PayPalEmail = "user2@example.com",
+                DateCreated = DateTime.Parse("02/25/1969")
             },
             new AspNetUser
             {
@@ -183,7 +185,8 @@ public partial class UserRepositoryTest
                 Preferred = true,
                 PreferredPlus = true,
                 Rating = 5.0m,
-                PayPalEmail = "user3@example.com"
+                PayPalEmail = "user3@example.com",
+                DateCreated = DateTime.Parse("02/25/1969")
             }
         });
         _context.SaveChanges();
@@ -236,7 +239,8 @@ public partial class UserRepositoryTest
             Preferred = true,
             PreferredPlus = false,
             Active = true,
-            NotificationPreference = NotificationPreference.All
+            NotificationPreference = NotificationPreference.All,
+            DateCreated = DateTime.Parse("02/25/1969")
         });
     }
 
@@ -271,7 +275,8 @@ public partial class UserRepositoryTest
             Preferred = true,
             PreferredPlus = true,
             Active = true,
-            NotificationPreference = NotificationPreference.All
+            NotificationPreference = NotificationPreference.All,
+            DateCreated = DateTime.Parse("02/25/1969")
         });
     }
 

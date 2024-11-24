@@ -343,7 +343,8 @@ public class UserService : IUserService
                 MobileLast4 = aspNetUser.MobileLast4,
                 PayPalEmail = aspNetUser.PayPalEmail,
                 VenmoAccount = aspNetUser.VenmoAccount,
-                Rating = aspNetUser.Rating
+                Rating = aspNetUser.Rating,
+                DateCreated = aspNetUser.DateCreated
             };
 
             // Post a ServiceBus message
