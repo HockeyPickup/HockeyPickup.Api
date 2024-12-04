@@ -1,8 +1,10 @@
 using FluentAssertions;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.GraphQL.Queries;
 using HockeyPickup.Api.Models.Responses;
 using Moq;
+using RosterPlayer = HockeyPickup.Api.Models.Responses.RosterPlayer;
 
 namespace HockeyPickup.Api.Tests.GraphQLTests;
 
@@ -55,7 +57,9 @@ public class SessionQueriesTests
             UpdateDateTime = _testDate,
             SessionDate = _testDate.AddDays(7),
             BuySells = new List<BuySellResponse>(),
-            ActivityLogs = new List<ActivityLogResponse>()
+            ActivityLogs = new List<ActivityLogResponse>(),
+            BuyingQueues = new List<BuyingQueueItem>(),
+            CurrentRosters = new List<RosterPlayer>()
         };
         _mockRepository.Setup(r => r.GetSessionAsync(1))
             .ReturnsAsync(expectedSession);

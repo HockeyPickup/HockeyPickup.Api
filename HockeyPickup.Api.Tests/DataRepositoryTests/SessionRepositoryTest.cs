@@ -8,6 +8,8 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
 using Microsoft.AspNetCore.Identity;
 using System.Reflection;
+using RosterPlayer = HockeyPickup.Api.Data.Entities.RosterPlayer;
+using System.ComponentModel.DataAnnotations;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -1113,5 +1115,339 @@ public class DetailedSessionRepositoryTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.Should().BeEquivalentTo(new List<RegularResponse>());
+    }
+
+    [Fact]
+    public void RosterPlayer_InitializesWithDefaultValues()
+    {
+        // Arrange & Act
+        var player = new RosterPlayer();
+
+        // Assert
+        player.SessionRosterId.Should().Be(0);
+        player.UserId.Should().BeNull();
+        player.FirstName.Should().BeNull();
+        player.LastName.Should().BeNull();
+        player.SessionId.Should().Be(0);
+        player.TeamAssignment.Should().Be(0);
+        player.IsPlaying.Should().BeFalse();
+        player.IsRegular.Should().BeFalse();
+        player.PlayerStatus.Should().BeNull();
+        player.Rating.Should().Be(0);
+        player.Preferred.Should().BeFalse();
+        player.PreferredPlus.Should().BeFalse();
+        player.LastBuySellId.Should().BeNull();
+        player.JoinedDateTime.Should().Be(default);
+        player.Position.Should().Be(0);
+        player.CurrentPosition.Should().BeNull();
+    }
+
+    [Fact]
+    public void RosterPlayer_SetPropertiesCorrectly()
+    {
+        // Arrange
+        var player = new RosterPlayer
+        {
+            SessionRosterId = 1,
+            UserId = "user123",
+            FirstName = "John",
+            LastName = "Doe",
+            SessionId = 5,
+            TeamAssignment = 1,
+            IsPlaying = true,
+            IsRegular = true,
+            PlayerStatus = "Active",
+            Rating = 4.5m,
+            Preferred = true,
+            PreferredPlus = true,
+            LastBuySellId = 10,
+            JoinedDateTime = new DateTime(2024, 1, 1),
+            Position = 2,
+            CurrentPosition = "Forward"
+        };
+
+        // Assert
+        player.SessionRosterId.Should().Be(1);
+        player.UserId.Should().Be("user123");
+        player.FirstName.Should().Be("John");
+        player.LastName.Should().Be("Doe");
+        player.SessionId.Should().Be(5);
+        player.TeamAssignment.Should().Be(1);
+        player.IsPlaying.Should().BeTrue();
+        player.IsRegular.Should().BeTrue();
+        player.PlayerStatus.Should().Be("Active");
+        player.Rating.Should().Be(4.5m);
+        player.Preferred.Should().BeTrue();
+        player.PreferredPlus.Should().BeTrue();
+        player.LastBuySellId.Should().Be(10);
+        player.JoinedDateTime.Should().Be(new DateTime(2024, 1, 1));
+        player.Position.Should().Be(2);
+        player.CurrentPosition.Should().Be("Forward");
+    }
+}
+
+public class BuyingQueueTests
+{
+    [Fact]
+    public void BuyingQueue_InitializesWithDefaultValues()
+    {
+        // Arrange & Act
+        var queue = new BuyingQueue();
+
+        // Assert
+        queue.BuySellId.Should().Be(0);
+        queue.SessionId.Should().Be(0);
+        queue.BuyerName.Should().BeNull();
+        queue.SellerName.Should().BeNull();
+        queue.TeamAssignment.Should().Be(0);
+        queue.TransactionStatus.Should().BeNull();
+        queue.QueueStatus.Should().BeNull();
+        queue.PaymentSent.Should().BeFalse();
+        queue.PaymentReceived.Should().BeFalse();
+        queue.BuyerNote.Should().BeNull();
+        queue.SellerNote.Should().BeNull();
+    }
+
+    [Fact]
+    public void BuyingQueue_SetPropertiesCorrectly()
+    {
+        // Arrange
+        var queue = new BuyingQueue
+        {
+            BuySellId = 1,
+            SessionId = 5,
+            BuyerName = "John Doe",
+            SellerName = "Jane Smith",
+            TeamAssignment = 2,
+            TransactionStatus = "Pending",
+            QueueStatus = "Active",
+            PaymentSent = true,
+            PaymentReceived = true,
+            BuyerNote = "Ready to buy",
+            SellerNote = "Spot available"
+        };
+
+        // Assert
+        queue.BuySellId.Should().Be(1);
+        queue.SessionId.Should().Be(5);
+        queue.BuyerName.Should().Be("John Doe");
+        queue.SellerName.Should().Be("Jane Smith");
+        queue.TeamAssignment.Should().Be(2);
+        queue.TransactionStatus.Should().Be("Pending");
+        queue.QueueStatus.Should().Be("Active");
+        queue.PaymentSent.Should().BeTrue();
+        queue.PaymentReceived.Should().BeTrue();
+        queue.BuyerNote.Should().Be("Ready to buy");
+        queue.SellerNote.Should().Be("Spot available");
+    }
+
+    [Fact]
+    public void BuyingQueue_HandlesNullableProperties()
+    {
+        // Arrange
+        var queue = new BuyingQueue
+        {
+            BuySellId = 1,
+            SessionId = 5,
+            BuyerName = null,
+            SellerName = null,
+            TeamAssignment = 2,
+            TransactionStatus = null,
+            QueueStatus = null,
+            PaymentSent = false,
+            PaymentReceived = false,
+            BuyerNote = null,
+            SellerNote = null
+        };
+
+        // Assert
+        queue.BuyerName.Should().BeNull();
+        queue.SellerName.Should().BeNull();
+        queue.TransactionStatus.Should().BeNull();
+        queue.QueueStatus.Should().BeNull();
+        queue.BuyerNote.Should().BeNull();
+        queue.SellerNote.Should().BeNull();
+    }
+
+    [Fact]
+    public void BuyingQueueItem_PropertiesInitializeWithCorrectTypes()
+    {
+        // Arrange & Act
+        var queueItem = new BuyingQueueItem
+        {
+            BuySellId = 1,
+            SessionId = 2,
+            TeamAssignment = 1,
+            TransactionStatus = "Pending",
+            QueueStatus = "Active",
+            PaymentSent = false,
+            PaymentReceived = false
+        };
+
+        // Assert
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuySellId))!.PropertyType.Should().Be(typeof(int));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SessionId))!.PropertyType.Should().Be(typeof(int));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerName))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerName))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.TeamAssignment))!.PropertyType.Should().Be(typeof(int));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.TransactionStatus))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.QueueStatus))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.PaymentSent))!.PropertyType.Should().Be(typeof(bool));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.PaymentReceived))!.PropertyType.Should().Be(typeof(bool));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerNote))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerNote))!.PropertyType.Should().Be(typeof(string));
+    }
+
+    [Fact]
+    public void BuyingQueueItem_RequiredPropertiesAreCorrectlyAttributed()
+    {
+        // Arrange
+        var type = typeof(BuyingQueueItem);
+        var requiredProperties = new[]
+        {
+            nameof(BuyingQueueItem.BuySellId),
+            nameof(BuyingQueueItem.SessionId),
+            nameof(BuyingQueueItem.TeamAssignment),
+            nameof(BuyingQueueItem.TransactionStatus),
+            nameof(BuyingQueueItem.QueueStatus),
+            nameof(BuyingQueueItem.PaymentSent),
+            nameof(BuyingQueueItem.PaymentReceived)
+        };
+
+        // Act & Assert
+        foreach (var propertyName in requiredProperties)
+        {
+            var property = type.GetProperty(propertyName);
+            property.Should().NotBeNull();
+            property!.GetCustomAttributes(typeof(RequiredAttribute), false)
+                .Should().NotBeEmpty($"{propertyName} should be marked as required");
+        }
+    }
+
+    [Fact]
+    public void BuyingQueueItem_OptionalPropertiesAllowNull()
+    {
+        // Arrange
+        var queueItem = new BuyingQueueItem
+        {
+            BuySellId = 1,
+            SessionId = 2,
+            TeamAssignment = 1,
+            TransactionStatus = "Pending",
+            QueueStatus = "Active",
+            PaymentSent = false,
+            PaymentReceived = false
+        };
+
+        // Act & Assert
+        queueItem.BuyerName.Should().BeNull();
+        queueItem.SellerName.Should().BeNull();
+        queueItem.BuyerNote.Should().BeNull();
+        queueItem.SellerNote.Should().BeNull();
+    }
+
+    [Fact]
+    public void BuyingQueueItem_ValidatesMaxLengthAttributes()
+    {
+        // Arrange
+        var type = typeof(BuyingQueueItem);
+        var maxLengthProperties = new Dictionary<string, int>
+        {
+            { nameof(BuyingQueueItem.BuyerName), 512 },
+            { nameof(BuyingQueueItem.SellerName), 512 },
+            { nameof(BuyingQueueItem.TransactionStatus), 50 },
+            { nameof(BuyingQueueItem.QueueStatus), 50 },
+            { nameof(BuyingQueueItem.BuyerNote), 4000 },
+            { nameof(BuyingQueueItem.SellerNote), 4000 }
+        };
+
+        // Act & Assert
+        foreach (var kvp in maxLengthProperties)
+        {
+            var property = type.GetProperty(kvp.Key);
+            property.Should().NotBeNull();
+            var maxLengthAttr = property!.GetCustomAttribute<MaxLengthAttribute>();
+            maxLengthAttr.Should().NotBeNull($"{kvp.Key} should have MaxLength attribute");
+            maxLengthAttr!.Length.Should().Be(kvp.Value, $"{kvp.Key} should have MaxLength of {kvp.Value}");
+        }
+    }
+
+    [Fact]
+    public void BuyingQueueItem_SetPropertiesCorrectly()
+    {
+        // Arrange
+        var queueItem = new BuyingQueueItem
+        {
+            BuySellId = 1,
+            SessionId = 2,
+            BuyerName = "John Doe",
+            SellerName = "Jane Smith",
+            TeamAssignment = 1,
+            TransactionStatus = "Pending",
+            QueueStatus = "Active",
+            PaymentSent = true,
+            PaymentReceived = false,
+            BuyerNote = "Ready to buy",
+            SellerNote = "Spot available"
+        };
+
+        // Assert
+        queueItem.BuySellId.Should().Be(1);
+        queueItem.SessionId.Should().Be(2);
+        queueItem.BuyerName.Should().Be("John Doe");
+        queueItem.SellerName.Should().Be("Jane Smith");
+        queueItem.TeamAssignment.Should().Be(1);
+        queueItem.TransactionStatus.Should().Be("Pending");
+        queueItem.QueueStatus.Should().Be("Active");
+        queueItem.PaymentSent.Should().BeTrue();
+        queueItem.PaymentReceived.Should().BeFalse();
+        queueItem.BuyerNote.Should().Be("Ready to buy");
+        queueItem.SellerNote.Should().Be("Spot available");
+    }
+
+    [Fact]
+    public void BuyingQueueItem_ValidatesTeamAssignmentValues()
+    {
+        // Arrange
+        var queueItem = new BuyingQueueItem
+        {
+            BuySellId = 1,
+            SessionId = 2,
+            TeamAssignment = 1,
+            TransactionStatus = "Pending",
+            QueueStatus = "Active",
+            PaymentSent = false,
+            PaymentReceived = false
+        };
+
+        // Act & Assert
+        queueItem.TeamAssignment.Should().BeOneOf(1, 2, 0);
+        queueItem.TeamAssignment.Should().BeGreaterOrEqualTo(0);
+    }
+
+    [Fact]
+    public void BuyingQueueItem_ValidatesDataTypeAttributes()
+    {
+        // Arrange
+        var type = typeof(BuyingQueueItem);
+        var textProperties = new[]
+        {
+            nameof(BuyingQueueItem.BuyerName),
+            nameof(BuyingQueueItem.SellerName),
+            nameof(BuyingQueueItem.TransactionStatus),
+            nameof(BuyingQueueItem.QueueStatus),
+            nameof(BuyingQueueItem.BuyerNote),
+            nameof(BuyingQueueItem.SellerNote)
+        };
+
+        // Act & Assert
+        foreach (var propertyName in textProperties)
+        {
+            var property = type.GetProperty(propertyName);
+            property.Should().NotBeNull();
+            var dataTypeAttr = property!.GetCustomAttribute<DataTypeAttribute>();
+            dataTypeAttr.Should().NotBeNull($"{propertyName} should have DataType attribute");
+            dataTypeAttr!.DataType.Should().Be(DataType.Text, $"{propertyName} should be of DataType.Text");
+        }
     }
 }
