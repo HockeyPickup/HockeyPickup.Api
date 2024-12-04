@@ -19,6 +19,8 @@ public class Session
     public virtual RegularSet? RegularSet { get; set; }
     public virtual ICollection<BuySell> BuySells { get; set; } = new List<BuySell>();
     public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
+    public virtual ICollection<RosterPlayer> CurrentRosters { get; set; } = new List<RosterPlayer>();
+    public virtual ICollection<BuyingQueue> BuyingQueues { get; set; } = new List<BuyingQueue>();
 }
 
 public class RegularSet
@@ -99,3 +101,43 @@ public class ActivityLog
     [ForeignKey("UserId")]
     public virtual AspNetUser? User { get; set; }
 }
+
+[Table("CurrentSessionRoster")]
+public class RosterPlayer
+{
+    [Key]
+    public int SessionRosterId { get; set; }
+    public string UserId { get; set; } = null!;
+    public string FirstName { get; set; } = null!;
+    public string LastName { get; set; } = null!;
+    public int SessionId { get; set; }
+    public int TeamAssignment { get; set; }
+    public bool IsPlaying { get; set; }
+    public bool IsRegular { get; set; }
+    public string PlayerStatus { get; set; } = null!;
+    public decimal Rating { get; set; }
+    public bool Preferred { get; set; }
+    public bool PreferredPlus { get; set; }
+    public int? LastBuySellId { get; set; }
+    public DateTime JoinedDateTime { get; set; }
+    public int Position { get; set; }
+    public string CurrentPosition { get; set; } = null!;
+}
+
+[Table("SessionBuyingQueue")]
+public class BuyingQueue
+{
+    [Key]
+    public int BuySellId { get; set; }
+    public int SessionId { get; set; }
+    public string? BuyerName { get; set; }
+    public string? SellerName { get; set; }
+    public int TeamAssignment { get; set; }
+    public string TransactionStatus { get; set; } = null!;
+    public string QueueStatus { get; set; } = null!;
+    public bool PaymentSent { get; set; }
+    public bool PaymentReceived { get; set; }
+    public string? BuyerNote { get; set; }
+    public string? SellerNote { get; set; }
+}
+

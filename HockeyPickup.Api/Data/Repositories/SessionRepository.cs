@@ -44,6 +44,10 @@ public class SessionRepository : ISessionRepository
             .Include(s => s.RegularSet)
                 .ThenInclude(r => r.Regulars)
                     .ThenInclude(reg => reg.User)
+            // Views are already denormalized, so include directly
+            .Include(s => s.CurrentRosters.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
+            .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
+            .AsSplitQuery() // Added this as without it, it's very slow
             .OrderByDescending(s => s.SessionDate).ToListAsync();
 
         return sessions.Select(MapToDetailedResponse);
@@ -62,6 +66,10 @@ public class SessionRepository : ISessionRepository
             .Include(s => s.RegularSet)
                 .ThenInclude(r => r.Regulars)
                     .ThenInclude(reg => reg.User)
+            // Views are already denormalized, so include directly
+            .Include(s => s.CurrentRosters.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
+            .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
+            .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
         return session != null ? MapToDetailedResponse(session) : null;
@@ -82,8 +90,62 @@ public class SessionRepository : ISessionRepository
             BuyDayMinimum = session.BuyDayMinimum,
             BuySells = MapBuySells(session.BuySells),
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
-            RegularSet = MapRegularSet(session.RegularSet)
+            RegularSet = MapRegularSet(session.RegularSet),
+            CurrentRosters = MapCurrentRoster(session.CurrentRosters),
+            BuyingQueues = MapBuyingQueue(session.BuyingQueues)
         };
+    }
+
+    private static List<Models.Responses.RosterPlayer> MapCurrentRoster(ICollection<Entities.RosterPlayer> roster)
+    {
+        if (roster == null) return new List<Models.Responses.RosterPlayer>();
+
+        return roster.Select(r => new Models.Responses.RosterPlayer
+        {
+            SessionRosterId = r.SessionRosterId,
+            UserId = r.UserId,
+            FirstName = r.FirstName,
+            LastName = r.LastName,
+            TeamAssignment = r.TeamAssignment,
+            IsPlaying = r.IsPlaying,
+            IsRegular = r.IsRegular,
+            PlayerStatus = ParsePlayerStatus(r.PlayerStatus),
+            Rating = r.Rating,
+            Preferred = r.Preferred,
+            PreferredPlus = r.PreferredPlus,
+            LastBuySellId = r.LastBuySellId,
+            Position = r.Position,
+            CurrentPosition = r.CurrentPosition,
+            JoinedDateTime = r.JoinedDateTime
+        }).ToList();
+    }
+
+    private static PlayerStatus ParsePlayerStatus(string status) => status switch
+    {
+        "Regular" => PlayerStatus.Regular,
+        "Substitute" => PlayerStatus.Substitute,
+        "Not Playing" => PlayerStatus.NotPlaying,
+        _ => throw new ArgumentException($"Invalid player status: {status}")
+    };
+
+    private static List<Models.Responses.BuyingQueueItem> MapBuyingQueue(ICollection<Entities.BuyingQueue> queue)
+    {
+        if (queue == null) return new List<Models.Responses.BuyingQueueItem>();
+
+        return queue.Select(q => new BuyingQueueItem
+        {
+            BuySellId = q.BuySellId,
+            SessionId = q.SessionId,
+            BuyerName = q.BuyerName,
+            SellerName = q.SellerName,
+            TeamAssignment = q.TeamAssignment,
+            TransactionStatus = q.TransactionStatus,
+            QueueStatus = q.QueueStatus,
+            PaymentSent = q.PaymentSent,
+            PaymentReceived = q.PaymentReceived,
+            BuyerNote = q.BuyerNote,
+            SellerNote = q.SellerNote
+        }).ToList();
     }
 
     private static List<BuySellResponse> MapBuySells(ICollection<BuySell> buySells)

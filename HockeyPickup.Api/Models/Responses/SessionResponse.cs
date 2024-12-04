@@ -90,6 +90,20 @@ public class SessionDetailedResponse : SessionBasicResponse
     [GraphQLName("RegularSet")]
     [GraphQLDescription("Regular set details for the session")]
     public RegularSetResponse? RegularSet { get; set; }
+
+    [Description("Current roster state for the session")]
+    [JsonPropertyName("CurrentRosters")]
+    [JsonProperty(nameof(CurrentRosters))]
+    [GraphQLName("CurrentRosters")]
+    [GraphQLDescription("Current roster state for the session")]
+    public ICollection<RosterPlayer>? CurrentRosters { get; set; }
+
+    [Description("Buying queue for the session")]
+    [JsonPropertyName("BuyingQueues")]
+    [JsonProperty(nameof(BuyingQueues))]
+    [GraphQLName("BuyingQueues")]
+    [GraphQLDescription("Buying queue for the session")]
+    public ICollection<BuyingQueueItem>? BuyingQueues { get; set; }
 }
 
 [GraphQLName("BuySell")]
@@ -315,4 +329,249 @@ public class RegularResponse
     [GraphQLName("User")]
     [GraphQLDescription("User details")]
     public UserBasicResponse? User { get; set; }
+}
+
+public enum PlayerStatus
+{
+    [Description("Regular player in the roster")]
+    Regular = 0,
+
+    [Description("Substitute player in the roster")]
+    Substitute = 1,
+
+    [Description("Player no longer in the roster")]
+    NotPlaying = 2
+}
+
+[GraphQLName("BuyingQueueItem")]
+public class BuyingQueueItem
+{
+    [Required]
+    [Description("Unique identifier for the buy/sell transaction")]
+    [JsonPropertyName("BuySellId")]
+    [JsonProperty(nameof(BuySellId), Required = Required.Always)]
+    [GraphQLName("BuySellId")]
+    [GraphQLDescription("Unique identifier for the buy/sell transaction")]
+    public required int BuySellId { get; set; }
+
+    [Required]
+    [Description("Session identifier")]
+    [JsonPropertyName("SessionId")]
+    [JsonProperty(nameof(SessionId), Required = Required.Always)]
+    [GraphQLName("SessionId")]
+    [GraphQLDescription("Session identifier")]
+    public required int SessionId { get; set; }
+
+    [Description("Name of the buyer")]
+    [MaxLength(512)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("BuyerName")]
+    [JsonProperty(nameof(BuyerName), Required = Required.Default)]
+    [GraphQLName("BuyerName")]
+    [GraphQLDescription("Name of the buyer")]
+    public string? BuyerName { get; set; }
+
+    [Description("Name of the seller")]
+    [MaxLength(512)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("SellerName")]
+    [JsonProperty(nameof(SellerName), Required = Required.Default)]
+    [GraphQLName("SellerName")]
+    [GraphQLDescription("Name of the seller")]
+    public string? SellerName { get; set; }
+
+    [Required]
+    [Description("Team assignment (1 for Light, 2 for Dark)")]
+    [JsonPropertyName("TeamAssignment")]
+    [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
+    [GraphQLName("TeamAssignment")]
+    [GraphQLDescription("Team assignment (1 for Light, 2 for Dark)")]
+    public required int TeamAssignment { get; set; }
+
+    [Required]
+    [Description("Current status of the transaction")]
+    [MaxLength(50)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("TransactionStatus")]
+    [JsonProperty(nameof(TransactionStatus), Required = Required.Always)]
+    [GraphQLName("TransactionStatus")]
+    [GraphQLDescription("Current status of the transaction")]
+    public required string TransactionStatus { get; set; }
+
+    [Required]
+    [Description("Position in the buying queue")]
+    [MaxLength(50)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("QueueStatus")]
+    [JsonProperty(nameof(QueueStatus), Required = Required.Always)]
+    [GraphQLName("QueueStatus")]
+    [GraphQLDescription("Position in the buying queue")]
+    public required string QueueStatus { get; set; }
+
+    [Required]
+    [Description("Indicates if payment has been sent")]
+    [JsonPropertyName("PaymentSent")]
+    [JsonProperty(nameof(PaymentSent), Required = Required.Always)]
+    [GraphQLName("PaymentSent")]
+    [GraphQLDescription("Indicates if payment has been sent")]
+    public required bool PaymentSent { get; set; }
+
+    [Required]
+    [Description("Indicates if payment has been received")]
+    [JsonPropertyName("PaymentReceived")]
+    [JsonProperty(nameof(PaymentReceived), Required = Required.Always)]
+    [GraphQLName("PaymentReceived")]
+    [GraphQLDescription("Indicates if payment has been received")]
+    public required bool PaymentReceived { get; set; }
+
+    [Description("Note from the buyer")]
+    [MaxLength(4000)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("BuyerNote")]
+    [JsonProperty(nameof(BuyerNote), Required = Required.Default)]
+    [GraphQLName("BuyerNote")]
+    [GraphQLDescription("Note from the buyer")]
+    public string? BuyerNote { get; set; }
+
+    [Description("Note from the seller")]
+    [MaxLength(4000)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("SellerNote")]
+    [JsonProperty(nameof(SellerNote), Required = Required.Default)]
+    [GraphQLName("SellerNote")]
+    [GraphQLDescription("Note from the seller")]
+    public string? SellerNote { get; set; }
+}
+
+[GraphQLName("RosterPlayer")]
+public class RosterPlayer
+{
+    [Required]
+    [Description("Unique identifier for the roster entry")]
+    [JsonPropertyName("SessionRosterId")]
+    [JsonProperty(nameof(SessionRosterId), Required = Required.Always)]
+    [GraphQLName("SessionRosterId")]
+    [GraphQLDescription("Unique identifier for the roster entry")]
+    public required int SessionRosterId { get; set; }
+
+    [Required]
+    [Description("User identifier")]
+    [MaxLength(128)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("UserId")]
+    [JsonProperty(nameof(UserId), Required = Required.Always)]
+    [GraphQLName("UserId")]
+    [GraphQLDescription("User identifier")]
+    public required string UserId { get; set; }
+
+    [Required]
+    [Description("First name of the player")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("FirstName")]
+    [JsonProperty(nameof(FirstName), Required = Required.Always)]
+    [GraphQLName("FirstName")]
+    [GraphQLDescription("First name of the player")]
+    public required string FirstName { get; set; }
+
+    [Required]
+    [Description("Last name of the player")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("LastName")]
+    [JsonProperty(nameof(LastName), Required = Required.Always)]
+    [GraphQLName("LastName")]
+    [GraphQLDescription("Last name of the player")]
+    public required string LastName { get; set; }
+
+    [Required]
+    [Description("Team assignment (1 for Light, 2 for Dark)")]
+    [JsonPropertyName("TeamAssignment")]
+    [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
+    [GraphQLName("TeamAssignment")]
+    [GraphQLDescription("Team assignment (1 for Light, 2 for Dark)")]
+    public required int TeamAssignment { get; set; }
+
+    [Required]
+    [Description("Position for the player")]
+    [Range(0, int.MaxValue)]
+    [JsonPropertyName("Position")]
+    [JsonProperty(nameof(Position), Required = Required.Always)]
+    [GraphQLName("Position")]
+    [GraphQLDescription("Position for the player")]
+    public required int Position{ get; set; }
+
+    [Required]
+    [Description("Position name for the player")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("CurrentPosition")]
+    [JsonProperty(nameof(CurrentPosition), Required = Required.Always)]
+    [GraphQLName("CurrentPosition")]
+    [GraphQLDescription("Position name for the player")]
+    public required string CurrentPosition { get; set; }
+
+    [Required]
+    [Description("Indicates if the player is currently playing")]
+    [JsonPropertyName("IsPlaying")]
+    [JsonProperty(nameof(IsPlaying), Required = Required.Always)]
+    [GraphQLName("IsPlaying")]
+    [GraphQLDescription("Indicates if the player is currently playing")]
+    public required bool IsPlaying { get; set; }
+
+    [Required]
+    [Description("Indicates if the player is a regular")]
+    [JsonPropertyName("IsRegular")]
+    [JsonProperty(nameof(IsRegular), Required = Required.Always)]
+    [GraphQLName("IsRegular")]
+    [GraphQLDescription("Indicates if the player is a regular")]
+    public required bool IsRegular { get; set; }
+
+    [Required]
+    [Description("Player's status in the roster")]
+    [JsonPropertyName("PlayerStatus")]
+    [JsonProperty(nameof(PlayerStatus), Required = Required.Always)]
+    [GraphQLName("PlayerStatus")]
+    [GraphQLDescription("Player's status in the roster")]
+    public required PlayerStatus PlayerStatus { get; set; }
+
+    [Required]
+    [Description("Player's rating")]
+    [JsonPropertyName("Rating")]
+    [JsonProperty(nameof(Rating), Required = Required.Always)]
+    [GraphQLName("Rating")]
+    [GraphQLDescription("Player's rating")]
+    public required decimal Rating { get; set; }
+
+    [Required]
+    [Description("Indicates if the player has preferred status")]
+    [JsonPropertyName("Preferred")]
+    [JsonProperty(nameof(Preferred), Required = Required.Always)]
+    [GraphQLName("Preferred")]
+    [GraphQLDescription("Indicates if the player has preferred status")]
+    public required bool Preferred { get; set; }
+
+    [Required]
+    [Description("Indicates if the player has preferred plus status")]
+    [JsonPropertyName("PreferredPlus")]
+    [JsonProperty(nameof(PreferredPlus), Required = Required.Always)]
+    [GraphQLName("PreferredPlus")]
+    [GraphQLDescription("Indicates if the player has preferred plus status")]
+    public required bool PreferredPlus { get; set; }
+
+    [Description("Last buy/sell transaction ID affecting this roster position")]
+    [JsonPropertyName("LastBuySellId")]
+    [JsonProperty(nameof(LastBuySellId), Required = Required.Default)]
+    [GraphQLName("LastBuySellId")]
+    [GraphQLDescription("Last buy/sell transaction ID affecting this roster position")]
+    public int? LastBuySellId { get; set; }
+
+    [Required]
+    [Description("Date and time when the player joined the roster")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("JoinedDateTime")]
+    [JsonProperty(nameof(JoinedDateTime), Required = Required.Always)]
+    [GraphQLName("JoinedDateTime")]
+    [GraphQLDescription("Date and time when the player joined the roster")]
+    public required DateTime JoinedDateTime { get; set; }
 }

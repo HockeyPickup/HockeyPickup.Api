@@ -18,6 +18,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     public DbSet<Regular>? Regulars { get; set; }
     public DbSet<BuySell>? BuySells { get; set; }
     public DbSet<ActivityLog>? ActivityLogs { get; set; }
+    public DbSet<RosterPlayer>? CurrentSessionRosters { get; set; }
+    public DbSet<BuyingQueue>? SessionBuyingQueues { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -72,6 +74,16 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
             entity.Property(e => e.ConcurrencyStamp).HasColumnType("nvarchar(max)");
             entity.Property(e => e.DateCreated).HasColumnType("datetime");
+
+            entity.HasMany(u => u.BuyerTransactions)
+                    .WithOne(b => b.Buyer)
+                    .HasForeignKey(b => b.BuyerUserId)
+                    .IsRequired(false);
+
+            entity.HasMany(u => u.SellerTransactions)
+                .WithOne(b => b.Seller)
+                .HasForeignKey(b => b.SellerUserId)
+                .IsRequired(false);
         });
 
         modelBuilder.Entity<AspNetRole>(entity =>
@@ -195,6 +207,16 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .WithMany(r => r.Sessions)
                 .HasForeignKey(e => e.RegularSetId)
                 .HasConstraintName("FK_dbo.Sessions_dbo.RegularSets_RegularSetId");
+
+            entity.HasMany(s => s.CurrentRosters)
+                    .WithOne()
+                    .HasForeignKey(r => r.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(s => s.BuyingQueues)
+                .WithOne()
+                .HasForeignKey(q => q.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configure BuySells
@@ -212,23 +234,29 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.BuyerNoteFlagged).HasDefaultValue(false);
 
             entity.HasOne(e => e.Session)
-                .WithMany(s => s.BuySells)
-                .HasForeignKey(e => e.SessionId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId");
+                    .WithMany(s => s.BuySells)
+                    .HasForeignKey(e => e.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId")
+                    .IsRequired(); // Make this relationship required
 
+            // Configure one-way relationships for Buyer/Seller
             entity.HasOne(e => e.Buyer)
                 .WithMany(u => u.BuyerTransactions)
                 .HasForeignKey(e => e.BuyerUserId)
-                .HasConstraintName("FK_dbo.BuySells_dbo.AspNetUsers_BuyerUserId");
+                .HasConstraintName("FK_dbo.BuySells_dbo.AspNetUsers_BuyerUserId")
+                .IsRequired(false)  // Explicitly mark as optional
+                .OnDelete(DeleteBehavior.Restrict);  // Prevent cascading deletes
 
             entity.HasOne(e => e.Seller)
                 .WithMany(u => u.SellerTransactions)
                 .HasForeignKey(e => e.SellerUserId)
-                .HasConstraintName("FK_dbo.BuySells_dbo.AspNetUsers_SellerUserId");
+                .HasConstraintName("FK_dbo.BuySells_dbo.AspNetUsers_SellerUserId")
+                .IsRequired(false)  // Explicitly mark as optional
+                .OnDelete(DeleteBehavior.Restrict);  // Prevent cascading deletes
         });
 
-        // Configure RegularSets
+            // Configure RegularSets
         modelBuilder.Entity<RegularSet>(entity =>
         {
             entity.ToTable("RegularSets");
@@ -277,6 +305,32 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .WithMany(u => u.ActivityLogs)
                 .HasForeignKey(e => e.UserId)
                 .HasConstraintName("FK_dbo.ActivityLogs_dbo.AspNetUsers_UserId");
+        });
+
+        // Configure Views
+        modelBuilder.Entity<RosterPlayer>(entity =>
+        {
+            entity.ToView("CurrentSessionRoster");
+            entity.HasKey(r => r.SessionRosterId);
+
+            entity.Property(r => r.PlayerStatus).HasMaxLength(50);
+            entity.Property(r => r.Rating).HasColumnType("decimal(18,2)");
+            entity.Property(r => r.UserId).HasMaxLength(128);
+            entity.Property(r => r.FirstName).HasMaxLength(256);
+            entity.Property(r => r.LastName).HasMaxLength(256);
+        });
+
+        modelBuilder.Entity<BuyingQueue>(entity =>
+        {
+            entity.ToView("SessionBuyingQueue");
+            entity.HasKey(q => q.BuySellId);
+
+            entity.Property(q => q.TransactionStatus).HasMaxLength(50);
+            entity.Property(q => q.QueueStatus).HasMaxLength(50);
+            entity.Property(q => q.BuyerName).HasMaxLength(512);
+            entity.Property(q => q.SellerName).HasMaxLength(512);
+            entity.Property(q => q.BuyerNote).HasColumnType("nvarchar(max)");
+            entity.Property(q => q.SellerNote).HasColumnType("nvarchar(max)");
         });
 
         modelBuilder.HasAnnotation("Relational:IsStoredInDatabase", true);
