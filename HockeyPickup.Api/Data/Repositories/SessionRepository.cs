@@ -128,9 +128,9 @@ public class SessionRepository : ISessionRepository
         _ => throw new ArgumentException($"Invalid player status: {status}")
     };
 
-    private static List<Models.Responses.BuyingQueueItem> MapBuyingQueue(ICollection<Entities.BuyingQueue> queue)
+    private static List<BuyingQueueItem> MapBuyingQueue(ICollection<Entities.BuyingQueue> queue)
     {
-        if (queue == null) return new List<Models.Responses.BuyingQueueItem>();
+        if (queue == null) return new List<BuyingQueueItem>();
 
         return queue.Select(q => new BuyingQueueItem
         {

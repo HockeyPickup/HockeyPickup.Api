@@ -8,8 +8,11 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
 using Microsoft.AspNetCore.Identity;
 using System.Reflection;
-using RosterPlayer = HockeyPickup.Api.Data.Entities.RosterPlayer;
 using System.ComponentModel.DataAnnotations;
+using HotChocolate;
+using Newtonsoft.Json;
+using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -1121,7 +1124,7 @@ public class DetailedSessionRepositoryTests : IDisposable
     public void RosterPlayer_InitializesWithDefaultValues()
     {
         // Arrange & Act
-        var player = new RosterPlayer();
+        var player = new Data.Entities.RosterPlayer();
 
         // Assert
         player.SessionRosterId.Should().Be(0);
@@ -1146,7 +1149,7 @@ public class DetailedSessionRepositoryTests : IDisposable
     public void RosterPlayer_SetPropertiesCorrectly()
     {
         // Arrange
-        var player = new RosterPlayer
+        var player = new Data.Entities.RosterPlayer
         {
             SessionRosterId = 1,
             UserId = "user123",
@@ -1449,5 +1452,335 @@ public class BuyingQueueTests
             dataTypeAttr.Should().NotBeNull($"{propertyName} should have DataType attribute");
             dataTypeAttr!.DataType.Should().Be(DataType.Text, $"{propertyName} should be of DataType.Text");
         }
+    }
+
+
+}
+
+public class RosterPlayerTests
+{
+    private readonly DateTime _testDate = DateTime.UtcNow;
+
+    [Fact]
+    public void RosterPlayer_InitializesWithDefaultValues()
+    {
+        // Arrange & Act
+        var player = new Data.Entities.RosterPlayer();
+
+        // Assert
+        player.SessionRosterId.Should().Be(0);
+        player.UserId.Should().BeNull();
+        player.FirstName.Should().BeNull();
+        player.LastName.Should().BeNull();
+        player.SessionId.Should().Be(0);
+        player.TeamAssignment.Should().Be(0);
+        player.IsPlaying.Should().BeFalse();
+        player.IsRegular.Should().BeFalse();
+        player.PlayerStatus.Should().BeNull();
+        player.Rating.Should().Be(0);
+        player.Preferred.Should().BeFalse();
+        player.PreferredPlus.Should().BeFalse();
+        player.LastBuySellId.Should().BeNull();
+        player.JoinedDateTime.Should().Be(default);
+        player.Position.Should().Be(0);
+        player.CurrentPosition.Should().BeNull();
+    }
+
+    [Fact]
+    public void RosterPlayer_SetPropertiesCorrectly()
+    {
+        // Arrange
+        var player = new Data.Entities.RosterPlayer
+        {
+            SessionRosterId = 1,
+            UserId = "user123",
+            FirstName = "John",
+            LastName = "Doe",
+            SessionId = 5,
+            TeamAssignment = 1,
+            IsPlaying = true,
+            IsRegular = true,
+            PlayerStatus = "Regular",
+            Rating = 4.5m,
+            Preferred = true,
+            PreferredPlus = false,
+            LastBuySellId = 10,
+            JoinedDateTime = _testDate,
+            Position = 2,
+            CurrentPosition = "Forward"
+        };
+
+        // Assert
+        player.SessionRosterId.Should().Be(1);
+        player.UserId.Should().Be("user123");
+        player.FirstName.Should().Be("John");
+        player.LastName.Should().Be("Doe");
+        player.SessionId.Should().Be(5);
+        player.TeamAssignment.Should().Be(1);
+        player.IsPlaying.Should().BeTrue();
+        player.IsRegular.Should().BeTrue();
+        player.PlayerStatus.Should().Be("Regular");
+        player.Rating.Should().Be(4.5m);
+        player.Preferred.Should().BeTrue();
+        player.PreferredPlus.Should().BeFalse();
+        player.LastBuySellId.Should().Be(10);
+        player.JoinedDateTime.Should().Be(_testDate);
+        player.Position.Should().Be(2);
+        player.CurrentPosition.Should().Be("Forward");
+    }
+
+    [Fact]
+    public void RosterPlayer_AllowsNullValues()
+    {
+        // Arrange
+        var player = new Data.Entities.RosterPlayer
+        {
+            SessionRosterId = 1,
+            SessionId = 5,
+            TeamAssignment = 1,
+            IsPlaying = true,
+            IsRegular = false,
+            Rating = 0,
+            Preferred = false,
+            PreferredPlus = false,
+            Position = 1,
+            JoinedDateTime = _testDate
+        };
+
+        // Assert
+        player.UserId.Should().BeNull();
+        player.FirstName.Should().BeNull();
+        player.LastName.Should().BeNull();
+        player.PlayerStatus.Should().BeNull();
+        player.LastBuySellId.Should().BeNull();
+        player.CurrentPosition.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("Regular")]
+    [InlineData("Substitute")]
+    [InlineData("NotPlaying")]
+    public void RosterPlayer_AcceptsValidPlayerStatus(string status)
+    {
+        // Arrange
+        var player = new Data.Entities.RosterPlayer
+        {
+            SessionRosterId = 1,
+            SessionId = 1,
+            TeamAssignment = 1,
+            Position = 1,
+            JoinedDateTime = _testDate,
+            PlayerStatus = status
+        };
+
+        // Assert
+        player.PlayerStatus.Should().Be(status);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void RosterPlayer_AcceptsValidTeamAssignments(int teamAssignment)
+    {
+        // Arrange
+        var player = new Data.Entities.RosterPlayer
+        {
+            SessionRosterId = 1,
+            SessionId = 1,
+            TeamAssignment = teamAssignment,
+            Position = 1,
+            JoinedDateTime = _testDate
+        };
+
+        // Assert
+        player.TeamAssignment.Should().Be(teamAssignment);
+    }
+
+    [Fact]
+    public void RosterPlayer_RatingHandlesDecimalValues()
+    {
+        // Arrange & Act
+        var player = new Data.Entities.RosterPlayer
+        {
+            SessionRosterId = 1,
+            SessionId = 1,
+            TeamAssignment = 1,
+            Position = 1,
+            JoinedDateTime = _testDate,
+            Rating = 4.5m
+        };
+
+        // Assert
+        player.Rating.Should().Be(4.5m);
+        player.Rating.GetType().Should().Be(typeof(decimal));
+    }
+}
+
+public class RosterPlayerResponseTests
+{
+    private readonly DateTime _testDate = DateTime.UtcNow;
+
+    [Fact]
+    public void RosterPlayer_SetPropertiesCorrectly()
+    {
+        // Arrange
+        var player = new Models.Responses.RosterPlayer
+        {
+            SessionRosterId = 1,
+            UserId = "user123",
+            FirstName = "John",
+            LastName = "Doe",
+            TeamAssignment = 1,
+            Position = 2,
+            CurrentPosition = "Forward",
+            IsPlaying = true,
+            IsRegular = true,
+            PlayerStatus = PlayerStatus.Regular,
+            Rating = 4.5m,
+            Preferred = true,
+            PreferredPlus = false,
+            LastBuySellId = 5,
+            JoinedDateTime = _testDate
+        };
+
+        // Assert
+        player.SessionRosterId.Should().Be(1);
+        player.UserId.Should().Be("user123");
+        player.FirstName.Should().Be("John");
+        player.LastName.Should().Be("Doe");
+        player.TeamAssignment.Should().Be(1);
+        player.Position.Should().Be(2);
+        player.CurrentPosition.Should().Be("Forward");
+        player.IsPlaying.Should().BeTrue();
+        player.IsRegular.Should().BeTrue();
+        player.PlayerStatus.Should().Be(PlayerStatus.Regular);
+        player.Rating.Should().Be(4.5m);
+        player.Preferred.Should().BeTrue();
+        player.PreferredPlus.Should().BeFalse();
+        player.LastBuySellId.Should().Be(5);
+        player.JoinedDateTime.Should().Be(_testDate);
+    }
+
+    [Fact]
+    public void RosterPlayer_PropertiesHaveCorrectTypes()
+    {
+        // Arrange
+        var type = typeof(Models.Responses.RosterPlayer);
+
+        // Act & Assert
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.SessionRosterId))!.PropertyType.Should().Be(typeof(int));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.UserId))!.PropertyType.Should().Be(typeof(string));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.FirstName))!.PropertyType.Should().Be(typeof(string));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.LastName))!.PropertyType.Should().Be(typeof(string));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.TeamAssignment))!.PropertyType.Should().Be(typeof(int));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.Position))!.PropertyType.Should().Be(typeof(int));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.CurrentPosition))!.PropertyType.Should().Be(typeof(string));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.IsPlaying))!.PropertyType.Should().Be(typeof(bool));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.IsRegular))!.PropertyType.Should().Be(typeof(bool));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.PlayerStatus))!.PropertyType.Should().Be(typeof(PlayerStatus));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.Rating))!.PropertyType.Should().Be(typeof(decimal));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.Preferred))!.PropertyType.Should().Be(typeof(bool));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.PreferredPlus))!.PropertyType.Should().Be(typeof(bool));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.LastBuySellId))!.PropertyType.Should().Be(typeof(int?));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.JoinedDateTime))!.PropertyType.Should().Be(typeof(DateTime));
+    }
+
+    [Fact]
+    public void RosterPlayer_HasRequiredJsonAttributes()
+    {
+        // Arrange
+        var type = typeof(Models.Responses.RosterPlayer);
+
+        // Act & Assert
+        type.Should().BeDecoratedWith<GraphQLNameAttribute>();
+
+        var sessionRosterIdProp = type.GetProperty(nameof(Models.Responses.RosterPlayer.SessionRosterId));
+        sessionRosterIdProp.Should().BeDecoratedWith<JsonPropertyNameAttribute>();
+        sessionRosterIdProp.Should().BeDecoratedWith<JsonPropertyAttribute>();
+        sessionRosterIdProp.Should().BeDecoratedWith<GraphQLNameAttribute>();
+        sessionRosterIdProp.Should().BeDecoratedWith<GraphQLDescriptionAttribute>();
+        sessionRosterIdProp.Should().BeDecoratedWith<DescriptionAttribute>();
+    }
+}
+
+public class SessionRepositoryMappingTests
+{
+    private Mock<ILogger<SessionRepository>> _mockLogger;
+    private HockeyPickupContext _context;
+    private SessionRepository _repository;
+
+    public SessionRepositoryMappingTests()
+    {
+        _mockLogger = new Mock<ILogger<SessionRepository>>();
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        _context = new DetailedSessionTestContext(options);
+        _repository = new SessionRepository(_context, _mockLogger.Object);
+    }
+
+    [Theory]
+    [InlineData("Regular", PlayerStatus.Regular)]
+    [InlineData("Substitute", PlayerStatus.Substitute)]
+    [InlineData("Not Playing", PlayerStatus.NotPlaying)]
+    public void ParsePlayerStatus_ValidStatus_ReturnsCorrectEnum(string status, PlayerStatus expected)
+    {
+        // Arrange
+        var parseMethod = typeof(SessionRepository)
+            .GetMethod("ParsePlayerStatus", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = parseMethod!.Invoke(null, new object[] { status });
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Invalid")]
+    [InlineData(null)]
+    [InlineData("")]
+    public void ParsePlayerStatus_InvalidStatus_ThrowsArgumentException(string invalidStatus)
+    {
+        // Arrange
+        var parseMethod = typeof(SessionRepository)
+            .GetMethod("ParsePlayerStatus", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act & Assert
+        var action = () => parseMethod!.Invoke(null, new object[] { invalidStatus });
+        action.Should().Throw<TargetInvocationException>()
+            .WithInnerException<ArgumentException>()
+            .WithMessage($"Invalid player status: {invalidStatus}");
+    }
+
+    [Fact]
+    public void MapCurrentRoster_NullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapCurrentRoster", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<Models.Responses.RosterPlayer>());
+    }
+
+    [Fact]
+    public void MapBuyingQueue_NullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapBuyingQueue", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<BuyingQueueItem>());
     }
 }
