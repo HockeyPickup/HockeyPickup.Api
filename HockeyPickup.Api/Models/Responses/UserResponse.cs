@@ -152,6 +152,15 @@ public class UserBasicResponse
     [GraphQLName("DateCreated")]
     [GraphQLDescription("User account creation date")]
     public DateTime? DateCreated { get; set; }
+
+    [Description("Roles of user")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("Roles")]
+    [JsonProperty(nameof(Roles), Required = Required.Default)]
+    [GraphQLName("Roles")]
+    [GraphQLDescription("Roles of user")]
+    public string[] Roles { get; set; } = [];
 }
 
 public class UserDetailedResponse : UserBasicResponse

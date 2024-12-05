@@ -2,6 +2,7 @@ using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace HockeyPickup.Api.Data.Repositories;
 
@@ -231,7 +232,8 @@ public class SessionRepository : ISessionRepository
             VenmoAccount = user.VenmoAccount,
             PayPalEmail = user.PayPalEmail,
             NotificationPreference = (NotificationPreference) user.NotificationPreference,
-            DateCreated = user.DateCreated
+            DateCreated = user.DateCreated,
+            Roles = user.Roles.Where(role => role.Name != null).Select(role => role.Name!).ToArray()
         };
     }
 }
