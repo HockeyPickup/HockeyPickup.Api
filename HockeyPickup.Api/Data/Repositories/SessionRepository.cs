@@ -165,8 +165,8 @@ public class SessionRepository : ISessionRepository
             PaymentReceived = b.PaymentReceived,
             CreateDateTime = b.CreateDateTime,
             TeamAssignment = b.TeamAssignment,
-            Buyer = MapToUserBasicResponse(b.Buyer),
-            Seller = MapToUserBasicResponse(b.Seller)
+            Buyer = MapToUserDetailedResponse(b.Buyer),
+            Seller = MapToUserDetailedResponse(b.Seller)
         }).OrderBy(b => b.BuySellId).ToList();
     }
 
@@ -180,7 +180,7 @@ public class SessionRepository : ISessionRepository
             UserId = a.UserId,
             CreateDateTime = a.CreateDateTime,
             Activity = a.Activity,
-            User = MapToUserBasicResponse(a.User)
+            User = MapToUserDetailedResponse(a.User)
         }).OrderByDescending(a => a.CreateDateTime).ToList();
     }
 
@@ -208,15 +208,15 @@ public class SessionRepository : ISessionRepository
             UserId = r.UserId,
             TeamAssignment = r.TeamAssignment,
             PositionPreference = r.PositionPreference,
-            User = MapToUserBasicResponse(r.User)
+            User = MapToUserDetailedResponse(r.User)
         }).ToList();
     }
 
-    private static UserBasicResponse? MapToUserBasicResponse(AspNetUser? user)
+    private static UserDetailedResponse? MapToUserDetailedResponse(AspNetUser? user)
     {
         if (user == null) return null;
 
-        return new UserBasicResponse
+        return new UserDetailedResponse
         {
             Id = user.Id,
             UserName = user.UserName,
@@ -226,6 +226,7 @@ public class SessionRepository : ISessionRepository
             Preferred = user.Preferred,
             PreferredPlus = user.PreferredPlus,
             Active = user.Active,
+            Rating = user.Rating,
             LockerRoom13 = user.LockerRoom13,
             EmergencyName = user.EmergencyName,
             EmergencyPhone = user.EmergencyPhone,

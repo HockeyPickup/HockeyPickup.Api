@@ -187,14 +187,14 @@ public class BuySellResponse
     [JsonProperty(nameof(Buyer))]
     [GraphQLName("Buyer")]
     [GraphQLDescription("Buyer details")]
-    public UserBasicResponse? Buyer { get; set; }
+    public UserDetailedResponse? Buyer { get; set; }
 
     [Description("Seller details")]
     [JsonPropertyName("Seller")]
     [JsonProperty(nameof(Seller))]
     [GraphQLName("Seller")]
     [GraphQLDescription("Seller details")]
-    public UserBasicResponse? Seller { get; set; }
+    public UserDetailedResponse? Seller { get; set; }
 }
 
 [GraphQLName("ActivityLog")]
@@ -238,7 +238,7 @@ public class ActivityLogResponse
     [JsonProperty(nameof(User))]
     [GraphQLName("User")]
     [GraphQLDescription("User details")]
-    public UserBasicResponse? User { get; set; }
+    public UserDetailedResponse? User { get; set; }
 }
 
 [GraphQLName("RegularSet")]
@@ -328,7 +328,7 @@ public class RegularResponse
     [JsonProperty(nameof(User))]
     [GraphQLName("User")]
     [GraphQLDescription("User details")]
-    public UserBasicResponse? User { get; set; }
+    public UserDetailedResponse? User { get; set; }
 }
 
 public enum PlayerStatus

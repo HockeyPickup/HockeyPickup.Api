@@ -23,9 +23,9 @@ public record LoginResponse
     public required DateTime Expiration { get; init; }
 
     [Required]
-    [Description("UserBasicResponse Record")]
-    [DataType("UserBasicResponse")]
-    [JsonPropertyName("UserBasicResponse")]
-    [JsonProperty(nameof(UserBasicResponse), Required = Required.Always)]
-    public required UserBasicResponse UserBasicResponse { get; init; }
+    [Description("UserDetailedResponse Record")]
+    [DataType("UserDetailedResponse")]
+    [JsonPropertyName("UserDetailedResponse")]
+    [JsonProperty(nameof(UserDetailedResponse), Required = Required.Always)]
+    public required UserDetailedResponse UserDetailedResponse { get; init; }
 }

@@ -60,7 +60,7 @@ public class AuthController : ControllerBase
         {
             Token = token,
             Expiration = expiration,
-            UserBasicResponse = user.ToUserBasicResponse()
+            UserDetailedResponse = user.ToUserDetailedResponse()
         };
 
         return Ok(loginResponse.ToApiDataResponse(result));

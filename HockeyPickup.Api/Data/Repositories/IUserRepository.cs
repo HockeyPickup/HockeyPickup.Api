@@ -4,7 +4,6 @@ namespace HockeyPickup.Api.Data.Repositories;
 
 public interface IUserRepository
 {
-    Task<IEnumerable<UserBasicResponse>> GetBasicUsersAsync();
     Task<IEnumerable<UserDetailedResponse>> GetDetailedUsersAsync();
-    Task<UserBasicResponse> GetUserAsync(string userId);
+    Task<UserDetailedResponse> GetUserAsync(string userId);
 }

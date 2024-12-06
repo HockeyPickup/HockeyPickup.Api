@@ -672,13 +672,13 @@ public class DetailedSessionRepositoryTests : IDisposable
 
         // Verify explicit MapToUserBasicResponse method
         var mapMethod = typeof(SessionRepository)
-            .GetMethod("MapToUserBasicResponse",
+            .GetMethod("MapToUserDetailedResponse",
                 BindingFlags.NonPublic | BindingFlags.Static);
 
         var nullResult = mapMethod!.Invoke(null, new object[] { null! });
         nullResult.Should().BeNull();
 
-        var userResult = mapMethod!.Invoke(null, new object[] { user1 }) as UserBasicResponse;
+        var userResult = mapMethod!.Invoke(null, new object[] { user1 }) as UserDetailedResponse;
         userResult.Should().NotBeNull();
         userResult!.Id.Should().Be(user1.Id);
     }
@@ -1256,8 +1256,8 @@ public class BuyingQueueTests
             BuyerName = null,
             SellerName = null,
             TeamAssignment = 2,
-            TransactionStatus = null,
-            QueueStatus = null,
+            TransactionStatus = null!,
+            QueueStatus = null!,
             PaymentSent = false,
             PaymentReceived = false,
             BuyerNote = null,
@@ -1707,9 +1707,8 @@ public class RosterPlayerResponseTests
 
 public class SessionRepositoryMappingTests
 {
-    private Mock<ILogger<SessionRepository>> _mockLogger;
-    private HockeyPickupContext _context;
-    private SessionRepository _repository;
+    private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+    private readonly HockeyPickupContext _context;
 
     public SessionRepositoryMappingTests()
     {
@@ -1718,7 +1717,6 @@ public class SessionRepositoryMappingTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _context = new DetailedSessionTestContext(options);
-        _repository = new SessionRepository(_context, _mockLogger.Object);
     }
 
     [Theory]
@@ -1742,7 +1740,7 @@ public class SessionRepositoryMappingTests
     [InlineData("Invalid")]
     [InlineData(null)]
     [InlineData("")]
-    public void ParsePlayerStatus_InvalidStatus_ThrowsArgumentException(string invalidStatus)
+    public void ParsePlayerStatus_InvalidStatus_ThrowsArgumentException(string? invalidStatus)
     {
         // Arrange
         var parseMethod = typeof(SessionRepository)

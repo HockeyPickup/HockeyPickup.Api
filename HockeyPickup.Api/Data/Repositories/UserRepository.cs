@@ -18,33 +18,6 @@ public class UserRepository : IUserRepository
         _logger = logger;
     }
 
-    public async Task<IEnumerable<UserBasicResponse>> GetBasicUsersAsync()
-    {
-        return await _context.Users
-            .Where(u => u.Active)
-            .Select(u => new UserBasicResponse
-            {
-                Id = u.Id,
-                UserName = u.UserName,
-                Email = u.Email,
-                FirstName = u.FirstName,
-                LastName = u.LastName,
-                Preferred = u.Preferred,
-                PreferredPlus = u.PreferredPlus,
-                Active = u.Active,
-                LockerRoom13 = u.LockerRoom13,
-                EmergencyName = u.EmergencyName,
-                EmergencyPhone = u.EmergencyPhone,
-                MobileLast4 = u.MobileLast4,
-                VenmoAccount = u.VenmoAccount,
-                PayPalEmail = u.PayPalEmail,
-                NotificationPreference = (NotificationPreference) u.NotificationPreference,
-                DateCreated = u.DateCreated,
-                Roles = u.Roles.ToRoleNames(),
-            })
-            .ToListAsync();
-    }
-
     public async Task<IEnumerable<UserDetailedResponse>> GetDetailedUsersAsync()
     {
         return await _context.Users
@@ -73,11 +46,11 @@ public class UserRepository : IUserRepository
             .ToListAsync();
     }
 
-    public async Task<UserBasicResponse> GetUserAsync(string userId)
+    public async Task<UserDetailedResponse> GetUserAsync(string userId)
     {
         return await _context.Users
             .Where(u => u.Id == userId)
-            .Select(u => new UserBasicResponse
+            .Select(u => new UserDetailedResponse
             {
                 Id = u.Id,
                 UserName = u.UserName,
@@ -86,6 +59,7 @@ public class UserRepository : IUserRepository
                 LastName = u.LastName,
                 Preferred = u.Preferred,
                 PreferredPlus = u.PreferredPlus,
+                Rating = u.Rating,
                 Active = u.Active,
                 LockerRoom13 = u.LockerRoom13,
                 EmergencyName = u.EmergencyName,

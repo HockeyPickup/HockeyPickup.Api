@@ -80,33 +80,6 @@ public partial class UsersControllerTest
         };
     }
 
-    private static List<UserBasicResponse> CreateBasicUsersList()
-    {
-        return new List<UserBasicResponse>
-        {
-            new() {
-                Id = "1",
-                UserName = "user1",
-                Email = "user1@example.com",
-                FirstName = "John",
-                LastName = "Doe",
-                Preferred = true,
-                PreferredPlus = false,
-                Active = true
-            },
-            new() {
-                Id = "2",
-                UserName = "user2",
-                Email = "user2@example.com",
-                FirstName = "Jane",
-                LastName = "Smith",
-                Preferred = true,
-                PreferredPlus = true,
-                Active = true
-            }
-        };
-    }
-
     [Fact]
     public async Task GetUsers_AsAdmin_ReturnsDetailedUsers()
     {
@@ -128,32 +101,12 @@ public partial class UsersControllerTest
     }
 
     [Fact]
-    public async Task GetUsers_AsRegularUser_ReturnsBasicUsers()
-    {
-        // Arrange
-        SetupUserRole("User");
-        var basicUsers = CreateBasicUsersList();
-
-        _mockUserRepository
-            .Setup(x => x.GetBasicUsersAsync())
-            .ReturnsAsync(basicUsers);
-
-        // Act
-        var result = await _controller.GetUsers();
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedUsers = okResult.Value.Should().BeAssignableTo<IEnumerable<UserBasicResponse>>().Subject;
-        returnedUsers.Should().BeEquivalentTo(basicUsers);
-    }
-
-    [Fact]
     public async Task GetUsers_RepositoryThrowsException_Returns500()
     {
         // Arrange
         SetupUserRole("User");
         _mockUserRepository
-            .Setup(x => x.GetBasicUsersAsync())
+            .Setup(x => x.GetDetailedUsersAsync())
             .ThrowsAsync(new Exception("Database error"));
 
         // Act
@@ -177,44 +130,6 @@ public partial class UsersControllerTest
                 It.IsAny<Exception>(),
                 It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task GetUsers_NoRoleClaim_ReturnsBasicUsers()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
-            new Claim(ClaimTypes.Name, "test@example.com")
-            // No role claim
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var claimsPrincipal = new ClaimsPrincipal(identity);
-
-        var httpContext = new DefaultHttpContext
-        {
-            User = claimsPrincipal
-        };
-
-        _controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = httpContext
-        };
-
-        var basicUsers = CreateBasicUsersList();
-
-        _mockUserRepository
-            .Setup(x => x.GetBasicUsersAsync())
-            .ReturnsAsync(basicUsers);
-
-        // Act
-        var result = await _controller.GetUsers();
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedUsers = okResult.Value.Should().BeAssignableTo<IEnumerable<UserBasicResponse>>().Subject;
-        returnedUsers.Should().BeEquivalentTo(basicUsers);
     }
 }
 
@@ -243,7 +158,7 @@ public partial class UsersControllerTest
         var userId = "test-user-id";
         SetupUser(userId);
 
-        var expectedUser = new UserBasicResponse
+        var expectedUser = new UserDetailedResponse
         {
             Id = userId,
             UserName = "testuser",
@@ -252,7 +167,8 @@ public partial class UsersControllerTest
             LastName = "User",
             Preferred = true,
             PreferredPlus = false,
-            Active = true
+            Active = true,
+            Rating = 1
         };
 
         _mockUserRepository
@@ -264,7 +180,7 @@ public partial class UsersControllerTest
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedUser = okResult.Value.Should().BeOfType<UserBasicResponse>().Subject;
+        var returnedUser = okResult.Value.Should().BeOfType<UserDetailedResponse>().Subject;
         returnedUser.Should().BeEquivalentTo(expectedUser);
     }
 

@@ -31,21 +31,15 @@ public class UsersController : ControllerBase
 
     [Authorize]
     [HttpGet]
-    [Description("Returns list of users - basic info for regular users, detailed for admins")]
-    [Produces(typeof(IEnumerable<UserBasicResponse>))]
-    [ProducesResponseType(typeof(IEnumerable<UserBasicResponse>), StatusCodes.Status200OK)]
+    [Description("Returns list of users")]
+    [Produces(typeof(IEnumerable<UserDetailedResponse>))]
     [ProducesResponseType(typeof(IEnumerable<UserDetailedResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<object>>> GetUsers()
     {
         try
         {
-            // Check if user is admin
-            if (User.IsInRole("Admin"))
-            {
-                return Ok(await _userRepository.GetDetailedUsersAsync());
-            }
-            return Ok(await _userRepository.GetBasicUsersAsync());
+            return Ok(await _userRepository.GetDetailedUsersAsync());
         }
         catch (Exception ex)
         {
@@ -57,11 +51,11 @@ public class UsersController : ControllerBase
     [Authorize]
     [HttpGet("current")]
     [Description("Returns the user object for the signed in user")]
-    [Produces(typeof(UserBasicResponse))]
-    [ProducesResponseType(typeof(UserBasicResponse), StatusCodes.Status200OK)]
+    [Produces(typeof(UserDetailedResponse))]
+    [ProducesResponseType(typeof(UserDetailedResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<UserBasicResponse>> GetUser()
+    public async Task<ActionResult<UserDetailedResponse>> GetUser()
     {
         try
         {

@@ -210,41 +210,6 @@ public partial class UserRepositoryTest
     }
 
     [Fact]
-    public async Task GetBasicUsersAsync_ReturnsOnlyActiveUsers()
-    {
-        // Act
-        var result = await _repository.GetBasicUsersAsync();
-
-        // Assert
-        result.Should().HaveCount(2); // Only active users
-        result.Select(u => u.Id).Should().BeEquivalentTo(new[] { "user1", "user3" });
-    }
-
-    [Fact]
-    public async Task GetBasicUsersAsync_MapsPropertiesCorrectly()
-    {
-        // Act
-        var result = await _repository.GetBasicUsersAsync();
-
-        // Assert
-        var activeUser = result.Should().ContainSingle(u => u.Id == "user1").Subject;
-        activeUser.Should().BeEquivalentTo(new UserBasicResponse
-        {
-            Id = "user1",
-            UserName = "user1@example.com",
-            Email = "user1@example.com",
-            PayPalEmail = "user1@example.com",
-            FirstName = "Active",
-            LastName = "User",
-            Preferred = true,
-            PreferredPlus = false,
-            Active = true,
-            NotificationPreference = NotificationPreference.All,
-            DateCreated = DateTime.Parse("02/25/1969")
-        });
-    }
-
-    [Fact]
     public async Task GetDetailedUsersAsync_ReturnsOnlyActiveUsers()
     {
         // Act
@@ -278,20 +243,6 @@ public partial class UserRepositoryTest
             NotificationPreference = NotificationPreference.All,
             DateCreated = DateTime.Parse("02/25/1969")
         });
-    }
-
-    [Fact]
-    public async Task GetBasicUsersAsync_WithNoUsers_ReturnsEmptyList()
-    {
-        // Arrange
-        await _context.Database.EnsureDeletedAsync();
-        await _context.Database.EnsureCreatedAsync();
-
-        // Act
-        var result = await _repository.GetBasicUsersAsync();
-
-        // Assert
-        result.Should().BeEmpty();
     }
 
     [Fact]

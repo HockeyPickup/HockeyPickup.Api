@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace HockeyPickup.Api.Models.Responses;
 
 [GraphQLName("User")]
-public class UserBasicResponse
+public class UserDetailedResponse
 {
     [Required]
     [Description("Unique identifier for the user")]
@@ -161,10 +161,7 @@ public class UserBasicResponse
     [GraphQLName("Roles")]
     [GraphQLDescription("Roles of user")]
     public string[] Roles { get; set; } = [];
-}
 
-public class UserDetailedResponse : UserBasicResponse
-{
     [Required]
     [Description("User's rating")]
     [Range(0, 5)]

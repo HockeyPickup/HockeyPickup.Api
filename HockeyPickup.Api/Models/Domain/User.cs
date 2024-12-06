@@ -192,9 +192,9 @@ public class User
     [JsonProperty(nameof(DateCreated), Required = Required.Default)]
     public DateTime? DateCreated { get; set; }
 
-    internal UserBasicResponse ToUserBasicResponse()
+    internal UserDetailedResponse ToUserDetailedResponse()
     {
-        return new UserBasicResponse
+        return new UserDetailedResponse
         {
             Id = Id,
             UserName = UserName,
@@ -211,7 +211,8 @@ public class User
             EmergencyName = EmergencyName,
             EmergencyPhone = EmergencyPhone,
             LockerRoom13 = LockerRoom13,
-            DateCreated = DateCreated
+            DateCreated = DateCreated,
+            Rating = Rating
         };
     }
 }
