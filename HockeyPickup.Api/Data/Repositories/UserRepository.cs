@@ -1,5 +1,6 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -39,7 +40,7 @@ public class UserRepository : IUserRepository
                 PayPalEmail = u.PayPalEmail,
                 NotificationPreference = (NotificationPreference) u.NotificationPreference,
                 DateCreated = u.DateCreated,
-                Roles = u.Roles.Where(role => role.Name != null).Select(role => role.Name!).ToArray(),
+                Roles = u.Roles.ToRoleNames(),
             })
             .ToListAsync();
     }
@@ -67,7 +68,7 @@ public class UserRepository : IUserRepository
                 PayPalEmail = u.PayPalEmail,
                 NotificationPreference = (NotificationPreference) u.NotificationPreference,
                 DateCreated = u.DateCreated,
-                Roles = u.Roles.Where(role => role.Name != null).Select(role => role.Name!).ToArray(),
+                Roles = u.Roles.ToRoleNames(),
             })
             .ToListAsync();
     }
@@ -94,7 +95,7 @@ public class UserRepository : IUserRepository
                 PayPalEmail = u.PayPalEmail,
                 NotificationPreference = (NotificationPreference) u.NotificationPreference,
                 DateCreated = u.DateCreated,
-                Roles = u.Roles.Where(role => role.Name != null).Select(role => role.Name!).ToArray(),
+                Roles = u.Roles.ToRoleNames(),
             })
             .FirstOrDefaultAsync();
     }

@@ -6,6 +6,7 @@ using HockeyPickup.Api.Models.Responses;
 using Microsoft.Extensions.Logging;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
+using HockeyPickup.Api.Helpers;
 using Microsoft.AspNetCore.Identity;
 using System.Reflection;
 using System.ComponentModel.DataAnnotations;
@@ -1782,5 +1783,23 @@ public class SessionRepositoryMappingTests
         // Assert
         result.Should().NotBeNull();
         result.Should().BeEquivalentTo(new List<BuyingQueueItem>());
+    }
+
+    [Fact]
+    public void ToRoleNames_HandlesNullNames()
+    {
+        // Arrange
+        var roles = new List<AspNetRole>
+        {
+            new AspNetRole { Id = "1", Name = "User" },
+            new AspNetRole { Id = "2", Name = null },
+            new AspNetRole { Id = "3", Name = "Admin" }
+        };
+
+        // Act
+        var result = roles.ToRoleNames();
+
+        // Assert
+        result.Should().BeEquivalentTo(new[] { "User", "Admin" });
     }
 }

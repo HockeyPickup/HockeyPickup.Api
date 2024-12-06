@@ -1,5 +1,6 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -233,7 +234,7 @@ public class SessionRepository : ISessionRepository
             PayPalEmail = user.PayPalEmail,
             NotificationPreference = (NotificationPreference) user.NotificationPreference,
             DateCreated = user.DateCreated,
-            Roles = user.Roles.Where(role => role.Name != null).Select(role => role.Name!).ToArray()
+            Roles = user.Roles.ToRoleNames(),
         };
     }
 }
