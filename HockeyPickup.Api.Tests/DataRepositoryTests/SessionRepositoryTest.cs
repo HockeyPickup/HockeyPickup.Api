@@ -932,7 +932,10 @@ public class DetailedSessionRepositoryTests : IDisposable
 
         // Get the RegularSet and explicitly set its Regulars to null
         var modifiedRegularSet = await _context.RegularSets.FindAsync(1);
-        _context.Entry(modifiedRegularSet).Collection(r => r.Regulars).CurrentValue = null;
+        if (modifiedRegularSet != null)
+        {
+            _context.Entry(modifiedRegularSet).Collection(r => r!.Regulars).CurrentValue = null;
+        }
         await _context.SaveChangesAsync();
 
         // Clear any tracking

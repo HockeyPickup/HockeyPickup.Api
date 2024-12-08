@@ -45,7 +45,7 @@ public static class RatingSecurityExtensions
     private static readonly AsyncLocal<bool?> _isRatingAdminCache = new();
     private static IHttpContextAccessor? _httpContextAccessor;
 
-    public static void Initialize(IHttpContextAccessor httpContextAccessor)
+    public static void Initialize(IHttpContextAccessor? httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
     }
