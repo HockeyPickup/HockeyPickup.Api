@@ -236,6 +236,9 @@ public class Program
 
         app.UseHttpsRedirection();
 
+        var httpContextAccessor = app.Services.GetRequiredService<IHttpContextAccessor>();
+        RatingSecurityExtensions.Initialize(httpContextAccessor);
+
         app.UseOpenApi();
         app.UseSwagger(c =>
         {

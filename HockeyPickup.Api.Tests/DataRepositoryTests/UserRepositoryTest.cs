@@ -236,7 +236,7 @@ public partial class UserRepositoryTest
             PayPalEmail = "user3@example.com",
             FirstName = "Preferred",
             LastName = "Plus",
-            Rating = 5.0m,
+            Rating = 0m,
             Preferred = true,
             PreferredPlus = true,
             Active = true,

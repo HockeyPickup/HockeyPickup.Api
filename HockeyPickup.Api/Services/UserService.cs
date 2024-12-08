@@ -343,7 +343,7 @@ public class UserService : IUserService
                 MobileLast4 = aspNetUser.MobileLast4,
                 PayPalEmail = aspNetUser.PayPalEmail,
                 VenmoAccount = aspNetUser.VenmoAccount,
-                Rating = aspNetUser.Rating,
+                Rating = aspNetUser.GetSecureRating(),
                 DateCreated = aspNetUser.DateCreated
             };
 

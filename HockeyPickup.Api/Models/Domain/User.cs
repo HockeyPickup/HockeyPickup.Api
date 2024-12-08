@@ -192,6 +192,13 @@ public class User
     [JsonProperty(nameof(DateCreated), Required = Required.Default)]
     public DateTime? DateCreated { get; set; }
 
+    [Description("Roles of user")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("Roles")]
+    [JsonProperty(nameof(Roles), Required = Required.Default)]
+    public string[] Roles { get; set; } = [];
+
     internal UserDetailedResponse ToUserDetailedResponse()
     {
         return new UserDetailedResponse
@@ -212,7 +219,8 @@ public class User
             EmergencyPhone = EmergencyPhone,
             LockerRoom13 = LockerRoom13,
             DateCreated = DateCreated,
-            Rating = Rating
+            Rating = Rating,
+            Roles = Roles
         };
     }
 }
