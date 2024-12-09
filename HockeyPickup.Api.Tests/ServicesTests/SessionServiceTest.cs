@@ -53,7 +53,7 @@ public partial class SessionServiceTests
             _logger.Object);
     }
 
-    private static SessionDetailedResponse CreateTestSession(string userId, int position)
+    private static SessionDetailedResponse CreateTestSession(string userId, int position, int team)
     {
         return new SessionDetailedResponse
         {
@@ -71,7 +71,7 @@ public partial class SessionServiceTests
                     FirstName = "Test",
                     LastName = "User",
                     SessionId = 1,
-                    TeamAssignment = 1,
+                    TeamAssignment = team,
                     IsPlaying = true,
                     IsRegular = false,
                     PlayerStatus = PlayerStatus.Substitute,
@@ -98,7 +98,7 @@ public partial class SessionServiceTests
         var sessionId = 1;
         var newPosition = 1;
         var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
-        var session = CreateTestSession(userId, 2);
+        var session = CreateTestSession(userId, 2, 1);
 
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
@@ -163,7 +163,7 @@ public partial class SessionServiceTests
         var userId = "testUser";
         var currentPosition = 1;
         var user = new AspNetUser { Id = userId };
-        var session = CreateTestSession(userId, currentPosition);
+        var session = CreateTestSession(userId, currentPosition, 1);
 
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
@@ -299,5 +299,149 @@ public partial class SessionServiceTests
         loadedRoster.JoinedDateTime.Should().NotBe(default);
         loadedRoster.LeftDateTime.Should().NotBeNull();
         loadedRoster.LastBuySellId.Should().Be(123);
+    }
+}
+
+public partial class SessionServiceTests
+{
+    [Fact]
+    public async Task UpdateRosterTeam_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var newTeam = 2;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession(userId, 2, 1);
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _sessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+        _sessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
+            .Returns(Task.FromResult(session));
+        _sessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Data);
+        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam), Times.Once);
+        _sessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        _userManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+            .Returns(Task.FromResult<AspNetUser?>(null));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(1, "nonexistent", 1);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Roster player not found", result.Message);
+        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_SessionNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "testUser" };
+        _userManager.Setup(x => x.FindByIdAsync("testUser"))
+            .Returns(Task.FromResult(user)!);
+
+        // Instead of throwing KeyNotFoundException, we'll have the repository return null
+        _sessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+            .Returns(Task.FromResult<SessionDetailedResponse>(null!));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(1, "testUser", 1);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Session not found", result.Message);
+        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_SameTeam_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var currentTeam = 1;
+        var user = new AspNetUser { Id = userId };
+        var session = CreateTestSession(userId, 1, currentTeam);
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _sessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(1, userId, currentTeam);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("New team assignment is the same as the current team assignment", result.Message);
+        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_ExceptionThrown_ReturnsFailure()
+    {
+        // Arrange
+        var exception = new Exception("Test exception");
+        _userManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+            .ThrowsAsync(exception);
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(1, "testUser", 1);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Test exception", result.Message);
+
+        // Correct way to verify ILogger
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(3)]
+    [InlineData(99)]
+    public void ParseTeamName_InvalidTeam_ReturnsEmpty(int team)
+    {
+        // Act
+        var result = team.ParseTeamName();
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(0, "TBD")]
+    [InlineData(1, "Light")]
+    [InlineData(2, "Dark")]
+    public void ParseTeamName_ValidTeam_ReturnsCorrectName(int team, string expected)
+    {
+        // Act
+        var result = team.ParseTeamName();
+
+        // Assert
+        result.Should().Be(expected);
     }
 }

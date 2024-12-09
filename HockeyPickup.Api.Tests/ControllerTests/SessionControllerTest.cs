@@ -86,4 +86,56 @@ public class SessionControllerTests
         Assert.False(response.Success);
         Assert.Equal("Error message", response.Message);
     }
+
+    [Fact]
+    public async Task UpdateTeamAssignment_Success_ReturnsOkResult()
+    {
+        // Arrange
+        var request = new UpdateRosterTeamRequest
+        {
+            SessionId = 1,
+            UserId = "testUser",
+            NewTeamAssignment = 1
+        };
+        var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateSuccess(
+            CreateTestSession(), "Success");
+
+        _sessionService.Setup(x => x.UpdateRosterTeam(
+            request.SessionId, request.UserId, request.NewTeamAssignment))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRosterTeam(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(okResult.Value);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public async Task UpdateTeamAssignment_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateRosterTeamRequest
+        {
+            SessionId = 1,
+            UserId = "testUser",
+            NewTeamAssignment = 1
+        };
+        var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateFailure("Error message");
+
+        _sessionService.Setup(x => x.UpdateRosterTeam(
+            request.SessionId, request.UserId, request.NewTeamAssignment))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRosterTeam(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Error message", response.Message);
+    }
 }
