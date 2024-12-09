@@ -9,6 +9,7 @@ namespace HockeyPickup.Api.Services;
 public interface ISessionService
 {
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition);
+    Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment);
 }
 
 public class SessionService : ISessionService
@@ -62,6 +63,43 @@ public class SessionService : ISessionService
         {
             _logger.LogError(ex, $"Error updating player position for session: {sessionId}, user: {userId}");
             return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating player position: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Roster player not found");
+            }
+
+            var session = await _sessionRepository.GetSessionAsync(sessionId);
+            if (session == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Session not found");
+            }
+
+            var currentRoster = session.CurrentRosters.Where(u => u.UserId == userId).FirstOrDefault();
+            if (currentRoster.TeamAssignment == newTeamAssignment)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("New team assignment is the same as the current team assignment");
+            }
+
+            await _sessionRepository.UpdatePlayerTeamAsync(sessionId, userId, newTeamAssignment);
+
+            var msg = $"{user.FirstName} {user.LastName} changed team assignment from {currentRoster.TeamAssignment.ParseTeamName()} to {newTeamAssignment.ParseTeamName()}";
+
+            var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
+
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error updating player team assignment for session: {sessionId}, user: {userId}");
+            return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating player team assignment: {ex.Message}");
         }
     }
 }

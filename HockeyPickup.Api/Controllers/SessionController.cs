@@ -42,4 +42,18 @@ public class SessionController : ControllerBase
         var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-roster-team")]
+    [Description("Updates a roster player team")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> UpdateRosterTeam([FromBody] UpdateRosterTeamRequest updateRosterTeamRequest)
+    {
+        var result = await _sessionService.UpdateRosterTeam(updateRosterTeamRequest.SessionId, updateRosterTeamRequest.UserId, updateRosterTeamRequest.NewTeamAssignment);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }

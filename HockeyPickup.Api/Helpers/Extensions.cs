@@ -53,6 +53,17 @@ public static class IntExtensions
             _ => string.Empty,
         };
     }
+
+    public static string ParseTeamName(this int position)
+    {
+        return position switch
+        {
+            0 => "TBD",
+            1 => "Light",
+            2 => "Dark",
+            _ => string.Empty,
+        };
+    }
 }
 
 public static class RoleExtensions

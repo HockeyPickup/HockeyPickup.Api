@@ -60,6 +60,25 @@ public class SessionRepository : ISessionRepository
         return session;
     }
 
+    public async Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, int team)
+    {
+        // Find and update the roster entry
+        var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+        if (rosterEntry == null)
+        {
+            throw new KeyNotFoundException($"Player not found in session roster");
+        }
+
+        rosterEntry.TeamAssignment = team;
+
+        await _context.SaveChangesAsync();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(sessionId);
+
+        return session;
+    }
+
     public async Task<IEnumerable<SessionBasicResponse>> GetBasicSessionsAsync()
     {
         return await _context.Sessions
