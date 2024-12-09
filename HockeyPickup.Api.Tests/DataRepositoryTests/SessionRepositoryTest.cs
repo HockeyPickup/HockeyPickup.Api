@@ -14,6 +14,9 @@ using HotChocolate;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+using Microsoft.Data.Sqlite;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -148,6 +151,7 @@ public class DetailedSessionTestContext : HockeyPickupContext
 public class BasicSessionRepositoryTests : IDisposable
 {
     private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+    private readonly Mock<HttpContextAccessor> _mockContextAccessor;
     private readonly HockeyPickupContext _context;
     private readonly SessionRepository _repository;
     private readonly DateTime _testDate = DateTime.UtcNow;
@@ -155,6 +159,7 @@ public class BasicSessionRepositoryTests : IDisposable
     public BasicSessionRepositoryTests()
     {
         _mockLogger = new Mock<ILogger<SessionRepository>>();
+        _mockContextAccessor = new Mock<HttpContextAccessor> { CallBase = true };
 
         var options = new DbContextOptionsBuilder<HockeyPickupContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -184,7 +189,7 @@ public class BasicSessionRepositoryTests : IDisposable
         });
         _context.SaveChanges();
 
-        _repository = new SessionRepository(_context, _mockLogger.Object);
+        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object);
     }
 
     public void Dispose()
@@ -214,9 +219,10 @@ public class BasicSessionRepositoryTests : IDisposable
     }
 }
 
-public class DetailedSessionRepositoryTests : IDisposable
+public partial class DetailedSessionRepositoryTests : IDisposable
 {
     private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+    private readonly Mock<HttpContextAccessor> _mockContextAccessor;
     private readonly HockeyPickupContext _context;
     private readonly SessionRepository _repository;
     private readonly DateTime _testDate = DateTime.UtcNow;
@@ -224,13 +230,14 @@ public class DetailedSessionRepositoryTests : IDisposable
     public DetailedSessionRepositoryTests()
     {
         _mockLogger = new Mock<ILogger<SessionRepository>>();
+        _mockContextAccessor = new Mock<HttpContextAccessor> { CallBase = true };
 
         var options = new DbContextOptionsBuilder<HockeyPickupContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
         _context = new DetailedSessionTestContext(options);
-        _repository = new SessionRepository(_context, _mockLogger.Object);
+        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object);
     }
 
     public void Dispose()
@@ -1632,6 +1639,7 @@ public class RosterPlayerResponseTests
         var player = new Models.Responses.RosterPlayer
         {
             SessionRosterId = 1,
+            SessionId = 1,
             UserId = "user123",
             FirstName = "John",
             LastName = "Doe",
@@ -1802,5 +1810,323 @@ public class SessionRepositoryMappingTests
 
         // Assert
         result.Should().BeEquivalentTo(new[] { "User", "Admin" });
+    }
+}
+
+// New ActivityLog tests with fixes
+public partial class DetailedSessionRepositoryTests
+{
+    [Fact]
+    public async Task AddActivityAsync_ValidActivity_CreatesActivityLogAndReturnsSession()
+    {
+        // Arrange
+        var userId = "testUser";
+        var testDate = DateTime.UtcNow;
+
+        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        var mockHttpContext = new Mock<HttpContext>();
+        var mockPrincipal = new Mock<ClaimsPrincipal>();
+
+        mockPrincipal.Setup(x => x.FindFirst(ClaimTypes.NameIdentifier))
+            .Returns(new Claim(ClaimTypes.NameIdentifier, userId));
+        mockHttpContext.Setup(x => x.User).Returns(mockPrincipal.Object);
+        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+
+        // Use the real context but with in-memory database
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var context = new DetailedSessionTestContext(options);
+
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = testDate,
+            UpdateDateTime = testDate,
+            SessionDate = testDate.AddDays(1),
+            Note = "Test session"
+        };
+        context.Sessions!.Add(session);
+        await context.SaveChangesAsync();
+
+        var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object);
+
+        // Act
+        var result = await repository.AddActivityAsync(1, "Test activity");
+
+        // Assert
+        result.Should().NotBeNull();
+        var activityLog = await context.ActivityLogs!.FirstOrDefaultAsync();
+        activityLog.Should().NotBeNull();
+        activityLog!.SessionId.Should().Be(1);
+        activityLog.UserId.Should().Be(userId);
+        activityLog.Activity.Should().Be("Test activity");
+    }
+
+    [Fact]
+    public async Task AddActivityAsync_NoUserContext_ThrowsUnauthorizedException()
+    {
+        // Arrange
+        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext) null!);
+
+        var repository = new SessionRepository(_context, _mockLogger.Object, mockHttpContextAccessor.Object);
+
+        // Act & Assert
+        await repository.Invoking(r => r.AddActivityAsync(1, "Test activity"))
+            .Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
+    [Fact]
+    public async Task AddActivityAsync_DbUpdateException_OnInvalidSessionId()
+    {
+        // Arrange
+        var userId = "testUser";
+        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        var mockHttpContext = new Mock<HttpContext>();
+        var mockPrincipal = new Mock<ClaimsPrincipal>();
+
+        mockPrincipal.Setup(x => x.FindFirst(ClaimTypes.NameIdentifier))
+            .Returns(new Claim(ClaimTypes.NameIdentifier, userId));
+        mockHttpContext.Setup(x => x.User).Returns(mockPrincipal.Object);
+        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+
+        // Use SQLite in-memory with connection
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema
+        using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+
+        // Use a new context instance for the test
+        using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object);
+
+            // Act & Assert
+            await repository.Invoking(r => r.AddActivityAsync(999, "Test activity"))
+                .Should().ThrowAsync<DbUpdateException>();
+        }
+    }
+}
+
+public partial class DetailedSessionRepositoryTests
+{
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_ValidUpdate_ChangesPositionAndReturnsSession()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema and seed data
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                PayPalEmail = "test@example.com",
+                NotificationPreference = 1
+            };
+            context.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                Position = 1,
+                JoinedDateTime = DateTime.UtcNow
+            };
+            context.SessionRosters!.Add(roster);
+
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+
+            // Act
+            var result = await repository.UpdatePlayerPositionAsync(1, "testUser", 2);
+
+            // Assert
+            result.Should().NotBeNull();
+            var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
+            updatedRoster.Position.Should().Be(2);
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]  // TBD
+    [InlineData(1)]  // Forward
+    [InlineData(2)]  // Defense
+    public async Task UpdatePlayerPositionAsync_ValidPositionValues_UpdatesSuccessfully(int newPosition)
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema and seed data
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                PayPalEmail = "test@example.com",
+                NotificationPreference = 1
+            };
+            context.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                Position = 0,  // Start with TBD
+                JoinedDateTime = DateTime.UtcNow
+            };
+            context.SessionRosters!.Add(roster);
+
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+
+            // Act
+            var result = await repository.UpdatePlayerPositionAsync(1, "testUser", newPosition);
+
+            // Assert
+            result.Should().NotBeNull();
+            var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
+            updatedRoster.Position.Should().Be(newPosition);
+        }
+    }
+
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_PlayerNotInRoster_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                PayPalEmail = "test@example.com",
+                NotificationPreference = 1
+            };
+            context.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+
+            // Act & Assert
+            await repository.Invoking(r => r.UpdatePlayerPositionAsync(1, "nonexistentUser", 2))
+                .Should().ThrowAsync<KeyNotFoundException>()
+                .WithMessage("Player not found in session roster");
+        }
+    }
+
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_InvalidSession_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var context = new DetailedSessionTestContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var user = new AspNetUser
+        {
+            Id = "testUser",
+            UserName = "test@example.com",
+            Email = "test@example.com",
+            PayPalEmail = "test@example.com",
+            NotificationPreference = 1
+        };
+        context.Users!.Add(user);
+        await context.SaveChangesAsync();
+
+        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+
+        // Act & Assert
+        await repository.Invoking(r => r.UpdatePlayerPositionAsync(999, "testUser", 2))
+            .Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Player not found in session roster");
     }
 }

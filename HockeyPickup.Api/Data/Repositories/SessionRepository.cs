@@ -147,6 +147,7 @@ public class SessionRepository : ISessionRepository
         return roster.Select(r => new Models.Responses.RosterPlayer
         {
             SessionRosterId = r.SessionRosterId,
+            SessionId = r.SessionId,
             UserId = r.UserId,
             FirstName = r.FirstName,
             LastName = r.LastName,

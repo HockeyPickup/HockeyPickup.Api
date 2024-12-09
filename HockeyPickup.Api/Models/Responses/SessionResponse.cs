@@ -455,6 +455,14 @@ public class RosterPlayer
     public required int SessionRosterId { get; set; }
 
     [Required]
+    [Description("Session identifier")]
+    [JsonPropertyName("SessionId")]
+    [JsonProperty(nameof(SessionId), Required = Required.Always)]
+    [GraphQLName("SessionId")]
+    [GraphQLDescription("Session identifier")]
+    public required int SessionId { get; set; }
+
+    [Required]
     [Description("User identifier")]
     [MaxLength(128)]
     [DataType(DataType.Text)]

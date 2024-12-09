@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace HockeyPickup.Api.Tests.Extensions;
 
-public class RatingSecurityExtensionsTests
+public partial class RatingSecurityExtensionsTests
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
