@@ -14,6 +14,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     }
 
     public DbSet<Session>? Sessions { get; set; }
+    public DbSet<SessionRoster>? SessionRosters { get; set; }
     public DbSet<RegularSet>? RegularSets { get; set; }
     public DbSet<Regular>? Regulars { get; set; }
     public DbSet<BuySell>? BuySells { get; set; }
@@ -291,9 +292,9 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         {
             entity.ToTable("ActivityLogs");
             entity.HasKey(e => e.ActivityLogId).HasName("PK_dbo.ActivityLogs");
-
             entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
             entity.Property(e => e.Activity).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.UserId).HasMaxLength(128).IsRequired(); // Make sure UserId is required
 
             entity.HasOne(e => e.Session)
                 .WithMany(s => s.ActivityLogs)
@@ -304,6 +305,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.HasOne(e => e.User)
                 .WithMany(u => u.ActivityLogs)
                 .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict) // Prevent cascade delete
+                .IsRequired() // This enforces the foreign key constraint
                 .HasConstraintName("FK_dbo.ActivityLogs_dbo.AspNetUsers_UserId");
         });
 
@@ -333,6 +336,32 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(q => q.SellerNote).HasColumnType("nvarchar(max)");
         });
 
+        // Add this inside OnModelCreating method, alongside other entity configurations
+        modelBuilder.Entity<SessionRoster>(entity =>
+        {
+            entity.ToTable("SessionRosters");
+            entity.HasKey(e => e.SessionRosterId).HasName("PK_dbo.SessionRosters");
+
+            entity.Property(e => e.IsPlaying).HasDefaultValue(true);
+            entity.Property(e => e.IsRegular).HasDefaultValue(false);
+            entity.Property(e => e.Position).HasDefaultValue(2);
+            entity.Property(e => e.JoinedDateTime).HasColumnType("datetime");
+            entity.Property(e => e.LeftDateTime).HasColumnType("datetime");
+            entity.Property(e => e.UserId).HasMaxLength(128).IsRequired();
+
+            // Configure relationship with Session
+            entity.HasOne(e => e.Session)
+                .WithMany()
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_dbo.SessionRosters_Sessions");
+
+            // Configure relationship with AspNetUser
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .HasConstraintName("FK_dbo.SessionRosters_AspNetUsers");
+        });
         modelBuilder.HasAnnotation("Relational:IsStoredInDatabase", true);
     }
 }

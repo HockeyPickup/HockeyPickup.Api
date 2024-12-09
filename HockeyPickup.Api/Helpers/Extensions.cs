@@ -15,6 +15,18 @@ public static class HttpContextExtensions
 
         return authorization.Substring("Bearer ".Length);
     }
+
+    public static string GetUserId(this IHttpContextAccessor httpContextAccessor)
+    {
+        var userId = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new UnauthorizedAccessException("User ID not found in context");
+        }
+
+        return userId;
+    }
 }
 
 public static class StringExtensions
@@ -26,6 +38,20 @@ public static class StringExtensions
                password.Any(char.IsLower) &&
                password.Any(char.IsDigit) &&
                password.Any(c => !char.IsLetterOrDigit(c));
+    }
+}
+
+public static class IntExtensions
+{
+    public static string ParsePositionName(this int position)
+    {
+        return position switch
+        {
+            0 => "TBD",
+            1 => "Forward",
+            2 => "Defense",
+            _ => string.Empty,
+        };
     }
 }
 

@@ -4,6 +4,7 @@ using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace HockeyPickup.Api.Data.Repositories;
 
@@ -11,11 +12,52 @@ public class SessionRepository : ISessionRepository
 {
     private readonly HockeyPickupContext _context;
     private readonly ILogger<SessionRepository> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public SessionRepository(HockeyPickupContext context, ILogger<SessionRepository> logger)
+    public SessionRepository(HockeyPickupContext context, ILogger<SessionRepository> logger, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task<SessionDetailedResponse> AddActivityAsync(int sessionId, string activity)
+    {
+        var activityLog = new ActivityLog
+        {
+            SessionId = sessionId,
+            UserId = _httpContextAccessor.GetUserId(),
+            CreateDateTime = DateTime.UtcNow,
+            Activity = activity
+        };
+
+        await _context.ActivityLogs.AddAsync(activityLog);
+
+        await _context.SaveChangesAsync();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(activityLog.SessionId);
+
+        return session;
+    }
+
+    public async Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, int position)
+    {
+        // Find and update the roster entry
+        var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+        if (rosterEntry == null)
+        {
+            throw new KeyNotFoundException($"Player not found in session roster");
+        }
+
+        rosterEntry.Position = position;
+
+        await _context.SaveChangesAsync();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(sessionId);
+
+        return session;
     }
 
     public async Task<IEnumerable<SessionBasicResponse>> GetBasicSessionsAsync()

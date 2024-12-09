@@ -227,10 +227,11 @@ public class Program
 
         builder.Services.AddDistributedMemoryCache();
 
-        builder.Services.AddSingleton<IJwtService, JwtService>();
+        builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddSingleton<IServiceBus, ResilientServiceBus>();
-        builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
+        builder.Services.AddScoped<ISessionService, SessionService>();
+        builder.Services.AddScoped<IServiceBus, ResilientServiceBus>();
+        builder.Services.AddScoped<ITokenBlacklistService, TokenBlacklistService>();
 
         var app = builder.Build();
 

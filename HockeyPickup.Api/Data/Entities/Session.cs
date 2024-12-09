@@ -102,6 +102,28 @@ public class ActivityLog
     public virtual AspNetUser? User { get; set; }
 }
 
+public class SessionRoster
+{
+    [Key]
+    public int SessionRosterId { get; set; }
+    public int SessionId { get; set; }
+    public string UserId { get; set; } = null!;
+    public int TeamAssignment { get; set; }
+    public bool IsPlaying { get; set; }
+    public bool IsRegular { get; set; }
+    public DateTime JoinedDateTime { get; set; }
+    public DateTime? LeftDateTime { get; set; }
+    public int? LastBuySellId { get; set; }
+    public int Position { get; set; }
+
+    // Navigation properties
+    [ForeignKey("SessionId")]
+    public virtual Session? Session { get; set; }
+
+    [ForeignKey("UserId")]
+    public virtual AspNetUser? User { get; set; }
+}
+
 [Table("CurrentSessionRoster")]
 public class RosterPlayer
 {
