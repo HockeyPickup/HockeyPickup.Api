@@ -34,6 +34,7 @@ public class SessionRepository : ISessionRepository
         await _context.ActivityLogs.AddAsync(activityLog);
 
         await _context.SaveChangesAsync();
+        _context.DetachChangeTracker();
 
         // Fetch and return updated session details
         var session = await GetSessionAsync(activityLog.SessionId);
@@ -53,6 +54,7 @@ public class SessionRepository : ISessionRepository
         rosterEntry.Position = position;
 
         await _context.SaveChangesAsync();
+        _context.DetachChangeTracker();
 
         // Fetch and return updated session details
         var session = await GetSessionAsync(sessionId);
@@ -72,6 +74,7 @@ public class SessionRepository : ISessionRepository
         rosterEntry.TeamAssignment = team;
 
         await _context.SaveChangesAsync();
+        _context.DetachChangeTracker();
 
         // Fetch and return updated session details
         var session = await GetSessionAsync(sessionId);

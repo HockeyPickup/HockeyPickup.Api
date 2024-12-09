@@ -1,6 +1,8 @@
 #pragma warning disable IDE0057 // Use range operator
 
+using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace HockeyPickup.Api.Helpers;
@@ -134,4 +136,16 @@ public static class RatingSecurityExtensions
         _isRatingAdminCache.Value = null;
     }
 }
+
+public static class DbContextExtensions
+{
+    public static void DetachChangeTracker(this HockeyPickupContext context)
+    {
+        foreach (var entry in context.ChangeTracker.Entries())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+}
+
 #pragma warning restore IDE0057 // Use range operator
