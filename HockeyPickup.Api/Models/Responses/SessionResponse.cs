@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using HockeyPickup.Api.Data.Entities;
 using Newtonsoft.Json;
 
 namespace HockeyPickup.Api.Models.Responses;
@@ -329,18 +330,6 @@ public class RegularResponse
     [GraphQLName("User")]
     [GraphQLDescription("User details")]
     public UserDetailedResponse? User { get; set; }
-}
-
-public enum PlayerStatus
-{
-    [Description("Regular player in the roster")]
-    Regular = 0,
-
-    [Description("Substitute player in the roster")]
-    Substitute = 1,
-
-    [Description("Player no longer in the roster")]
-    NotPlaying = 2
 }
 
 [GraphQLName("BuyingQueueItem")]

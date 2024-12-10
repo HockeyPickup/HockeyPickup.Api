@@ -6,4 +6,5 @@ public interface IUserRepository
 {
     Task<IEnumerable<UserDetailedResponse>> GetDetailedUsersAsync();
     Task<UserDetailedResponse> GetUserAsync(string userId);
+    Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync();
 }

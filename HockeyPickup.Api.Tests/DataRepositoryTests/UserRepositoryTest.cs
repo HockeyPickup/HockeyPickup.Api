@@ -130,20 +130,16 @@ public partial class UserRepositoryTest
     private readonly Mock<ILogger<UserRepository>> _mockLogger;
     private readonly HockeyPickupContext _context;
     private readonly UserRepository _repository;
+    private static int _dbCounter;
 
     public UserRepositoryTest()
     {
         _mockLogger = new Mock<ILogger<UserRepository>>();
 
-        // Create the options builder for HockeyPickupContext
         var optionsBuilder = new DbContextOptionsBuilder<HockeyPickupContext>();
-        optionsBuilder.UseSqlite("DataSource=:memory:");
+        optionsBuilder.UseInMemoryDatabase($"HockeyPickupTest_{Interlocked.Increment(ref _dbCounter)}");
 
-        // Create the test context with the correct options type
         _context = new UserTestHockeyPickupContext(optionsBuilder.Options);
-        _context.Database.OpenConnection();
-        _context.Database.EnsureCreated();
-
         _context.Users.AddRange(new[]
         {
             new AspNetUser
@@ -154,6 +150,7 @@ public partial class UserRepositoryTest
                 FirstName = "Active",
                 LastName = "User",
                 Active = true,
+                LockerRoom13 = true,
                 Preferred = true,
                 PreferredPlus = false,
                 Rating = 4.5m,
@@ -168,6 +165,7 @@ public partial class UserRepositoryTest
                 FirstName = "Inactive",
                 LastName = "User",
                 Active = false,
+                LockerRoom13 = true,
                 Preferred = false,
                 PreferredPlus = false,
                 Rating = 3.5m,
@@ -337,5 +335,220 @@ public partial class UserRepositoryTest
         result.Should().NotBeNull();
         result.Id.Should().Be(targetUserId);
         result.UserName.Should().Be("target");
+    }
+}
+
+public partial class UserRepositoryTest
+{
+    [Fact]
+    public async Task GetLockerRoom13SessionsAsync_ReturnsEmptyWhenNoSessions()
+    {
+        // Act
+        var result = await _repository.GetLockerRoom13SessionsAsync();
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetLockerRoom13SessionsAsync_FiltersOutPastAndCancelledSessions()
+    {
+        // Arrange
+        var sessions = new[]
+        {
+            new Session
+            {
+                SessionId = 1,
+                SessionDate = DateTime.UtcNow.AddDays(1),
+                Note = "Future session",
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow
+            },
+            new Session
+            {
+                SessionId = 2,
+                SessionDate = DateTime.UtcNow.AddDays(-1),
+                Note = "Past session",
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow
+            },
+            new Session
+            {
+                SessionId = 3,
+                SessionDate = DateTime.UtcNow.AddDays(2),
+                Note = "This session was cancelled",
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow
+            }
+        };
+        await _context.Sessions.AddRangeAsync(sessions);
+
+        var user = new AspNetUser
+        {
+            Id = "lr13user",
+            UserName = "test@example.com",
+            LockerRoom13 = true,
+            Active = true,
+            Preferred = false,
+            PreferredPlus = false
+        };
+        await _context.Users.AddAsync(user);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetLockerRoom13SessionsAsync();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result.Single().SessionId.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetLockerRoom13SessionsAsync_HandlesAllPlayerStatuses()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 1,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session",
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+        await _context.Sessions.AddAsync(session);
+
+        var users = new[]
+        {
+            new AspNetUser
+            {
+                Id = "regular",
+                UserName = "regular@test.com",
+                FirstName = "Regular",
+                LastName = "Player",
+                LockerRoom13 = true,
+                Active = true,
+                Preferred = true,
+                PreferredPlus = false
+            },
+            new AspNetUser
+            {
+                Id = "substitute",
+                UserName = "sub@test.com",
+                FirstName = "Sub",
+                LastName = "Player",
+                LockerRoom13 = true,
+                Active = true,
+                Preferred = false,
+                PreferredPlus = false
+            },
+            new AspNetUser
+            {
+                Id = "queue",
+                UserName = "queue@test.com",
+                FirstName = "Queue",
+                LastName = "Player",
+                LockerRoom13 = true,
+                Active = true,
+                Preferred = false,
+                PreferredPlus = false
+            },
+            new AspNetUser
+            {
+                Id = "nonlr13",
+                UserName = "nonlr13@test.com",
+                FirstName = "Non",
+                LastName = "LR13",
+                LockerRoom13 = false,
+                Active = true,
+                Preferred = false,
+                PreferredPlus = false
+            }
+        };
+        await _context.Users.AddRangeAsync(users);
+
+        var rosters = new[]
+        {
+            new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "regular",
+                IsRegular = true,
+                IsPlaying = true,
+                JoinedDateTime = DateTime.UtcNow,
+                Position = 1
+            },
+            new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "substitute",
+                IsRegular = false,
+                IsPlaying = true,
+                JoinedDateTime = DateTime.UtcNow,
+                Position = 2
+            }
+        };
+        await _context.SessionRosters.AddRangeAsync(rosters);
+
+        var buySell = new BuySell
+        {
+            SessionId = 1,
+            BuyerUserId = "queue",
+            SellerUserId = null,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+        await _context.BuySells.AddAsync(buySell);
+
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetLockerRoom13SessionsAsync();
+
+        // Assert
+        result.Should().HaveCount(1);
+        var players = result.Single().LockerRoom13Players;
+        players.Should().HaveCount(5);
+
+        players.Should().Contain(p => p.Id == "regular" && p.PlayerStatus == PlayerStatus.Regular);
+        players.Should().Contain(p => p.Id == "substitute" && p.PlayerStatus == PlayerStatus.Substitute);
+        players.Should().Contain(p => p.Id == "queue" && p.PlayerStatus == PlayerStatus.InQueue);
+        players.Should().NotContain(p => p.Id == "nonlr13");
+    }
+
+    [Fact]
+    public async Task GetLockerRoom13SessionsAsync_OrdersSessionsAndPlayers()
+    {
+        // Arrange
+        var sessions = new[]
+        {
+            new Session
+            {
+                SessionId = 1,
+                SessionDate = DateTime.UtcNow.AddDays(2),
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow
+            },
+            new Session
+            {
+                SessionId = 2,
+                SessionDate = DateTime.UtcNow.AddDays(1),
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow
+            }
+        };
+        await _context.Sessions.AddRangeAsync(sessions);
+
+        // Act
+        var result = await _repository.GetLockerRoom13SessionsAsync();
+
+        // Assert
+        var sessionList = result.ToList();
+        sessionList.Should().BeInAscendingOrder(s => s.SessionDate);
+
+        foreach (var session in sessionList)
+        {
+            session.LockerRoom13Players.Should().BeInAscendingOrder(p => p.LastName)
+                .And.ThenBeInAscendingOrder(p => p.FirstName);
+        }
     }
 }

@@ -73,4 +73,61 @@ public class UserRepository : IUserRepository
             })
             .FirstOrDefaultAsync();
     }
+
+    public async Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync()
+    {
+        var currentDate = DateTime.UtcNow;
+
+        var query =
+            from session in _context.Sessions
+            where session.SessionDate > currentDate
+                && !session.Note.Contains("cancelled")
+            select new LockerRoom13Response
+            {
+                SessionId = session.SessionId,
+                SessionDate = session.SessionDate,
+                LockerRoom13Players = (
+                    from user in _context.Users
+                    where user.LockerRoom13
+                    join roster in _context.SessionRosters
+                        on new { UserId = user.Id, session.SessionId }
+                        equals new { roster.UserId, roster.SessionId }
+                        into userRosters
+                    from roster in userRosters.DefaultIfEmpty()
+                        // Left join with BuySells to check queue status
+                    join buySell in _context.BuySells
+                        on new { UserId = user.Id, session.SessionId }
+                        equals new { UserId = buySell.BuyerUserId, buySell.SessionId }
+                        into buySells
+                    from buySell in buySells.DefaultIfEmpty()
+                    select new LockerRoom13Players
+                    {
+                        Id = user.Id,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Active = user.Active,
+                        Preferred = user.Preferred,
+                        PreferredPlus = user.PreferredPlus,
+                        LockerRoom13 = user.LockerRoom13,
+                        PlayerStatus =
+                            // If they're a buyer with no seller, they're InQueue
+                            (buySell != null && buySell.SellerUserId == null) ?
+                                PlayerStatus.InQueue :
+                            // Otherwise use roster status
+                            roster == null ? PlayerStatus.NotPlaying :
+                                roster.IsPlaying ?
+                                    (roster.IsRegular ? PlayerStatus.Regular : PlayerStatus.Substitute)
+                                    : PlayerStatus.NotPlaying
+                    })
+                    .OrderBy(p => p.LastName)
+                    .ThenBy(p => p.FirstName)
+                    .ToList()
+            };
+
+        return await query
+            .OrderBy(r => r.SessionDate)
+            .ToListAsync();
+    }
 }

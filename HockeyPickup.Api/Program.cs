@@ -7,6 +7,7 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.GraphQL.Queries;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
+using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using HotChocolate.Authorization;
 using HotChocolate.Resolvers;
@@ -61,6 +62,8 @@ public class Program
                 });
             };
             o.OperationProcessors.Add(new AuthorizeCheckOperationProcessor());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<LockerRoom13Players>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<LockerRoom13Response>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ErrorDetail>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ServiceBusCommsMessage>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<User>());
@@ -76,8 +79,10 @@ public class Program
                 Url = baseUrl
             });
             o.EnableAnnotations();
-            o.DocumentFilter<CustomModelDocumentFilter<ServiceBusCommsMessage>>();
+            o.DocumentFilter<CustomModelDocumentFilter<LockerRoom13Players>>();
+            o.DocumentFilter<CustomModelDocumentFilter<LockerRoom13Response>>();
             o.DocumentFilter<CustomModelDocumentFilter<ErrorDetail>>();
+            o.DocumentFilter<CustomModelDocumentFilter<ServiceBusCommsMessage>>();
             o.DocumentFilter<CustomModelDocumentFilter<User>>();
             o.DocumentFilter<CustomModelDocumentFilter<AspNetUser>>();
             o.DocumentFilter<CustomModelDocumentFilter<ApiResponse>>();

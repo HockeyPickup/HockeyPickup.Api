@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace HockeyPickup.Api.Data.Entities;
@@ -10,4 +11,19 @@ public enum NotificationPreference
     All,
     [Display(Name = @"Only My Buy/Sells")]
     OnlyMyBuySell
+}
+
+public enum PlayerStatus
+{
+    [Description("Regular player in the roster")]
+    Regular = 0,
+
+    [Description("Substitute player in the roster")]
+    Substitute = 1,
+
+    [Description("Player no longer in the roster")]
+    NotPlaying = 2,
+
+    [Description("Player int the queue")]
+    InQueue = 3
 }

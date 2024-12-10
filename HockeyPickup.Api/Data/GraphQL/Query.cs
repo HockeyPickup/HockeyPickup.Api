@@ -22,4 +22,13 @@ public class Query
         var detailedUsers = await userRepository.GetDetailedUsersAsync();
         return detailedUsers;
     }
+
+    [GraphQLDescription("Retrieves a list of LockerRoom13 status for each upcoming session.")]
+    [GraphQLType(typeof(IEnumerable<LockerRoom13Response>))]
+    [GraphQLName("LockerRoom13")]
+    public async Task<IEnumerable<LockerRoom13Response>> LockerRoom13([Service] IUserRepository userRepository)
+    {
+        var lockerRoom13Response = await userRepository.GetLockerRoom13SessionsAsync();
+        return lockerRoom13Response;
+    }
 }
