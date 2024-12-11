@@ -4,7 +4,6 @@ using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.GraphQL;
 using HockeyPickup.Api.Data.Repositories;
-using HockeyPickup.Api.GraphQL.Queries;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Responses;
@@ -152,7 +151,6 @@ public class Program
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
-            .AddTypeExtension<SessionQueries>()
             .AddAuthorizationCore();
 
         builder.Services.AddHealthChecks()

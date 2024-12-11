@@ -1,3 +1,4 @@
+using FluentAssertions;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.GraphQL;
 using HockeyPickup.Api.Data.Repositories;
@@ -10,6 +11,8 @@ namespace HockeyPickup.Api.Tests.GraphQLTests;
 
 public class GraphQLTests
 {
+    private readonly DateTime _testDate = DateTime.UtcNow;
+
     [Fact]
     public async Task UsersEx_ShouldReturnDetailedUsers_WhenAdmin()
     {
@@ -17,6 +20,7 @@ public class GraphQLTests
         var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
         var loggerMock = new Mock<ILogger<Query>>();
         var userRepositoryMock = new Mock<IUserRepository>();
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
 
         var expectedUsers = new List<UserDetailedResponse>
         {
@@ -160,5 +164,67 @@ public class GraphQLTests
         // Assert
         Assert.Empty(result);
         userRepositoryMock.Verify(r => r.GetLockerRoom13SessionsAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetSessions_CallsRepository()
+    {
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        var loggerMock = new Mock<ILogger<Query>>();
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var query = new Query(httpContextAccessorMock.Object, loggerMock.Object);
+
+        // Arrange
+        var expectedSessions = new List<SessionBasicResponse>
+        {
+            new() {
+                SessionId = 1,
+                Note = "Test Session 1",
+                CreateDateTime = _testDate,
+                UpdateDateTime = _testDate,
+                SessionDate = _testDate.AddDays(7)
+            }
+        };
+        sessionRepositoryMock.Setup(r => r.GetBasicSessionsAsync())
+            .ReturnsAsync(expectedSessions);
+
+        // Act
+        var result = await query.GetSessions(sessionRepositoryMock.Object);
+
+        // Assert
+        result.Should().BeEquivalentTo(expectedSessions);
+        sessionRepositoryMock.Verify(r => r.GetBasicSessionsAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetSession_CallsRepository()
+    {
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        var loggerMock = new Mock<ILogger<Query>>();
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var query = new Query(httpContextAccessorMock.Object, loggerMock.Object);
+
+        // Arrange
+        var expectedSession = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            Note = "Test Session",
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(7),
+            BuySells = new List<BuySellResponse>(),
+            ActivityLogs = new List<ActivityLogResponse>(),
+            BuyingQueues = new List<BuyingQueueItem>(),
+            CurrentRosters = new List<Models.Responses.RosterPlayer>()
+        };
+        sessionRepositoryMock.Setup(r => r.GetSessionAsync(1))
+            .ReturnsAsync(expectedSession);
+
+        // Act
+        var result = await query.GetSession(1, sessionRepositoryMock.Object);
+
+        // Assert
+        result.Should().BeEquivalentTo(expectedSession);
+        sessionRepositoryMock.Verify(r => r.GetSessionAsync(1), Times.Once);
     }
 }
