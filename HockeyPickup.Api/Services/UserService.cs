@@ -54,7 +54,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving user {UserId}", userId);
-            return ServiceResult.CreateFailure("An error occurred while saving user");
+            return ServiceResult.CreateFailure($"An error occurred while saving user. Error: {ex.Message}");
         }
     }
 
@@ -98,7 +98,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resetting password for {Email}", request.Email);
-            return ServiceResult.CreateFailure("An error occurred while resetting the password");
+            return ServiceResult.CreateFailure($"An error occurred while resetting the password. Error: {ex.Message}");
         }
     }
 
@@ -147,7 +147,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error initiating forgot password for {Email}", email);
-            return ServiceResult.CreateFailure("An error occurred while processing your request");
+            return ServiceResult.CreateFailure($"An error occurred while initiating forgot password. Error: {ex.Message}");
         }
     }
 
@@ -182,7 +182,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error changing password for user {UserId}", userId);
-            return ServiceResult.CreateFailure("An error occurred while changing the password");
+            return ServiceResult.CreateFailure($"An error occurred while changing the password. Error: {ex.Message}");
         }
     }
 
@@ -211,7 +211,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error confirming email for {Email}", email);
-            return ServiceResult.CreateFailure("An error occurred while confirming email");
+            return ServiceResult.CreateFailure($"An error occurred while confirming email. Error: {ex.Message}");
         }
     }
 
@@ -303,7 +303,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error registering user with email {Email}", request.Email);
-            return ServiceResult<AspNetUser>.CreateFailure("An error occurred during registration");
+            return ServiceResult<AspNetUser>.CreateFailure($"An error occurred during registration. Error: {ex.Message}");
         }
     }
 
@@ -371,7 +371,7 @@ public class UserService : IUserService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating credentials for username {UserName}", username);
-            return ServiceResult<(User user, string[] roles)>.CreateFailure("An error occurred while validating credentials");
+            return ServiceResult<(User user, string[] roles)>.CreateFailure($"An error occurred while validating credentials. Error: {ex.Message}");
         }
     }
 }

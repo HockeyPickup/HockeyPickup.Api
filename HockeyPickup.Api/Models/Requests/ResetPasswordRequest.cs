@@ -5,6 +5,11 @@ using System.Text.Json.Serialization;
 
 namespace HockeyPickup.Api.Models.Requests;
 
+public static class RequestConstants
+{
+    public const string PasswordRegEx = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[^\s]{8,}$";
+}
+
 public class ResetPasswordRequest
 {
     [Required]
@@ -29,7 +34,7 @@ public class ResetPasswordRequest
     [MinLength(8)]
     [MaxLength(100)]
     [DataType(DataType.Password)]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
+    [RegularExpression(RequestConstants.PasswordRegEx,
         ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character")]
     [JsonPropertyName("NewPassword")]
     [JsonProperty(nameof(NewPassword), Required = Required.Always)]
