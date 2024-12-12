@@ -59,7 +59,8 @@ Create a new file at the root of the HockeyPickup.Api project named `appsettings
   "JwtAudience": "https://api.hockeypickup.com/api/",
   "ServiceBusCommsQueueName": "comms-dev",
   "ServiceBusHealthCheckQueueName": "health-dev",
-  "RegistrationInviteCode": "<InviteCode>"
+  "RegistrationInviteCode": "<InviteCode>",
+  "SessionBuyPrice": "27.00"
   }
 }
 ```

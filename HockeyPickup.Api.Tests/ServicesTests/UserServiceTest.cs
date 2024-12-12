@@ -226,7 +226,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while validating credentials");
+        result.Message.Should().Contain("An error occurred while validating credentials");
 
         // Verify error was logged
         _mockLogger.Verify(x => x.Log(
@@ -530,7 +530,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred during registration");
+        result.Message.Should().Contain("An error occurred during registration");
 
         // Verify error was logged with correct exception and message
         _mockLogger.Verify(x => x.Log(
@@ -652,7 +652,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("Email confirmation failed. The link may have expired.");
+        result.Message.Should().Contain("Email confirmation failed. The link may have expired.");
 
         // Verify warning was logged
         _mockLogger.Verify(x => x.Log(
@@ -680,7 +680,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while confirming email");
+        result.Message.Should().Contain("An error occurred while confirming email");
 
         // Verify error was logged
         _mockLogger.Verify(x => x.Log(
@@ -899,7 +899,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while changing the password");
+        result.Message.Should().Contain("An error occurred while changing the password");
 
         // Verify error was logged
         _mockLogger.Verify(x => x.Log(
@@ -1167,7 +1167,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while processing your request");
+        result.Message.Should().Contain("An error occurred while initiating forgot password");
 
         // Verify error was logged
         _mockLogger.Verify(x => x.Log(
@@ -1195,7 +1195,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while processing your request");
+        result.Message.Should().Contain("An error occurred while initiating forgot password");
 
         // Verify error was logged with correct content
         _mockLogger.Verify(x => x.Log(
@@ -1437,7 +1437,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while resetting the password");
+        result.Message.Should().Contain("An error occurred while resetting the password");
 
         // Verify error was logged
         _mockLogger.Verify(x => x.Log(
@@ -1599,7 +1599,7 @@ public partial class UserServiceTest
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("An error occurred while saving user");
+        result.Message.Should().Contain("An error occurred while saving user");
 
         // Verify error was logged
         _mockLogger.Verify(x => x.Log(

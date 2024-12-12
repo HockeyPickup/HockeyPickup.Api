@@ -13,12 +13,16 @@ public class SessionRepository : ISessionRepository
     private readonly HockeyPickupContext _context;
     private readonly ILogger<SessionRepository> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IConfiguration _configuration;
+    private readonly decimal _cost;
 
-    public SessionRepository(HockeyPickupContext context, ILogger<SessionRepository> logger, IHttpContextAccessor httpContextAccessor)
+    public SessionRepository(HockeyPickupContext context, ILogger<SessionRepository> logger, IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
+        _configuration = configuration;
+        _cost = decimal.Parse(_configuration["SessionBuyPrice"]);
     }
 
     public async Task<SessionDetailedResponse> AddActivityAsync(int sessionId, string activity)
@@ -93,7 +97,8 @@ public class SessionRepository : ISessionRepository
                 Note = s.Note,
                 SessionDate = s.SessionDate,
                 RegularSetId = s.RegularSetId,
-                BuyDayMinimum = s.BuyDayMinimum
+                BuyDayMinimum = s.BuyDayMinimum,
+                Cost = s.Cost != 0 ? s.Cost : _cost
             })
             .OrderByDescending(s => s.SessionDate).ToListAsync();
     }
@@ -116,7 +121,7 @@ public class SessionRepository : ISessionRepository
             .AsSplitQuery() // Added this as without it, it's very slow
             .OrderByDescending(s => s.SessionDate).ToListAsync();
 
-        return sessions.Select(MapToDetailedResponse);
+        return sessions.Select(s => MapToDetailedResponse(s, _cost));
     }
 
     public async Task<SessionDetailedResponse> GetSessionAsync(int sessionId)
@@ -138,10 +143,10 @@ public class SessionRepository : ISessionRepository
             .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
-        return session != null ? MapToDetailedResponse(session) : null;
+        return session != null ? MapToDetailedResponse(session, _cost) : null;
     }
 
-    private static SessionDetailedResponse MapToDetailedResponse(Session session)
+    private static SessionDetailedResponse MapToDetailedResponse(Session session, decimal cost)
     {
         if (session == null) return null;
 
@@ -154,6 +159,7 @@ public class SessionRepository : ISessionRepository
             SessionDate = session.SessionDate,
             RegularSetId = session.RegularSetId,
             BuyDayMinimum = session.BuyDayMinimum,
+            Cost = session.Cost != 0 ? session.Cost : cost,
             BuySells = MapBuySells(session.BuySells),
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
             RegularSet = MapRegularSet(session.RegularSet),

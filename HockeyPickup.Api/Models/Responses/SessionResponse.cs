@@ -66,6 +66,13 @@ public class SessionBasicResponse
     [GraphQLName("BuyDayMinimum")]
     [GraphQLDescription("Minimum number of days before session to allow buying")]
     public int? BuyDayMinimum { get; set; }
+
+    [Description("Cost of the session")]
+    [JsonPropertyName("Cost")]
+    [JsonProperty(nameof(Cost))]
+    [GraphQLName("Cost")]
+    [GraphQLDescription("Cost of the session")]
+    public decimal? Cost{ get; set; }
 }
 
 [GraphQLName("SessionDetailed")]

@@ -13,6 +13,7 @@ public class Session
     public DateTime SessionDate { get; set; }
     public int? RegularSetId { get; set; }
     public int? BuyDayMinimum { get; set; }
+    public decimal? Cost { get; set; }
 
     // Navigation properties
     [ForeignKey("RegularSetId")]

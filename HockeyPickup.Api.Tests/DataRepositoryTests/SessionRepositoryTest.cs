@@ -17,6 +17,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -152,6 +153,7 @@ public class BasicSessionRepositoryTests : IDisposable
 {
     private readonly Mock<ILogger<SessionRepository>> _mockLogger;
     private readonly Mock<HttpContextAccessor> _mockContextAccessor;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly HockeyPickupContext _context;
     private readonly SessionRepository _repository;
     private readonly DateTime _testDate = DateTime.UtcNow;
@@ -160,6 +162,8 @@ public class BasicSessionRepositoryTests : IDisposable
     {
         _mockLogger = new Mock<ILogger<SessionRepository>>();
         _mockContextAccessor = new Mock<HttpContextAccessor> { CallBase = true };
+        _mockConfiguration = new Mock<IConfiguration>();
+        _mockConfiguration.Setup(x => x["SessionBuyPrice"]).Returns("27.00");
 
         var options = new DbContextOptionsBuilder<HockeyPickupContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -189,7 +193,7 @@ public class BasicSessionRepositoryTests : IDisposable
         });
         _context.SaveChanges();
 
-        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object);
+        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
     }
 
     public void Dispose()
@@ -223,6 +227,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
 {
     private readonly Mock<ILogger<SessionRepository>> _mockLogger;
     private readonly Mock<HttpContextAccessor> _mockContextAccessor;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly HockeyPickupContext _context;
     private readonly SessionRepository _repository;
     private readonly DateTime _testDate = DateTime.UtcNow;
@@ -231,13 +236,15 @@ public partial class DetailedSessionRepositoryTests : IDisposable
     {
         _mockLogger = new Mock<ILogger<SessionRepository>>();
         _mockContextAccessor = new Mock<HttpContextAccessor> { CallBase = true };
+        _mockConfiguration = new Mock<IConfiguration>();
+        _mockConfiguration.Setup(x => x["SessionBuyPrice"]).Returns("27.00");
 
         var options = new DbContextOptionsBuilder<HockeyPickupContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
         _context = new DetailedSessionTestContext(options);
-        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object);
+        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
     }
 
     public void Dispose()
@@ -1077,7 +1084,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
                 BindingFlags.NonPublic | BindingFlags.Static);
 
         // Act
-        var result = mapMethod!.Invoke(null, new object[] { null! });
+        var result = mapMethod!.Invoke(null, new object[] { null!, (decimal) 0.0 });
 
         // Assert
         result.Should().BeNull();
@@ -1849,7 +1856,7 @@ public partial class DetailedSessionRepositoryTests
         context.Sessions!.Add(session);
         await context.SaveChangesAsync();
 
-        var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object);
+        var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
 
         // Act
         var result = await repository.AddActivityAsync(1, "Test activity");
@@ -1870,7 +1877,7 @@ public partial class DetailedSessionRepositoryTests
         var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext) null!);
 
-        var repository = new SessionRepository(_context, _mockLogger.Object, mockHttpContextAccessor.Object);
+        var repository = new SessionRepository(_context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
 
         // Act & Assert
         await repository.Invoking(r => r.AddActivityAsync(1, "Test activity"))
@@ -1908,7 +1915,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
 
             // Act & Assert
             await repository.Invoking(r => r.AddActivityAsync(999, "Test activity"))
@@ -1970,7 +1977,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         await using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
             var result = await repository.UpdatePlayerPositionAsync(1, "testUser", 2);
@@ -2036,7 +2043,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         await using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
             var result = await repository.UpdatePlayerPositionAsync(1, "testUser", newPosition);
@@ -2088,7 +2095,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         await using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act & Assert
             await repository.Invoking(r => r.UpdatePlayerPositionAsync(1, "nonexistentUser", 2))
@@ -2122,7 +2129,7 @@ public partial class DetailedSessionRepositoryTests
         context.Users!.Add(user);
         await context.SaveChangesAsync();
 
-        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
         // Act & Assert
         await repository.Invoking(r => r.UpdatePlayerPositionAsync(999, "testUser", 2))
@@ -2184,7 +2191,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         await using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
             var result = await repository.UpdatePlayerTeamAsync(1, "testUser", 2);
@@ -2250,7 +2257,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         await using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
             var result = await repository.UpdatePlayerTeamAsync(1, "testUser", newTeam);
@@ -2302,7 +2309,7 @@ public partial class DetailedSessionRepositoryTests
         // Use a new context instance for the test
         await using (var context = new DetailedSessionTestContext(options))
         {
-            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act & Assert
             await repository.Invoking(r => r.UpdatePlayerTeamAsync(1, "nonexistentUser", 2))
@@ -2336,11 +2343,130 @@ public partial class DetailedSessionRepositoryTests
         context.Users!.Add(user);
         await context.SaveChangesAsync();
 
-        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object);
+        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
         // Act & Assert
         await repository.Invoking(r => r.UpdatePlayerTeamAsync(999, "testUser", 2))
             .Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage("Player not found in session roster");
+    }
+}
+
+public class SessionCostMappingTests : IDisposable
+{
+    private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+    private readonly Mock<HttpContextAccessor> _mockContextAccessor;
+    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly HockeyPickupContext _context;
+    private readonly SessionRepository _repository;
+    private readonly DateTime _testDate = DateTime.UtcNow;
+
+    public SessionCostMappingTests()
+    {
+        _mockLogger = new Mock<ILogger<SessionRepository>>();
+        _mockContextAccessor = new Mock<HttpContextAccessor>();
+        _mockConfiguration = new Mock<IConfiguration>();
+        _mockConfiguration.Setup(x => x["SessionBuyPrice"]).Returns("27.00");
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
+        _context = new DetailedSessionTestContext(options);
+        _repository = new SessionRepository(_context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+    }
+
+    public void Dispose()
+    {
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+    }
+
+    [Fact]
+    public async Task MapToDetailedResponse_WhenSessionCostIsZero_UsesCostParameter()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(1),
+            Note = "Test session",
+            Cost = 0 // Explicitly set cost to 0
+        };
+        _context.Sessions!.Add(session);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetSessionAsync(1);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Cost.Should().Be(27.00m); // Should use the cost parameter from configuration
+    }
+
+    [Fact]
+    public async Task MapToDetailedResponse_WhenSessionCostIsNonZero_UsesSessionCost()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(1),
+            Note = "Test session",
+            Cost = 30.00m // Set a non-zero cost
+        };
+        _context.Sessions!.Add(session);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetSessionAsync(1);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Cost.Should().Be(30.00m); // Should use the session's cost
+    }
+
+    [Fact]
+    public async Task MapToDetailedResponse_WhenSessionIsNull_ReturnsNull()
+    {
+        // Act
+        var result = await _repository.GetSessionAsync(999); // Non-existent session
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(0, 25.00)]
+    [InlineData(15.50, 25.00)]
+    [InlineData(30.00, 25.00)]
+    public void MapToDetailedResponse_CostMapping_WorksWithVariousCosts(decimal sessionCost, decimal defaultCost)
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(1),
+            Note = "Test session",
+            Cost = sessionCost
+        };
+
+        // Use reflection to access private static method
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapToDetailedResponse",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { session, defaultCost }) as SessionDetailedResponse;
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Cost.Should().Be(sessionCost != 0 ? sessionCost : defaultCost);
     }
 }
