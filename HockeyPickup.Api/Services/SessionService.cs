@@ -1,6 +1,7 @@
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
 
@@ -8,6 +9,8 @@ namespace HockeyPickup.Api.Services;
 
 public interface ISessionService
 {
+    Task<ServiceResult<SessionDetailedResponse>> CreateSession(CreateSessionRequest request);
+    Task<ServiceResult<SessionDetailedResponse>> UpdateSession(UpdateSessionRequest request);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment);
 }
@@ -27,6 +30,68 @@ public class SessionService : ISessionService
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public async Task<ServiceResult<SessionDetailedResponse>> CreateSession(CreateSessionRequest request)
+    {
+        try
+        {
+            var session = new Session
+            {
+                SessionDate = request.SessionDate,
+                Note = request.Note,
+                RegularSetId = request.RegularSetId,
+                BuyDayMinimum = request.BuyDayMinimum,
+                Cost = request.Cost,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow
+            };
+
+            var createdSession = await _sessionRepository.CreateSessionAsync(session);
+            var msg = $"Session created for {request.SessionDate:MM/dd/yyyy}";
+
+            var updatedSession = await _sessionRepository.AddActivityAsync(createdSession.SessionId, msg);
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating session");
+            return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred creating the session: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<SessionDetailedResponse>> UpdateSession(UpdateSessionRequest request)
+    {
+        try
+        {
+            var existingSession = await _sessionRepository.GetSessionAsync(request.SessionId);
+            if (existingSession == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Session not found");
+            }
+
+            var session = new Session
+            {
+                SessionId = request.SessionId,
+                SessionDate = request.SessionDate,
+                Note = request.Note,
+                RegularSetId = request.RegularSetId,
+                BuyDayMinimum = request.BuyDayMinimum,
+                Cost = request.Cost,
+                UpdateDateTime = DateTime.UtcNow
+            };
+
+            var updatedSession = await _sessionRepository.UpdateSessionAsync(session);
+            var msg = $"Session updated for {request.SessionDate:MM/dd/yyyy}";
+
+            updatedSession = await _sessionRepository.AddActivityAsync(updatedSession.SessionId, msg);
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error updating session: {request.SessionId}");
+            return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating the session: {ex.Message}");
+        }
     }
 
     public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition)

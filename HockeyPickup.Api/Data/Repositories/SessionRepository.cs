@@ -46,6 +46,51 @@ public class SessionRepository : ISessionRepository
         return session;
     }
 
+    public async Task<SessionDetailedResponse> CreateSessionAsync(Session session)
+    {
+        // Set default values for new session
+        session.CreateDateTime = DateTime.UtcNow;
+        session.UpdateDateTime = DateTime.UtcNow;
+
+        await _context.Sessions!.AddAsync(session);
+        await _context.SaveChangesAsync();
+
+        // Clear tracking to ensure fresh data
+        _context.DetachChangeTracker();
+
+        // Fetch and return the created session with all related data
+        var createdSession = await GetSessionAsync(session.SessionId);
+        return createdSession!;
+    }
+
+    public async Task<SessionDetailedResponse> UpdateSessionAsync(Session session)
+    {
+        var existingSession = await _context.Sessions!
+            .FirstOrDefaultAsync(s => s.SessionId == session.SessionId);
+
+        if (existingSession == null)
+        {
+            throw new KeyNotFoundException($"Session not found with ID: {session.SessionId}");
+        }
+
+        // Update only the fields that can be modified
+        existingSession.SessionDate = session.SessionDate;
+        existingSession.Note = session.Note;
+        existingSession.RegularSetId = session.RegularSetId;
+        existingSession.BuyDayMinimum = session.BuyDayMinimum;
+        existingSession.Cost = session.Cost;
+        existingSession.UpdateDateTime = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        // Clear tracking to ensure fresh data
+        _context.DetachChangeTracker();
+
+        // Fetch and return the updated session with all related data
+        var updatedSession = await GetSessionAsync(session.SessionId);
+        return updatedSession!;
+    }
+
     public async Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, int position)
     {
         // Find and update the roster entry

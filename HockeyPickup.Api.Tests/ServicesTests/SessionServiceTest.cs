@@ -1,8 +1,10 @@
 using FluentAssertions;
+using FluentAssertions.Common;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using HockeyPickup.Api.Tests.DataRepositoryTests;
@@ -19,10 +21,10 @@ namespace HockeyPickup.Api.Tests.Services;
 public partial class SessionServiceTests
 {
     private readonly Mock<UserManager<AspNetUser>> _userManager;
-    private readonly Mock<ISessionRepository> _sessionRepository;
+    private readonly Mock<ISessionRepository> _mockSessionRepository;
     private readonly Mock<IServiceBus> _serviceBus;
     private readonly Mock<IConfiguration> _configuration;
-    private readonly Mock<ILogger<UserService>> _logger;
+    private readonly Mock<ILogger<UserService>> _mockLogger;
     private readonly SessionService _sessionService;
 
     public SessionServiceTests()
@@ -40,17 +42,17 @@ public partial class SessionServiceTests
             Mock.Of<IServiceProvider>(),
             Mock.Of<ILogger<UserManager<AspNetUser>>>());
 
-        _sessionRepository = new Mock<ISessionRepository>();
+        _mockSessionRepository = new Mock<ISessionRepository>();
         _serviceBus = new Mock<IServiceBus>();
         _configuration = new Mock<IConfiguration>();
-        _logger = new Mock<ILogger<UserService>>();
+        _mockLogger = new Mock<ILogger<UserService>>();
 
         _sessionService = new SessionService(
             _userManager.Object,
-            _sessionRepository.Object,
+            _mockSessionRepository.Object,
             _serviceBus.Object,
             _configuration.Object,
-            _logger.Object);
+            _mockLogger.Object);
     }
 
     private static SessionDetailedResponse CreateTestSession(string userId, int position, int team)
@@ -102,11 +104,11 @@ public partial class SessionServiceTests
 
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
-        _sessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
             .Returns(Task.FromResult(session));
-        _sessionRepository.Setup(x => x.UpdatePlayerPositionAsync(sessionId, userId, newPosition))
+        _mockSessionRepository.Setup(x => x.UpdatePlayerPositionAsync(sessionId, userId, newPosition))
             .Returns(Task.FromResult(session));
-        _sessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
             .Returns(Task.FromResult(session));
 
         // Act
@@ -115,8 +117,8 @@ public partial class SessionServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
-        _sessionRepository.Verify(x => x.UpdatePlayerPositionAsync(sessionId, userId, newPosition), Times.Once);
-        _sessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(sessionId, userId, newPosition), Times.Once);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -132,7 +134,7 @@ public partial class SessionServiceTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("Roster player not found", result.Message);
-        _sessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -144,7 +146,7 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(user)!);
 
         // Instead of throwing KeyNotFoundException, we'll have the repository return null
-        _sessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
             .Returns(Task.FromResult<SessionDetailedResponse>(null!));
 
         // Act
@@ -153,7 +155,7 @@ public partial class SessionServiceTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("Session not found", result.Message);
-        _sessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -167,7 +169,7 @@ public partial class SessionServiceTests
 
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
-        _sessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
             .Returns(Task.FromResult(session));
 
         // Act
@@ -176,7 +178,7 @@ public partial class SessionServiceTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("New position is the same as the current position", result.Message);
-        _sessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -195,7 +197,7 @@ public partial class SessionServiceTests
         Assert.Contains("Test exception", result.Message);
 
         // Correct way to verify ILogger
-        _logger.Verify(
+        _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
@@ -316,11 +318,11 @@ public partial class SessionServiceTests
 
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
-        _sessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
             .Returns(Task.FromResult(session));
-        _sessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
+        _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
             .Returns(Task.FromResult(session));
-        _sessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
             .Returns(Task.FromResult(session));
 
         // Act
@@ -329,8 +331,8 @@ public partial class SessionServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
-        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam), Times.Once);
-        _sessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam), Times.Once);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
@@ -346,7 +348,7 @@ public partial class SessionServiceTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("Roster player not found", result.Message);
-        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -358,7 +360,7 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(user)!);
 
         // Instead of throwing KeyNotFoundException, we'll have the repository return null
-        _sessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
             .Returns(Task.FromResult<SessionDetailedResponse>(null!));
 
         // Act
@@ -367,7 +369,7 @@ public partial class SessionServiceTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("Session not found", result.Message);
-        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -381,7 +383,7 @@ public partial class SessionServiceTests
 
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
-        _sessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
             .Returns(Task.FromResult(session));
 
         // Act
@@ -390,7 +392,7 @@ public partial class SessionServiceTests
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("New team assignment is the same as the current team assignment", result.Message);
-        _sessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -409,7 +411,7 @@ public partial class SessionServiceTests
         Assert.Contains("Test exception", result.Message);
 
         // Correct way to verify ILogger
-        _logger.Verify(
+        _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
@@ -443,5 +445,214 @@ public partial class SessionServiceTests
 
         // Assert
         result.Should().Be(expected);
+    }
+}
+
+public partial class SessionServiceTests
+{
+    [Fact]
+    public async Task CreateSession_Success_ReturnsSessionResponse()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        var createdSession = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
+            .ReturnsAsync(createdSession);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(createdSession);
+
+        // Act
+        var result = await _sessionService.CreateSession(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(createdSession.SessionId, result.Data.SessionId);
+        _mockSessionRepository.Verify(x => x.CreateSessionAsync(It.IsAny<Session>()), Times.Once);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSession_Success_ReturnsUpdatedSession()
+    {
+        // Arrange
+        var request = new UpdateSessionRequest
+        {
+            SessionId = 1,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Updated session"
+        };
+
+        var existingSession = new SessionDetailedResponse
+        {
+            SessionId = request.SessionId,
+            SessionDate = DateTime.UtcNow,
+            RegularSetId = 2,
+            BuyDayMinimum = 2,
+            Cost = 25.00m,
+            Note = "Original session",
+            CreateDateTime = DateTime.UtcNow.AddDays(-1),
+            UpdateDateTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        var updatedSession = new SessionDetailedResponse
+        {
+            SessionId = request.SessionId,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = existingSession.CreateDateTime,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId))
+            .ReturnsAsync(existingSession);
+        _mockSessionRepository.Setup(x => x.UpdateSessionAsync(It.IsAny<Session>()))
+            .ReturnsAsync(updatedSession);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(updatedSession);
+
+        // Act
+        var result = await _sessionService.UpdateSession(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(updatedSession.SessionId, result.Data.SessionId);
+        Assert.Equal(request.SessionDate, result.Data.SessionDate);
+        Assert.Equal(request.RegularSetId, result.Data.RegularSetId);
+        Assert.Equal(request.BuyDayMinimum, result.Data.BuyDayMinimum);
+        Assert.Equal(request.Cost, result.Data.Cost);
+        Assert.Equal(request.Note, result.Data.Note);
+        _mockSessionRepository.Verify(x => x.UpdateSessionAsync(It.IsAny<Session>()), Times.Once);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateSession_SessionNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var request = new UpdateSessionRequest
+        {
+            SessionId = 1,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Updated session"
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId))
+            .Returns(Task.FromResult<SessionDetailedResponse>(null!));
+
+        // Act
+        var result = await _sessionService.UpdateSession(request);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Session not found", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdateSessionAsync(It.IsAny<Session>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateSession_ThrowsException_ReturnsFailure()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _sessionService.CreateSession(request);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("An error occurred creating the session: Test exception", result.Message);
+        // Logger verification needs to use It.IsAny<T> for all parameters
+        _mockLogger.Verify(x => x.Log(
+            It.IsAny<LogLevel>(),
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+        ));
+    }
+
+    [Fact]
+    public async Task UpdateSession_ThrowsException_ReturnsFailure()
+    {
+        // Arrange 
+        var request = new UpdateSessionRequest
+        {
+            SessionId = 1,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        var existingSession = new SessionDetailedResponse
+        {
+            SessionId = request.SessionId,
+            SessionDate = DateTime.UtcNow,
+            RegularSetId = 2,
+            BuyDayMinimum = 2,
+            Cost = 25.00m,
+            Note = "Original session",
+            CreateDateTime = DateTime.UtcNow.AddDays(-1),
+            UpdateDateTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId))
+            .ReturnsAsync(existingSession);
+
+        _mockSessionRepository.Setup(x => x.UpdateSessionAsync(It.IsAny<Session>()))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _sessionService.UpdateSession(request);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("An error occurred updating the session: Test exception", result.Message);
+        _mockLogger.Verify(x => x.Log(
+            It.IsAny<LogLevel>(),
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+        ));
     }
 }

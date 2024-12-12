@@ -30,6 +30,34 @@ public class SessionController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpPost("create-session")]
+    [Description("Creates a new session")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> CreateSession([FromBody] CreateSessionRequest createSessionRequest)
+    {
+        var result = await _sessionService.CreateSession(createSessionRequest);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? CreatedAtAction(nameof(CreateSession), new { id = result.Data.SessionId }, response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-session")]
+    [Description("Updates an existing session")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> UpdateSession([FromBody] UpdateSessionRequest updateSessionRequest)
+    {
+        var result = await _sessionService.UpdateSession(updateSessionRequest);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpPut("update-roster-position")]
     [Description("Updates a roster player position")]
     [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]

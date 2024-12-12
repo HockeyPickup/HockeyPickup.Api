@@ -138,4 +138,134 @@ public class SessionControllerTests
         Assert.False(response.Success);
         Assert.Equal("Error message", response.Message);
     }
+
+    [Fact]
+    public async Task CreateSession_Success_ReturnsCreatedResponse()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        var serviceResponse = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        _sessionService.Setup(x => x.CreateSession(It.IsAny<CreateSessionRequest>()))
+            .ReturnsAsync(ServiceResult<SessionDetailedResponse>.CreateSuccess(serviceResponse));
+
+        // Act
+        var result = await _controller.CreateSession(request);
+
+        // Assert
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(createdResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(serviceResponse.SessionId, response.Data.SessionId);
+    }
+
+    [Fact]
+    public async Task CreateSession_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        _sessionService.Setup(x => x.CreateSession(It.IsAny<CreateSessionRequest>()))
+            .ReturnsAsync(ServiceResult<SessionDetailedResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.CreateSession(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
+
+    [Fact]
+    public async Task UpdateSession_Success_ReturnsOkResponse()
+    {
+        // Arrange
+        var request = new UpdateSessionRequest
+        {
+            SessionId = 1,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Updated session"
+        };
+
+        var serviceResponse = new SessionDetailedResponse
+        {
+            SessionId = request.SessionId,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        _sessionService.Setup(x => x.UpdateSession(It.IsAny<UpdateSessionRequest>()))
+            .ReturnsAsync(ServiceResult<SessionDetailedResponse>.CreateSuccess(serviceResponse));
+
+        // Act
+        var result = await _controller.UpdateSession(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(okResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(serviceResponse.SessionId, response.Data.SessionId);
+    }
+
+    [Fact]
+    public async Task UpdateSession_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateSessionRequest
+        {
+            SessionId = 1,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Updated session"
+        };
+
+        _sessionService.Setup(x => x.UpdateSession(It.IsAny<UpdateSessionRequest>()))
+            .ReturnsAsync(ServiceResult<SessionDetailedResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.UpdateSession(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
 }

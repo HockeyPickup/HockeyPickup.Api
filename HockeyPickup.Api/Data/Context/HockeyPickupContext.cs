@@ -187,7 +187,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<Session>(entity =>
         {
-            entity.ToTable("Sessions");
+            entity.ToTable("Sessions", tb => tb.HasTrigger("TRG_Sessions_PopulateRoster"));
             entity.HasKey(e => e.SessionId).HasName("PK_dbo.Sessions");
 
             entity.Property(e => e.CreateDateTime)
@@ -218,6 +218,10 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .WithOne()
                 .HasForeignKey(q => q.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.SessionId)
+                .UseIdentityColumn()
+                .ValueGeneratedOnAdd();
         });
 
         // Configure BuySells

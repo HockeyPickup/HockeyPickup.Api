@@ -2470,3 +2470,134 @@ public class SessionCostMappingTests : IDisposable
         result!.Cost.Should().Be(sessionCost != 0 ? sessionCost : defaultCost);
     }
 }
+
+public class SessionRepositoryTests : IDisposable
+{
+    private readonly DbContextOptions<HockeyPickupContext> _options;
+    private readonly HockeyPickupContext _context;
+    private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly SessionRepository _repository;
+
+    public SessionRepositoryTests()
+    {
+        _options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
+        _context = new HockeyPickupContext(_options);
+        _mockLogger = new Mock<ILogger<SessionRepository>>();
+        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        _mockConfiguration = new Mock<IConfiguration>();
+        _mockConfiguration.Setup(x => x["SessionBuyPrice"]).Returns("20.00");
+
+        _repository = new SessionRepository(
+            _context,
+            _mockLogger.Object,
+            _mockHttpContextAccessor.Object,
+            _mockConfiguration.Object);
+    }
+
+    [Fact]
+    public async Task CreateSessionAsync_Success_ReturnsSessionResponse()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        // Act
+        var result = await _repository.CreateSessionAsync(session);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.SessionId > 0);
+        Assert.Equal(session.SessionDate, result.SessionDate);
+        Assert.Equal(session.RegularSetId, result.RegularSetId);
+        Assert.Equal(session.BuyDayMinimum, result.BuyDayMinimum);
+        Assert.Equal(session.Cost, result.Cost);
+        Assert.Equal(session.Note, result.Note);
+
+        // Verify it's in the database
+        var dbSession = await _context.Sessions!.FindAsync(result.SessionId);
+        Assert.NotNull(dbSession);
+        Assert.Equal(DateTime.UtcNow.Date, dbSession.CreateDateTime.Date);
+        Assert.Equal(DateTime.UtcNow.Date, dbSession.UpdateDateTime.Date);
+    }
+
+    [Fact]
+    public async Task UpdateSessionAsync_Success_ReturnsUpdatedSession()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Original session",
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        await _context.Sessions!.AddAsync(session);
+        await _context.SaveChangesAsync();
+
+        var updateSession = new Session
+        {
+            SessionId = session.SessionId,
+            SessionDate = DateTime.UtcNow.AddDays(2),
+            RegularSetId = 2,
+            BuyDayMinimum = 2,
+            Cost = 25.00m,
+            Note = "Updated session"
+        };
+
+        // Act
+        var result = await _repository.UpdateSessionAsync(updateSession);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(updateSession.SessionId, result.SessionId);
+        Assert.Equal(updateSession.SessionDate, result.SessionDate);
+        Assert.Equal(updateSession.RegularSetId, result.RegularSetId);
+        Assert.Equal(updateSession.BuyDayMinimum, result.BuyDayMinimum);
+        Assert.Equal(updateSession.Cost, result.Cost);
+        Assert.Equal(updateSession.Note, result.Note);
+
+        // Verify it's updated in the database
+        var dbSession = await _context.Sessions!.FindAsync(result.SessionId);
+        Assert.NotNull(dbSession);
+        Assert.Equal(DateTime.UtcNow.Date, dbSession.UpdateDateTime.Date);
+    }
+
+    [Fact]
+    public async Task UpdateSessionAsync_SessionNotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var session = new Session
+        {
+            SessionId = 999,
+            SessionDate = DateTime.UtcNow,
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _repository.UpdateSessionAsync(session));
+    }
+
+    public void Dispose()
+    {
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+    }
+}
