@@ -119,24 +119,24 @@ public class UserService : IUserService
             await _serviceBus.SendAsync(new ServiceBusCommsMessage
             {
                 Metadata = new Dictionary<string, string>
-            {
-                { "Type", "ForgotPassword" },
-                { "CommunicationEventId", Guid.NewGuid().ToString() }
-            },
+                {
+                    { "Type", "ForgotPassword" },
+                    { "CommunicationEventId", Guid.NewGuid().ToString() }
+                },
                 CommunicationMethod = new Dictionary<string, string>
-            {
-                { "Email", user.Email }
-            },
+                {
+                    { "Email", user.Email }
+                },
                 RelatedEntities = new Dictionary<string, string>
-            {
-                { "UserId", user.Id },
-                { "FirstName", user.FirstName },
-                { "LastName", user.LastName }
-            },
+                {
+                    { "UserId", user.Id },
+                    { "FirstName", user.FirstName },
+                    { "LastName", user.LastName }
+                },
                 MessageData = new Dictionary<string, string>
-            {
-                { "ResetUrl", resetUrl }
-            }
+                {
+                    { "ResetUrl", resetUrl }
+                }
             },
             subject: "ForgotPassword",
             correlationId: Guid.NewGuid().ToString(),
@@ -269,24 +269,24 @@ public class UserService : IUserService
                 await _serviceBus.SendAsync(new ServiceBusCommsMessage
                 {
                     Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "RegisterConfirmation" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
+                    {
+                        { "Type", "RegisterConfirmation" },
+                        { "CommunicationEventId", Guid.NewGuid().ToString() }
+                    },
                     CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email }
-                },
+                    {
+                        { "Email", user.Email }
+                    },
                     RelatedEntities = new Dictionary<string, string>
-                {
-                    { "UserId", user.Id },
-                    { "FirstName", user.FirstName },
-                    { "LastName", user.LastName }
-                },
+                    {
+                        { "UserId", user.Id },
+                        { "FirstName", user.FirstName },
+                        { "LastName", user.LastName }
+                    },
                     MessageData = new Dictionary<string, string>
-                {
-                    { "ConfirmationUrl", confirmationUrl }
-                }
+                    {
+                        { "ConfirmationUrl", confirmationUrl }
+                    }
                 },
                 subject: "RegisterConfirmation",
                 correlationId: Guid.NewGuid().ToString(),
@@ -351,15 +351,20 @@ public class UserService : IUserService
             await _serviceBus.SendAsync(new ServiceBusCommsMessage
             {
                 Metadata = new Dictionary<string, string>
-            {
-                { "Type", "SignedIn" },
-                { "CommunicationEventId", Guid.NewGuid().ToString() }
-            },
+                {
+                    { "Type", "SignedIn" },
+                    { "CommunicationEventId", Guid.NewGuid().ToString() }
+                },
                 CommunicationMethod = new Dictionary<string, string>
-            {
-                { "Email", user.Email }
-            },
-                RelatedEntities = [],
+                {
+                    { "Email", user.Email }
+                },
+                RelatedEntities = new Dictionary<string, string>
+                {
+                    { "UserId", user.Id },
+                    { "FirstName", user.FirstName },
+                    { "LastName", user.LastName }
+                },
                 MessageData = [],
             },
             subject: "SignedIn",
