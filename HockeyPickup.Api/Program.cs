@@ -63,6 +63,7 @@ public class Program
             o.OperationProcessors.Add(new AuthorizeCheckOperationProcessor());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<LockerRoom13Players>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<LockerRoom13Response>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<RegularSetDetailedResponse>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ErrorDetail>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ServiceBusCommsMessage>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<User>());
@@ -80,6 +81,7 @@ public class Program
             o.EnableAnnotations();
             o.DocumentFilter<CustomModelDocumentFilter<LockerRoom13Players>>();
             o.DocumentFilter<CustomModelDocumentFilter<LockerRoom13Response>>();
+            o.DocumentFilter<CustomModelDocumentFilter<RegularSetDetailedResponse>>();
             o.DocumentFilter<CustomModelDocumentFilter<ErrorDetail>>();
             o.DocumentFilter<CustomModelDocumentFilter<ServiceBusCommsMessage>>();
             o.DocumentFilter<CustomModelDocumentFilter<User>>();
@@ -147,6 +149,10 @@ public class Program
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+        builder.Services.AddScoped<IRegularRepository, RegularRepository>();
+
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<ISessionService, SessionService>();
 
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
@@ -231,8 +237,6 @@ public class Program
         builder.Services.AddDistributedMemoryCache();
 
         builder.Services.AddScoped<IJwtService, JwtService>();
-        builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddScoped<ISessionService, SessionService>();
         builder.Services.AddScoped<IServiceBus, ResilientServiceBus>();
         builder.Services.AddScoped<ITokenBlacklistService, TokenBlacklistService>();
 

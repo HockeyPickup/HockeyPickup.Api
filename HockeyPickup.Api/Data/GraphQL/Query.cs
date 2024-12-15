@@ -51,4 +51,22 @@ public class Query
     {
         return await sessionRepository.GetSessionAsync(SessionId);
     }
+
+    [Authorize]
+    [GraphQLDescription("Retrieves all regular sets with their regular players")]
+    [GraphQLType(typeof(IEnumerable<RegularSetDetailedResponse>))]
+    [GraphQLName("RegularSets")]
+    public async Task<IEnumerable<RegularSetDetailedResponse>> GetRegularSets([Service] IRegularRepository regularRepository)
+    {
+        return await regularRepository.GetRegularSetsAsync();
+    }
+
+    [Authorize]
+    [GraphQLDescription("Retrieves a specific regular set by ID with all regular players")]
+    [GraphQLType(typeof(RegularSetDetailedResponse))]
+    [GraphQLName("RegularSet")]
+    public async Task<RegularSetDetailedResponse> GetRegularSet([GraphQLName("RegularSetId")] [GraphQLDescription("The ID of the regular set to retrieve")] int regularSetId, [Service] IRegularRepository regularRepository)
+    {
+        return await regularRepository.GetRegularSetAsync(regularSetId);
+    }
 }
