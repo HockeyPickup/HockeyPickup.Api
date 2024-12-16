@@ -5,6 +5,9 @@ using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Models.Responses;
 using System.Reflection;
+using Moq;
+using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -313,5 +316,74 @@ public class RegularRepositoryTests : IDisposable
         result.Should().NotBeNull();
         result.Should().BeOfType<List<RegularDetailedResponse>>();
         (result as List<RegularDetailedResponse>).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DuplicateRegularSetAsync_ValidRequest_ReturnsDuplicatedSet()
+    {
+        // Arrange
+        var sourceId = 1;
+        var newDescription = "Duplicated Set";
+        var mockDb = new Mock<IDbFacade>();
+
+        var expectedNewId = 2;
+        mockDb.Setup(x => x.ExecuteSqlRawAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SqlParameter>>()))
+            .Callback<string, IEnumerable<SqlParameter>>((sql, parameters) =>
+            {
+                parameters.Last().Value = expectedNewId;
+            })
+            .ReturnsAsync(1);
+
+        var repository = new RegularRepository(_context, mockDb.Object);
+
+        // Act
+        var result = await repository.DuplicateRegularSetAsync(sourceId, newDescription);
+
+        // Assert
+        mockDb.Verify(x => x.ExecuteSqlRawAsync(
+            It.Is<string>(sql => sql.Contains("CopyRoster")),
+            It.Is<IEnumerable<SqlParameter>>(p => p.Any(param => param.Value.ToString() == sourceId.ToString()))),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DuplicateRegularSetAsync_InvalidSourceId_ReturnsNull()
+    {
+        // Arrange
+        var mockDb = new Mock<IDbFacade>();
+        mockDb.Setup(x => x.ExecuteSqlRawAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SqlParameter>>()))
+            .ThrowsAsync(new Exception("Source not found"));
+
+        var repository = new RegularRepository(_context, mockDb.Object);
+
+        // Act
+        var result = await repository.DuplicateRegularSetAsync(999, "Test");
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DuplicateRegularSetAsync_VerifiesParameters()
+    {
+        // Arrange
+        var sourceId = 1;
+        var newDescription = "Test Description";
+        var mockDb = new Mock<IDbFacade>();
+        mockDb.Setup(x => x.ExecuteSqlRawAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SqlParameter>>()))
+            .ReturnsAsync(1);
+
+        var repository = new RegularRepository(_context, mockDb.Object);
+
+        // Act
+        await repository.DuplicateRegularSetAsync(sourceId, newDescription);
+
+        // Assert
+        mockDb.Verify(x => x.ExecuteSqlRawAsync(
+            It.IsAny<string>(),
+            It.Is<IEnumerable<SqlParameter>>(p =>
+                p.Any(param => param.ParameterName == "@RegularSetId" && (int) param.Value == sourceId) &&
+                p.Any(param => param.ParameterName == "@NewRosterDescription" && (string) param.Value == newDescription))),
+            Times.Once);
     }
 }

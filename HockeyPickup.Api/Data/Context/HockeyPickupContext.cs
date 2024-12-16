@@ -1,10 +1,33 @@
 using HockeyPickup.Api.Data.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
 
 namespace HockeyPickup.Api.Data.Context;
+
+public interface IDbFacade
+{
+    Task<int> ExecuteSqlRawAsync(string sql, IEnumerable<SqlParameter> parameters);
+}
+
+[ExcludeFromCodeCoverage]
+public class DbFacade : IDbFacade
+{
+    private readonly DatabaseFacade _database;
+
+    public DbFacade(DatabaseFacade database)
+    {
+        _database = database;
+    }
+
+    public async Task<int> ExecuteSqlRawAsync(string sql, IEnumerable<SqlParameter> parameters)
+    {
+        return await _database.ExecuteSqlRawAsync(sql, parameters);
+    }
+}
 
 [ExcludeFromCodeCoverage]
 public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetRole, string>

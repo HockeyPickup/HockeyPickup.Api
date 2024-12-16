@@ -1,6 +1,7 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Models.Responses;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -9,10 +10,12 @@ namespace HockeyPickup.Api.Data.Repositories;
 public class RegularRepository : IRegularRepository
 {
     private readonly HockeyPickupContext _context;
+    private readonly IDbFacade _db;
 
-    public RegularRepository(HockeyPickupContext context)
+    public RegularRepository(HockeyPickupContext context, IDbFacade? db = null)
     {
         _context = context;
+        _db = db ?? new DbFacade(context.Database);
     }
 
     public async Task<IEnumerable<RegularSetDetailedResponse>> GetRegularSetsAsync()
@@ -91,5 +94,34 @@ public class RegularRepository : IRegularRepository
             DateCreated = user.DateCreated,
             Roles = []
         };
+    }
+
+    public async Task<RegularSetDetailedResponse?> DuplicateRegularSetAsync(int regularSetId, string description)
+    {
+        try
+        {
+            var newIdParameter = new SqlParameter
+            {
+                ParameterName = "@NewRegularSetId",
+                SqlDbType = SqlDbType.Int,
+                Direction = ParameterDirection.Output
+            };
+
+            await _db.ExecuteSqlRawAsync(
+                "EXEC CopyRoster @RegularSetId, @NewRosterDescription, @NewRegularSetId OUTPUT",
+                new[]
+                {
+                    new SqlParameter("@RegularSetId", regularSetId),
+                    new SqlParameter("@NewRosterDescription", description),
+                    newIdParameter
+                });
+
+            var newRegularSetId = (int) newIdParameter.Value;
+            return await GetRegularSetAsync(newRegularSetId);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
