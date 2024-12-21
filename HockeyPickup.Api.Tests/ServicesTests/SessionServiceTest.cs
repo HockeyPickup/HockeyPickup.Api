@@ -1,5 +1,4 @@
 using FluentAssertions;
-using FluentAssertions.Common;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
