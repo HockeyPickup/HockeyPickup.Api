@@ -71,6 +71,7 @@ public partial class SessionServiceTests
                     UserId = userId,
                     FirstName = "Test",
                     LastName = "User",
+                    Email = "user@anywhere.com",
                     SessionId = 1,
                     TeamAssignment = team,
                     IsPlaying = true,

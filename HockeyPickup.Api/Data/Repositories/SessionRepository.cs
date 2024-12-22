@@ -222,6 +222,7 @@ public class SessionRepository : ISessionRepository
             SessionRosterId = r.SessionRosterId,
             SessionId = r.SessionId,
             UserId = r.UserId,
+            Email = r.Email,
             FirstName = r.FirstName,
             LastName = r.LastName,
             TeamAssignment = r.TeamAssignment,

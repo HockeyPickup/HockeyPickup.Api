@@ -1648,6 +1648,7 @@ public class RosterPlayerResponseTests
             SessionRosterId = 1,
             SessionId = 1,
             UserId = "user123",
+            Email = "user123@anywhere.com",
             FirstName = "John",
             LastName = "Doe",
             TeamAssignment = 1,

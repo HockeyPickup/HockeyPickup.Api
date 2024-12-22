@@ -131,6 +131,7 @@ public class RosterPlayer
     [Key]
     public int SessionRosterId { get; set; }
     public string UserId { get; set; } = null!;
+    public string Email { get; set; } = null!;
     public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public int SessionId { get; set; }

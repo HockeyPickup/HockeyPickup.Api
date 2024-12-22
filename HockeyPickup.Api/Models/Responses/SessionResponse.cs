@@ -469,6 +469,16 @@ public class RosterPlayer
     public required string UserId { get; set; }
 
     [Required]
+    [Description("Email address of the user")]
+    [MaxLength(256)]
+    [DataType(DataType.EmailAddress)]
+    [JsonPropertyName("Email")]
+    [JsonProperty(nameof(Email), Required = Required.Always)]
+    [GraphQLName("Email")]
+    [GraphQLDescription("Email address of the user")]
+    public required string Email { get; set; }
+
+    [Required]
     [Description("First name of the player")]
     [MaxLength(256)]
     [DataType(DataType.Text)]
