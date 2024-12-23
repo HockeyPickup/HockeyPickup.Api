@@ -1,7 +1,6 @@
 using FluentAssertions;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
-using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
@@ -11,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 
-namespace HockeyPickup.Api.Tests.Services;
+namespace HockeyPickup.Api.Tests.ServicesTests;
 
 public class RegularServiceTests
 {

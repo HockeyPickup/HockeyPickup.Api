@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 
-namespace HockeyPickup.Api.Tests.Services;
+namespace HockeyPickup.Api.Tests.ServicesTests;
 
 public partial class SessionServiceTests
 {

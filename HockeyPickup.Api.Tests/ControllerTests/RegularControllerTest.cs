@@ -19,7 +19,7 @@ public class RegularControllerTests
     {
         _regularService = new Mock<IRegularService>();
         _logger = new Mock<ILogger<AuthController>>();
-        _controller = new RegularController(_logger.Object, _regularService.Object);
+        _controller = new RegularController(_regularService.Object);
     }
 
     private static RegularSetDetailedResponse CreateTestRegularSet()

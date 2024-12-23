@@ -1684,3 +1684,186 @@ public partial class UserServiceTest
         result.Message.Should().Be("Failed to reset password");  // Default message when no errors
     }
 }
+
+public partial class UserServiceTest
+{
+    [Fact]
+    public async Task GetUserByIdAsync_ValidId_ReturnsUser()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var expectedUser = new AspNetUser { Id = userId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(expectedUser);
+
+        // Act
+        var result = await _service.GetUserByIdAsync(userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(userId);
+    }
+
+    [Fact]
+    public async Task GetUserByIdAsync_InvalidId_ReturnsNull()
+    {
+        // Arrange
+        var userId = "nonexistent-id";
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.GetUserByIdAsync(userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetUserByIdAsync_Exception_ReturnsNull()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.GetUserByIdAsync(userId);
+
+        // Assert
+        result.Should().BeNull();
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserRolesAsync_ValidUser_ReturnsRoles()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "test-user-id" };
+        var expectedRoles = new[] { "Admin", "User" };
+
+        _mockUserManager.Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(expectedRoles);
+
+        // Act
+        var result = await _service.GetUserRolesAsync(user);
+
+        // Assert
+        result.Should().BeEquivalentTo(expectedRoles);
+    }
+
+    [Fact]
+    public async Task GetUserRolesAsync_NoRoles_ReturnsEmptyArray()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "test-user-id" };
+
+        _mockUserManager.Setup(x => x.GetRolesAsync(user))
+            .ReturnsAsync(new List<string>());
+
+        // Act
+        var result = await _service.GetUserRolesAsync(user);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUserRolesAsync_Exception_ReturnsEmptyArray()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "test-user-id" };
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.GetRolesAsync(user))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.GetUserRolesAsync(user);
+
+        // Assert
+        result.Should().BeEmpty();
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task IsInRoleAsync_UserInRole_ReturnsTrue()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "test-user-id" };
+        var role = "Admin";
+
+        _mockUserManager.Setup(x => x.IsInRoleAsync(user, role))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _service.IsInRoleAsync(user, role);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsInRoleAsync_UserNotInRole_ReturnsFalse()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "test-user-id" };
+        var role = "Admin";
+
+        _mockUserManager.Setup(x => x.IsInRoleAsync(user, role))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _service.IsInRoleAsync(user, role);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task IsInRoleAsync_Exception_ReturnsFalse()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "test-user-id" };
+        var role = "Admin";
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.IsInRoleAsync(user, role))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.IsInRoleAsync(user, role);
+
+        // Assert
+        result.Should().BeFalse();
+
+        // Verify error was logged
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}

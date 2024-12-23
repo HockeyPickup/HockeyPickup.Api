@@ -19,7 +19,7 @@ public class SessionControllerTests
     {
         _sessionService = new Mock<ISessionService>();
         _logger = new Mock<ILogger<AuthController>>();
-        _controller = new SessionController(_logger.Object, _sessionService.Object);
+        _controller = new SessionController(_sessionService.Object);
     }
 
     private static SessionDetailedResponse CreateTestSession()
