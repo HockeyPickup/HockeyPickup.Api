@@ -208,17 +208,6 @@ public partial class UserRepositoryTest
     }
 
     [Fact]
-    public async Task GetDetailedUsersAsync_ReturnsOnlyActiveUsers()
-    {
-        // Act
-        var result = await _repository.GetDetailedUsersAsync();
-
-        // Assert
-        result.Should().HaveCount(2); // Only active users
-        result.Select(u => u.Id).Should().BeEquivalentTo(new[] { "user1", "user3" });
-    }
-
-    [Fact]
     public async Task GetDetailedUsersAsync_MapsPropertiesCorrectly()
     {
         // Act

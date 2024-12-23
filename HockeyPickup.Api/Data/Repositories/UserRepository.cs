@@ -21,7 +21,6 @@ public class UserRepository : IUserRepository
     public async Task<IEnumerable<UserDetailedResponse>> GetDetailedUsersAsync()
     {
         return await _context.Users
-            .Where(u => u.Active)
             .Select(u => new UserDetailedResponse
             {
                 Id = u.Id,
