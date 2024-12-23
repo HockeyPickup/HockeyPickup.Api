@@ -1,10 +1,8 @@
 using HockeyPickup.Api.Data.Context;
-using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
-using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Responses;
-using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace HockeyPickup.Api.Services;
@@ -124,16 +122,21 @@ public class ImpersonationService : IImpersonationService
         try
         {
             var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            _logger.LogDebug($"Current User ID: {currentUserId}");
+
             if (string.IsNullOrEmpty(currentUserId))
                 return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateFailure("User not found"));
 
             // Check for impersonation by looking for OriginalAdmin role
             var originalAdminClaim = user.FindFirst(c => c.Type == ClaimTypes.Role && c.Value.StartsWith("OriginalAdmin:"));
-            var startTimeClaim = user.FindFirst(c => c.Type == ClaimTypes.Role && c.Value.StartsWith("ImpersonationStartTime:"));
+            var startTimeClaim = user.FindFirst(c => c.Type == ClaimTypes.Role && c.Value.StartsWith("ImpersonationStartTime|"));
+
+            _logger.LogDebug($"Original Admin Claim: {originalAdminClaim?.Value}");
+            _logger.LogDebug($"Start Time Claim: {startTimeClaim?.Value}");
 
             if (originalAdminClaim == null)
             {
-                // Not impersonating
+                _logger.LogDebug("No original admin claim found - not impersonating");
                 return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateSuccess(new ImpersonationStatusResponse
                 {
                     IsImpersonating = false,
@@ -145,30 +148,48 @@ public class ImpersonationService : IImpersonationService
 
             // Get the original admin ID from the claim
             var originalAdminId = originalAdminClaim.Value.Split(':')[1];
+            _logger.LogDebug($"Parsed Admin ID: {originalAdminId}");
 
             // Parse start time if available
+            // In GetStatusAsync method:
             DateTime? startTime = null;
             if (startTimeClaim != null)
             {
-                var startTimeStr = startTimeClaim.Value.Split(':')[1];
-                if (DateTime.TryParse(startTimeStr, out var parsedTime))
+                var startTimeStr = startTimeClaim.Value.Split('|')[1];
+                _logger.LogDebug($"Parsed Start Time String: {startTimeStr}");
+
+                // Parse explicitly as UTC
+                if (DateTime.TryParse(startTimeStr, null, DateTimeStyles.RoundtripKind, out var parsedTime))
                 {
                     startTime = parsedTime;
+                    _logger.LogDebug($"Successfully parsed time: {startTime}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Failed to parse time from string: {startTimeStr}");
                 }
             }
 
-            return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateSuccess(new ImpersonationStatusResponse
+            var response = new ImpersonationStatusResponse
             {
                 IsImpersonating = true,
                 ImpersonatedUserId = currentUserId,
                 OriginalUserId = originalAdminId,
                 StartTime = startTime
-            }));
+            };
+
+            _logger.LogDebug($"Created response: IsImpersonating={response.IsImpersonating}, " +
+                            $"ImpersonatedUserId={response.ImpersonatedUserId}, " +
+                            $"OriginalUserId={response.OriginalUserId}, " +
+                            $"StartTime={response.StartTime}");
+
+            return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateSuccess(response));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting impersonation status");
-            return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateFailure($"An error occurred while getting impersonation status: {ex.Message}"));
+            return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateFailure(
+                $"An error occurred while getting impersonation status: {ex.Message}"));
         }
     }
 }
