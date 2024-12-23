@@ -21,11 +21,9 @@ namespace HockeyPickup.Api.Controllers;
 public class SessionController : ControllerBase
 {
     private readonly ISessionService _sessionService;
-    private readonly ILogger<AuthController> _logger;
 
-    public SessionController(ILogger<AuthController> logger, ISessionService sessionService)
+    public SessionController(ISessionService sessionService)
     {
-        _logger = logger;
         _sessionService = sessionService;
     }
 

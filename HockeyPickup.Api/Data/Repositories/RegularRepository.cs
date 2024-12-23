@@ -65,35 +65,8 @@ public class RegularRepository : IRegularRepository
             UserId = r.UserId,
             TeamAssignment = r.TeamAssignment,
             PositionPreference = r.PositionPreference,
-            User = MapUserResponse(r.User)
+            User = r.User.ToDetailedResponse()
         }).ToList();
-    }
-
-    private static UserDetailedResponse MapUserResponse(AspNetUser user)
-    {
-        if (user == null) return null;
-
-        return new UserDetailedResponse
-        {
-            Id = user.Id,
-            UserName = user.UserName,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Preferred = user.Preferred,
-            PreferredPlus = user.PreferredPlus,
-            Active = user.Active,
-            Rating = user.Rating, // Don't use GetSecureRating in tests
-            LockerRoom13 = user.LockerRoom13,
-            EmergencyName = user.EmergencyName,
-            EmergencyPhone = user.EmergencyPhone,
-            MobileLast4 = user.MobileLast4,
-            VenmoAccount = user.VenmoAccount,
-            PayPalEmail = user.PayPalEmail,
-            NotificationPreference = (NotificationPreference) user.NotificationPreference,
-            DateCreated = user.DateCreated,
-            Roles = []
-        };
     }
 
     public async Task<RegularSetDetailedResponse?> DuplicateRegularSetAsync(int regularSetId, string description)
@@ -123,5 +96,35 @@ public class RegularRepository : IRegularRepository
         {
             return null;
         }
+    }
+}
+
+public static class UserMappingExtensions
+{
+    public static UserDetailedResponse ToDetailedResponse(this AspNetUser user)
+    {
+        if (user == null) return null;
+
+        return new UserDetailedResponse
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Preferred = user.Preferred,
+            PreferredPlus = user.PreferredPlus,
+            Active = user.Active,
+            Rating = user.Rating,
+            LockerRoom13 = user.LockerRoom13,
+            EmergencyName = user.EmergencyName,
+            EmergencyPhone = user.EmergencyPhone,
+            MobileLast4 = user.MobileLast4,
+            VenmoAccount = user.VenmoAccount,
+            PayPalEmail = user.PayPalEmail,
+            NotificationPreference = (NotificationPreference) user.NotificationPreference,
+            DateCreated = user.DateCreated,
+            Roles = []
+        };
     }
 }

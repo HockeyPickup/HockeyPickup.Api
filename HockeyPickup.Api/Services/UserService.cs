@@ -16,6 +16,9 @@ public interface IUserService
     Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
     Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
     Task<ServiceResult> SaveUserAsync(string userId, SaveUserRequest request);
+    Task<AspNetUser?> GetUserByIdAsync(string userId);
+    Task<string[]> GetUserRolesAsync(AspNetUser user);
+    Task<bool> IsInRoleAsync(AspNetUser user, string role);
 }
 
 public class UserService : IUserService
@@ -377,6 +380,46 @@ public class UserService : IUserService
         {
             _logger.LogError(ex, "Error validating credentials for username {UserName}", username);
             return ServiceResult<(User user, string[] roles)>.CreateFailure($"An error occurred while validating credentials. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<AspNetUser?> GetUserByIdAsync(string userId)
+    {
+        try
+        {
+            return await _userManager.FindByIdAsync(userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user by ID {UserId}", userId);
+            return null;
+        }
+    }
+
+    public async Task<string[]> GetUserRolesAsync(AspNetUser user)
+    {
+        try
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            return roles.ToArray();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting roles for user {UserId}", user.Id);
+            return Array.Empty<string>();
+        }
+    }
+
+    public async Task<bool> IsInRoleAsync(AspNetUser user, string role)
+    {
+        try
+        {
+            return await _userManager.IsInRoleAsync(user, role);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking role {Role} for user {UserId}", role, user.Id);
+            return false;
         }
     }
 }

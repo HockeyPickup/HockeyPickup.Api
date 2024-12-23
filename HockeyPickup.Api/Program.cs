@@ -240,6 +240,7 @@ public class Program
         builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IServiceBus, ResilientServiceBus>();
         builder.Services.AddScoped<ITokenBlacklistService, TokenBlacklistService>();
+        builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 
         var app = builder.Build();
 

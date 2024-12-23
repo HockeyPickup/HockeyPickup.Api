@@ -21,11 +21,9 @@ namespace HockeyPickup.Api.Controllers;
 public class RegularController : ControllerBase
 {
     private readonly IRegularService _regularService;
-    private readonly ILogger<AuthController> _logger;
 
-    public RegularController(ILogger<AuthController> logger, IRegularService regularService)
+    public RegularController(IRegularService regularService)
     {
-        _logger = logger;
         _regularService = regularService;
     }
 
