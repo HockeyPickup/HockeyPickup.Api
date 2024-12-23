@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace HockeyPickup.Api.Tests.Controllers;
+namespace HockeyPickup.Api.Tests.ControllerTests;
 
 public class RegularControllerTests
 {

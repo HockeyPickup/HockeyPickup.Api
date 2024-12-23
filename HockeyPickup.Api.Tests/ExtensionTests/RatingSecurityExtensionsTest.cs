@@ -4,7 +4,7 @@ using HockeyPickup.Api.Helpers;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
-namespace HockeyPickup.Api.Tests.Extensions;
+namespace HockeyPickup.Api.Tests.ExtensionTests;
 
 public partial class RatingSecurityExtensionsTests
 {

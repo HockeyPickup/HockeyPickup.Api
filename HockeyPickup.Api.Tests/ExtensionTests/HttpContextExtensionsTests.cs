@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
 
-namespace HockeyPickup.Api.Tests.Extensions;
+namespace HockeyPickup.Api.Tests.ExtensionTests;
 
 public partial class HttpContextExtensionsTests
 {
