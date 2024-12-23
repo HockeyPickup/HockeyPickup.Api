@@ -104,10 +104,21 @@ public class SaveUserRequestEx : SaveUserRequest
     public bool? LockerRoom13 { get; set; }
 
     [Description("User's rating")]
-    [Range(0, 5)]
+    [Range(0, 10)]
     [DataType(DataType.Currency)]
     [JsonPropertyName("Rating")]
     [JsonProperty(nameof(Rating), Required = Required.Default)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public decimal Rating { get; set; }
+    public decimal? Rating { get; set; }
+}
+
+public class AdminUserUpdateRequest : SaveUserRequestEx
+{
+    [Required]
+    [Description("ID of the user to update")]
+    [MaxLength(128)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("UserId")]
+    [JsonProperty(nameof(UserId), Required = Required.Always)]
+    public required string UserId { get; set; }
 }

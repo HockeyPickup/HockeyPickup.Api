@@ -16,6 +16,7 @@ public interface IUserService
     Task<ServiceResult> InitiateForgotPasswordAsync(string email, string frontendurl);
     Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
     Task<ServiceResult> SaveUserAsync(string userId, SaveUserRequest request);
+    Task<ServiceResult> AdminUpdateUserAsync(AdminUserUpdateRequest request);
     Task<AspNetUser?> GetUserByIdAsync(string userId);
     Task<string[]> GetUserRolesAsync(AspNetUser user);
     Task<bool> IsInRoleAsync(AspNetUser user, string role);
@@ -36,6 +37,42 @@ public class UserService : IUserService
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public async Task<ServiceResult> AdminUpdateUserAsync(AdminUserUpdateRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+                return ServiceResult.CreateFailure("User not found");
+
+            UpdateUserPropertiesEx(user, request);
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to update user");
+
+            return ServiceResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating user {UserId} by admin", request.UserId);
+            return ServiceResult.CreateFailure($"An error occurred while updating user. Error: {ex.Message}");
+        }
+    }
+
+    private void UpdateUserPropertiesEx(AspNetUser user, SaveUserRequestEx request)
+    {
+        // First update base properties
+        UpdateUserProperties(user, request);
+
+        // Then update extended properties
+        if (request.Active.HasValue) user.Active = request.Active.Value;
+        if (request.Preferred.HasValue) user.Preferred = request.Preferred.Value;
+        if (request.PreferredPlus.HasValue) user.PreferredPlus = request.PreferredPlus.Value;
+        if (request.LockerRoom13.HasValue) user.LockerRoom13 = request.LockerRoom13.Value;
+        if (request.Rating.HasValue) user.Rating = request.Rating.Value;
     }
 
     public async Task<ServiceResult> SaveUserAsync(string userId, SaveUserRequest request)

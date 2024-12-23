@@ -11,6 +11,7 @@ using HockeyPickup.Api.Helpers;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using HockeyPickup.Api.Data.Entities;
+using System.Text.Json;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;
 
@@ -975,5 +976,55 @@ public partial class AuthControllerTest
         response.Success.Should().BeFalse();
         response.Errors.Should().ContainSingle()
             .Which.Message.Should().Be("Rating must be between 0 and 5");
+    }
+}
+
+public partial class AuthControllerTest
+{
+    [Fact]
+    public async Task AdminUpdateUser_ValidRequest_ReturnsOk()
+    {
+        // Arrange
+        var request = new AdminUserUpdateRequest
+        {
+            UserId = "test-user-id",
+            FirstName = "John",
+            LastName = "Doe",
+            Rating = 4.5m
+        };
+
+        _mockUserService
+            .Setup(x => x.AdminUpdateUserAsync(It.IsAny<AdminUserUpdateRequest>()))
+            .ReturnsAsync(ServiceResult.CreateSuccess());
+
+        // Act
+        var result = await _controller.AdminUpdateUser(request);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse>().Subject;
+        response.Success.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AdminUpdateUser_ServiceFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new AdminUserUpdateRequest { UserId = "test-user-id" };
+        SetupUserClaims(request.UserId);
+        var errorMessage = "Failed to update user";
+
+        _mockUserService
+            .Setup(x => x.AdminUpdateUserAsync(It.IsAny<AdminUserUpdateRequest>()))
+            .ReturnsAsync(ServiceResult.CreateFailure(errorMessage));
+
+        // Act
+        var result = await _controller.AdminUpdateUser(request);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiResponse>().Subject;
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be(errorMessage);
     }
 }

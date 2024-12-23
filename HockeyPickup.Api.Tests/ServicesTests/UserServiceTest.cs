@@ -1867,3 +1867,181 @@ public partial class UserServiceTest
             Times.Once);
     }
 }
+
+public partial class UserServiceTest
+{
+    private static AdminUserUpdateRequest CreateValidAdminUpdateRequest()
+    {
+        return new AdminUserUpdateRequest
+        {
+            UserId = "test-user-id",
+            FirstName = "John",
+            LastName = "Doe",
+            Rating = 4.5m,
+            Active = true,
+            Preferred = true,
+            PreferredPlus = false,
+            LockerRoom13 = false,
+            PayPalEmail = "john.pay@example.com",
+            NotificationPreference = NotificationPreference.OnlyMyBuySell
+        };
+    }
+
+    [Fact]
+    public async Task AdminUpdateUserAsync_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var request = CreateValidAdminUpdateRequest();
+        var user = new AspNetUser { Id = request.UserId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify all properties were updated correctly
+        user.FirstName.Should().Be(request.FirstName);
+        user.LastName.Should().Be(request.LastName);
+        user.Rating.Should().Be(request.Rating!.Value);
+        user.Active.Should().Be(request.Active!.Value);
+        user.Preferred.Should().Be(request.Preferred!.Value);
+        user.PreferredPlus.Should().Be(request.PreferredPlus!.Value);
+        user.LockerRoom13.Should().Be(request.LockerRoom13!.Value);
+    }
+
+    [Fact]
+    public async Task AdminUpdateUserAsync_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidAdminUpdateRequest();
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task AdminUpdateUserAsync_PartialUpdate_OnlyUpdatesProvidedFields()
+    {
+        // Arrange
+        var user = new AspNetUser
+        {
+            Id = "test-user-id",
+            FirstName = "Original",
+            LastName = "Name",
+            Rating = 3.0m,
+            Active = false
+        };
+
+        var request = new AdminUserUpdateRequest
+        {
+            UserId = user.Id,
+            FirstName = "NewFirst",  // Only updating FirstName
+            Rating = 4.0m           // And Rating
+        };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Verify updated fields
+        user.FirstName.Should().Be("NewFirst");
+        user.Rating.Should().Be(4.0m);
+
+        // Verify untouched fields
+        user.LastName.Should().Be("Name");
+        user.Active.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AdminUpdateUserAsync_UpdateFails_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidAdminUpdateRequest();
+        var user = new AspNetUser { Id = request.UserId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+
+        var errors = new[] { new IdentityError { Description = "Update failed" } };
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Failed(errors));
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Update failed");
+    }
+
+    [Fact]
+    public async Task AdminUpdateUserAsync_Exception_ReturnsFailure()
+    {
+        // Arrange
+        var request = CreateValidAdminUpdateRequest();
+        var thrownException = new Exception("Database error");
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ThrowsAsync(thrownException);
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("An error occurred while updating user");
+
+        // Verify error was logged with correct message and exception
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => true),
+            thrownException,
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AdminUpdateUserAsync_UpdateFailsWithNoErrors_ReturnsGenericFailure()
+    {
+        // Arrange
+        var request = CreateValidAdminUpdateRequest();
+        var user = new AspNetUser { Id = request.UserId };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+
+        // Setup update to fail but return no errors
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Failed());  // Empty errors collection
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to update user");  // Tests the default error message
+    }
+}

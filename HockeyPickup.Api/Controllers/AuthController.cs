@@ -165,5 +165,18 @@ public class AuthController : ControllerBase
         var response = ApiResponse.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("admin/update-user")]
+    [Description("Admin endpoint to update user profile information")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse>> AdminUpdateUser([FromBody] AdminUserUpdateRequest request)
+    {
+        var result = await _userService.AdminUpdateUserAsync(request);
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }
 #pragma warning restore IDE0057 // Use range operator
