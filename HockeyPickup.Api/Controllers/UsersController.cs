@@ -71,4 +71,31 @@ public class UsersController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while retrieving user" });
         }
     }
+
+    [Authorize]
+    [HttpGet("{userId}")]
+    [Description("Returns a specific user by their ID")]
+    [Produces(typeof(UserDetailedResponse))]
+    [ProducesResponseType(typeof(UserDetailedResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UserDetailedResponse>> GetUserById(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId))
+                return BadRequest(new { message = "User ID cannot be empty" });
+
+            var user = await _userRepository.GetUserAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving user with ID: {UserId}", userId);
+            return StatusCode(500, new { message = "An error occurred while retrieving user" });
+        }
+    }
 }

@@ -245,3 +245,111 @@ public partial class UsersControllerTest
             Times.Once);
     }
 }
+
+public partial class UsersControllerTest
+{
+    [Fact]
+    public async Task GetUserById_ValidId_ReturnsOkWithUser()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var expectedUser = new UserDetailedResponse
+        {
+            Id = userId,
+            UserName = "testuser",
+            Email = "test@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Preferred = true,
+            PreferredPlus = false,
+            Active = true,
+            Rating = 1
+        };
+
+        _mockUserRepository
+            .Setup(x => x.GetUserAsync(userId))
+            .ReturnsAsync(expectedUser);
+
+        // Act
+        var result = await _controller.GetUserById(userId);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedUser = okResult.Value.Should().BeOfType<UserDetailedResponse>().Subject;
+        returnedUser.Should().BeEquivalentTo(expectedUser);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null!)]
+    public async Task GetUserById_InvalidId_ReturnsBadRequest(string? userId)
+    {
+        // Act
+        var result = await _controller.GetUserById(userId!);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = JsonSerializer.Deserialize<ApiErrorResponse>(
+            JsonSerializer.Serialize(badRequestResult.Value),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+        response.Should().NotBeNull();
+        response!.Message.Should().Be("User ID cannot be empty");
+    }
+
+    [Fact]
+    public async Task GetUserById_UserNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var userId = "non-existent-id";
+        _mockUserRepository
+            .Setup(x => x.GetUserAsync(userId))
+            .ReturnsAsync((UserDetailedResponse) null!);
+
+        // Act
+        var result = await _controller.GetUserById(userId);
+
+        // Assert
+        var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        var response = JsonSerializer.Deserialize<ApiErrorResponse>(
+            JsonSerializer.Serialize(notFoundResult.Value),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+        response.Should().NotBeNull();
+        response!.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task GetUserById_RepositoryThrowsException_Returns500()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        _mockUserRepository
+            .Setup(x => x.GetUserAsync(userId))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.GetUserById(userId);
+
+        // Assert
+        var statusCodeResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+
+        var response = JsonSerializer.Deserialize<ApiErrorResponse>(
+            JsonSerializer.Serialize(statusCodeResult.Value),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+        response.Should().NotBeNull();
+        response!.Message.Should().Be("An error occurred while retrieving user");
+
+        // Verify error was logged
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}
