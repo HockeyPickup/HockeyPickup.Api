@@ -153,7 +153,7 @@ public class User
 
     [Required]
     [Description("User's rating")]
-    [Range(0, 5)]
+    [Range(0, 10)]
     [DataType(DataType.Currency)]
     [JsonPropertyName("Rating")]
     [JsonProperty(nameof(Rating), Required = Required.Always)]

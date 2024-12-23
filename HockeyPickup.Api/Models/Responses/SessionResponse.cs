@@ -183,7 +183,7 @@ public class BuySellResponse
 
     [Required]
     [Description("Team assignment for the transaction")]
-    [Range(0, int.MaxValue)]
+    [Range(0, 2)]
     [JsonPropertyName("TeamAssignment")]
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
@@ -315,7 +315,7 @@ public class RegularResponse
 
     [Required]
     [Description("Team assignment for the regular player")]
-    [Range(0, int.MaxValue)]
+    [Range(0, 2)]
     [JsonPropertyName("TeamAssignment")]
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
@@ -324,7 +324,7 @@ public class RegularResponse
 
     [Required]
     [Description("Position preference for the regular player")]
-    [Range(0, int.MaxValue)]
+    [Range(0, 2)]
     [JsonPropertyName("PositionPreference")]
     [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
     [GraphQLName("PositionPreference")]
@@ -508,7 +508,7 @@ public class RosterPlayer
 
     [Required]
     [Description("Position for the player")]
-    [Range(0, int.MaxValue)]
+    [Range(0, 2)]
     [JsonPropertyName("Position")]
     [JsonProperty(nameof(Position), Required = Required.Always)]
     [GraphQLName("Position")]

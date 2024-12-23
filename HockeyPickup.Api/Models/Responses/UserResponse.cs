@@ -164,7 +164,7 @@ public class UserDetailedResponse
 
     [Required]
     [Description("User's rating")]
-    [Range(0, 5)]
+    [Range(0, 10)]
     [JsonPropertyName("Rating")]
     [JsonProperty(nameof(Rating), Required = Required.Always)]
     [GraphQLName("Rating")]
