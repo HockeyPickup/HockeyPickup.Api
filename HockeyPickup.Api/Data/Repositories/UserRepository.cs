@@ -43,6 +43,8 @@ public class UserRepository : IUserRepository
                 DateCreated = u.DateCreated,
                 Roles = u.Roles.ToRoleNames(),
             })
+            .OrderBy(p => p.LastName)
+            .ThenBy(p => p.FirstName)
             .ToListAsync();
     }
 
