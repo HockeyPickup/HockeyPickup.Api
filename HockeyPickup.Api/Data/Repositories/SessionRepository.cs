@@ -310,6 +310,7 @@ public class SessionRepository : ISessionRepository
             RegularSetId = regularSet.RegularSetId,
             Description = regularSet.Description,
             DayOfWeek = regularSet.DayOfWeek,
+            Archived = regularSet.Archived,
             CreateDateTime = regularSet.CreateDateTime,
             Regulars = MapRegulars(regularSet.Regulars)
         };

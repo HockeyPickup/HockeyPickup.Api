@@ -974,6 +974,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
                 RegularSetId = loadedSession.RegularSet.RegularSetId,
                 Description = loadedSession.RegularSet.Description,
                 DayOfWeek = loadedSession.RegularSet.DayOfWeek,
+                Archived = loadedSession.RegularSet.Archived,
                 CreateDateTime = loadedSession.RegularSet.CreateDateTime,
                 Regulars = null  // Force null here
             } : null
