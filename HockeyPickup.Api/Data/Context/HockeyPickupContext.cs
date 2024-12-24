@@ -56,7 +56,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<AspNetUser>(entity =>
         {
-            entity.ToTable("AspNetUsers");
+            entity.ToTable("AspNetUsers", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.Id).HasName("PK_dbo.AspNetUsers");
 
             // Map existing columns with their exact types from your DB
@@ -112,7 +112,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<AspNetRole>(entity =>
         {
-            entity.ToTable("AspNetRoles");
+            entity.ToTable("AspNetRoles", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.Id).HasName("PK_dbo.AspNetRoles");
 
             entity.Property(e => e.Id).HasMaxLength(128).IsRequired();
@@ -123,7 +123,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<IdentityUserRole<string>>(entity =>
         {
-            entity.ToTable("AspNetUserRoles");
+            entity.ToTable("AspNetUserRoles", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => new { e.UserId, e.RoleId }).HasName("PK_dbo.AspNetUserRoles");
 
             entity.Property(e => e.UserId).HasMaxLength(128);
@@ -143,7 +143,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<IdentityUserLogin<string>>(entity =>
         {
-            entity.ToTable("AspNetUserLogins");
+            entity.ToTable("AspNetUserLogins", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => new { e.LoginProvider, e.ProviderKey });
 
             entity.Property(e => e.LoginProvider).HasMaxLength(128);
@@ -158,7 +158,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<IdentityUserClaim<string>>(entity =>
         {
-            entity.ToTable("AspNetUserClaims");
+            entity.ToTable("AspNetUserClaims", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.Id).HasName("PK_dbo.AspNetUserClaims");
 
             entity.Property(e => e.UserId).HasMaxLength(128);
@@ -173,7 +173,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<IdentityRoleClaim<string>>(entity =>
         {
-            entity.ToTable("AspNetRoleClaims");
+            entity.ToTable("AspNetRoleClaims", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.RoleId).HasMaxLength(128);
@@ -188,7 +188,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<IdentityUserToken<string>>(entity =>
         {
-            entity.ToTable("AspNetUserTokens");
+            entity.ToTable("AspNetUserTokens", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => new { e.UserId, e.LoginProvider, e.Name });
 
             entity.Property(e => e.UserId).HasMaxLength(128);
@@ -210,7 +210,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
         modelBuilder.Entity<Session>(entity =>
         {
-            entity.ToTable("Sessions", tb => tb.HasTrigger("TRG_Sessions_PopulateRoster"));
+            entity.ToTable("Sessions", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.SessionId).HasName("PK_dbo.Sessions");
 
             entity.Property(e => e.CreateDateTime)
@@ -250,7 +250,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         // Configure BuySells
         modelBuilder.Entity<BuySell>(entity =>
         {
-            entity.ToTable("BuySells");
+            entity.ToTable("BuySells", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.BuySellId).HasName("PK_dbo.BuySells");
 
             entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
@@ -287,7 +287,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             // Configure RegularSets
         modelBuilder.Entity<RegularSet>(entity =>
         {
-            entity.ToTable("RegularSets");
+            entity.ToTable("RegularSets", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.RegularSetId).HasName("PK_dbo.RegularSets");
 
             entity.Property(e => e.Description).HasColumnType("nvarchar(max)");
@@ -302,7 +302,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         // Configure Regulars (composite key)
         modelBuilder.Entity<Regular>(entity =>
         {
-            entity.ToTable("Regulars");
+            entity.ToTable("Regulars", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => new { e.RegularSetId, e.UserId }).HasName("PK_dbo.Regulars");
 
             entity.HasOne(e => e.RegularSet)
@@ -317,7 +317,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         // Configure ActivityLogs
         modelBuilder.Entity<ActivityLog>(entity =>
         {
-            entity.ToTable("ActivityLogs");
+            entity.ToTable("ActivityLogs", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.ActivityLogId).HasName("PK_dbo.ActivityLogs");
             entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
             entity.Property(e => e.Activity).HasColumnType("nvarchar(max)");
@@ -366,7 +366,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         // Add this inside OnModelCreating method, alongside other entity configurations
         modelBuilder.Entity<SessionRoster>(entity =>
         {
-            entity.ToTable("SessionRosters");
+            entity.ToTable("SessionRosters", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.SessionRosterId).HasName("PK_dbo.SessionRosters");
 
             entity.Property(e => e.IsPlaying).HasDefaultValue(true);
