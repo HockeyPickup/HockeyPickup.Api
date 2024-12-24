@@ -31,6 +31,7 @@ public class RegularSet
     public string? Description { get; set; }
     public int DayOfWeek { get; set; }
     public DateTime CreateDateTime { get; set; }
+    public bool Archived { get; set; } = false;
 
     // Navigation properties
     public virtual ICollection<Session> Sessions { get; set; } = new List<Session>();

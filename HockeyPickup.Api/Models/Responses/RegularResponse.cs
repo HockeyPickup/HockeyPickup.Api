@@ -42,6 +42,14 @@ public class RegularSetDetailedResponse
     [GraphQLDescription("Date and time when the regular set was created")]
     public required DateTime CreateDateTime { get; set; }
 
+    [Required]
+    [Description("Indicates if the regular set is archived")]
+    [JsonPropertyName("Archived")]
+    [JsonProperty(nameof(Archived), Required = Required.Always)]
+    [GraphQLName("Archived")]
+    [GraphQLDescription("Indicates if the regular set is archived")]
+    public required bool Archived { get; set; }
+
     [Description("List of regular players in this set")]
     [JsonPropertyName("Regulars")]
     [JsonProperty(nameof(Regulars))]

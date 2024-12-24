@@ -223,6 +223,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
             entity.Property(e => e.Note).HasColumnType("nvarchar(max)");
 
+            entity.Property(e => e.Cost).HasColumnType("decimal(18,2)");
+
             entity.Property(e => e.SessionDate)
                 .HasColumnType("datetime")
                 .HasDefaultValue("1900-01-01T00:00:00.000");

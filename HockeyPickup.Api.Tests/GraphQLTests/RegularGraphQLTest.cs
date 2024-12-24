@@ -47,6 +47,7 @@ public class RegularGraphQLTests
                 Description = "Monday Night",
                 DayOfWeek = 1,
                 CreateDateTime = _testDate,
+                Archived = false,
                 Regulars = new List<RegularDetailedResponse>
                 {
                     new()
@@ -118,6 +119,7 @@ public class RegularGraphQLTests
             Description = "Monday Night",
             DayOfWeek = 1,
             CreateDateTime = _testDate,
+            Archived = false,
             Regulars = new List<RegularDetailedResponse>
             {
                 new()

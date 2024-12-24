@@ -12,6 +12,7 @@
     <RepositoryUrl>https://github.com/HockeyPickup/HockeyPickup.Api</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <DefaultDbContext>HockeyPickup.Api.Data.Context.HockeyPickupContext</DefaultDbContext>
   </PropertyGroup>
 
   <ItemGroup>

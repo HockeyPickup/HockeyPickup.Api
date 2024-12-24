@@ -57,6 +57,7 @@ public class RegularServiceTests
             Description = "Test Regular Set",
             DayOfWeek = 1,
             CreateDateTime = DateTime.UtcNow,
+            Archived = false,
             Regulars = new List<RegularDetailedResponse>()
         };
     }
@@ -187,7 +188,8 @@ public class RegularServiceTests
             RegularSetId = request.RegularSetId,
             Description = "Original Set",
             DayOfWeek = 1,
-            CreateDateTime = DateTime.UtcNow
+            CreateDateTime = DateTime.UtcNow,
+            Archived = false,
         };
 
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))

@@ -29,6 +29,7 @@ public class RegularControllerTests
             RegularSetId = 1,
             Description = "Test Regular Set",
             DayOfWeek = 1,
+            Archived = false,
             CreateDateTime = DateTime.UtcNow,
             Regulars = new List<RegularDetailedResponse>()
         };
