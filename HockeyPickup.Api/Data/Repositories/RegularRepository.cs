@@ -10,11 +10,13 @@ namespace HockeyPickup.Api.Data.Repositories;
 public class RegularRepository : IRegularRepository
 {
     private readonly HockeyPickupContext _context;
+    private readonly ILogger<RegularRepository> _logger;
     private readonly IDbFacade _db;
 
-    public RegularRepository(HockeyPickupContext context, IDbFacade? db = null)
+    public RegularRepository(HockeyPickupContext context, ILogger<RegularRepository> logger, IDbFacade? db = null)
     {
         _context = context;
+        _logger = logger;
         _db = db ?? new DbFacade(context.Database);
     }
 
@@ -95,6 +97,32 @@ public class RegularRepository : IRegularRepository
         }
         catch
         {
+            return null;
+        }
+    }
+
+    public async Task<RegularSetDetailedResponse?> UpdateRegularSetAsync(int regularSetId, string description, int dayOfWeek, bool archived)
+    {
+        try
+        {
+            var regularSet = await _context.RegularSets!
+                .FirstOrDefaultAsync(rs => rs.RegularSetId == regularSetId);
+
+            if (regularSet == null)
+                return null;
+
+            regularSet.Description = description;
+            regularSet.DayOfWeek = dayOfWeek;
+            regularSet.Archived = archived;
+
+            await _context.SaveChangesAsync();
+
+            // Fetch the updated entity with all related data
+            return await GetRegularSetAsync(regularSetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating regular set {RegularSetId}", regularSetId);
             return null;
         }
     }

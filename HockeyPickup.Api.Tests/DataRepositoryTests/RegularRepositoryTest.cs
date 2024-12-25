@@ -8,6 +8,8 @@ using System.Reflection;
 using Moq;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using HockeyPickup.Api.Controllers;
+using Microsoft.Extensions.Logging;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -17,6 +19,7 @@ public class RegularRepositoryTests : IDisposable
     private readonly HockeyPickupContext _context;
     private readonly RegularRepository _repository;
     private readonly DateTime _testDate = DateTime.UtcNow;
+    private readonly Mock<ILogger<RegularRepository>> _mockLogger;
 
     public RegularRepositoryTests()
     {
@@ -25,7 +28,8 @@ public class RegularRepositoryTests : IDisposable
             .Options;
 
         _context = new DetailedSessionTestContext(_options);
-        _repository = new RegularRepository(_context);
+        _mockLogger = new Mock<ILogger<RegularRepository>>();
+        _repository = new RegularRepository(_context, _mockLogger.Object);
     }
 
     public void Dispose()
@@ -334,7 +338,7 @@ public class RegularRepositoryTests : IDisposable
             })
             .ReturnsAsync(1);
 
-        var repository = new RegularRepository(_context, mockDb.Object);
+        var repository = new RegularRepository(_context, _mockLogger.Object, mockDb.Object);
 
         // Act
         var result = await repository.DuplicateRegularSetAsync(sourceId, newDescription);
@@ -354,7 +358,7 @@ public class RegularRepositoryTests : IDisposable
         mockDb.Setup(x => x.ExecuteSqlRawAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SqlParameter>>()))
             .ThrowsAsync(new Exception("Source not found"));
 
-        var repository = new RegularRepository(_context, mockDb.Object);
+        var repository = new RegularRepository(_context, _mockLogger.Object, mockDb.Object);
 
         // Act
         var result = await repository.DuplicateRegularSetAsync(999, "Test");
@@ -373,7 +377,7 @@ public class RegularRepositoryTests : IDisposable
         mockDb.Setup(x => x.ExecuteSqlRawAsync(It.IsAny<string>(), It.IsAny<IEnumerable<SqlParameter>>()))
             .ReturnsAsync(1);
 
-        var repository = new RegularRepository(_context, mockDb.Object);
+        var repository = new RegularRepository(_context, _mockLogger.Object, mockDb.Object);
 
         // Act
         await repository.DuplicateRegularSetAsync(sourceId, newDescription);
@@ -385,5 +389,112 @@ public class RegularRepositoryTests : IDisposable
                 p.Any(param => param.ParameterName == "@RegularSetId" && (int) param.Value == sourceId) &&
                 p.Any(param => param.ParameterName == "@NewRosterDescription" && (string) param.Value == newDescription))),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRegularSetAsync_ValidRequest_ReturnsUpdatedSet()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var newDescription = "Updated Monday Night";
+        var newDayOfWeek = 2;
+        var newArchived = true;
+
+        // Act
+        var result = await _repository.UpdateRegularSetAsync(regularSetId, newDescription, newDayOfWeek, newArchived);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.RegularSetId.Should().Be(regularSetId);
+        result.Description.Should().Be(newDescription);
+        result.DayOfWeek.Should().Be(newDayOfWeek);
+        result.Archived.Should().BeTrue();
+        result.Regulars.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task UpdateRegularSetAsync_InvalidId_ReturnsNull()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 999;
+        var newDescription = "Invalid Set";
+        var newDayOfWeek = 2;
+        var newArchived = false;
+
+        // Act
+        var result = await _repository.UpdateRegularSetAsync(regularSetId, newDescription, newDayOfWeek, newArchived);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateRegularSetAsync_PreservesRegularsAfterUpdate()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var newDescription = "Updated Set";
+        var newDayOfWeek = 2;
+        var newArchived = true;
+
+        // Act
+        var result = await _repository.UpdateRegularSetAsync(regularSetId, newDescription, newDayOfWeek, newArchived);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Regulars.Should().HaveCount(2);
+        result.Regulars.Should().Contain(r => r.UserId == "user1");
+        result.Regulars.Should().Contain(r => r.UserId == "user2");
+    }
+
+    [Fact]
+    public async Task UpdateRegularSetAsync_DatabaseError_ReturnsNull()
+    {
+        // Arrange
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Test database error"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        // Act
+        var result = await repository.UpdateRegularSetAsync(1, "Test", 1, false);
+
+        // Assert
+        result.Should().BeNull();
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRegularSetAsync_VerifiesPropertyUpdates()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var newDescription = "New Description";
+        var newDayOfWeek = 3;
+        var newArchived = true;
+
+        // Act
+        await _repository.UpdateRegularSetAsync(regularSetId, newDescription, newDayOfWeek, newArchived);
+
+        // Assert
+        var updatedEntity = await _context.RegularSets
+            .FirstOrDefaultAsync(rs => rs.RegularSetId == regularSetId);
+
+        updatedEntity.Should().NotBeNull();
+        updatedEntity!.Description.Should().Be(newDescription);
+        updatedEntity.DayOfWeek.Should().Be(newDayOfWeek);
+        updatedEntity.Archived.Should().BeTrue();
     }
 }

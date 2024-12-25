@@ -40,4 +40,18 @@ public class RegularController : ControllerBase
         var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? CreatedAtAction(nameof(DuplicateRegularSet), new { id = result.Data.RegularSetId }, response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-regular-set")]
+    [Description("Updates a Regular Set")]
+    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> UpdateRegularSet([FromBody] UpdateRegularSetRequest updateRegularSetRequest)
+    {
+        var result = await _regularService.UpdateRegularSet(updateRegularSetRequest);
+        var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }
