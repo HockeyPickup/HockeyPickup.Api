@@ -190,4 +190,154 @@ public class RegularControllerTests
         Assert.False(response.Success);
         Assert.Equal("Description is required", response.Message);
     }
+
+    [Fact]
+    public async Task UpdateRegularPosition_Success_ReturnsOkResponse()
+    {
+        // Arrange
+        var request = new UpdateRegularPositionRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            NewPosition = 1
+        };
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
+            CreateTestRegularSet(), "Success");
+        _regularService.Setup(x => x.UpdateRegularPosition(request.RegularSetId, request.UserId, request.NewPosition))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRegularPosition(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(okResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(1, response.Data.RegularSetId);
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateRegularPositionRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            NewPosition = 1
+        };
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Test error");
+        _regularService.Setup(x => x.UpdateRegularPosition(request.RegularSetId, request.UserId, request.NewPosition))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRegularPosition(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_InvalidPosition_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateRegularPositionRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            NewPosition = 3  // Invalid position
+        };
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Invalid position value");
+        _regularService.Setup(x => x.UpdateRegularPosition(request.RegularSetId, request.UserId, request.NewPosition))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRegularPosition(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Invalid position value", response.Message);
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_Success_ReturnsOkResponse()
+    {
+        // Arrange
+        var request = new UpdateRegularTeamRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            NewTeamAssignment = 1
+        };
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
+            CreateTestRegularSet(), "Success");
+        _regularService.Setup(x => x.UpdateRegularTeam(request.RegularSetId, request.UserId, request.NewTeamAssignment))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRegularTeam(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(okResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(1, response.Data.RegularSetId);
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateRegularTeamRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            NewTeamAssignment = 1
+        };
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Test error");
+        _regularService.Setup(x => x.UpdateRegularTeam(request.RegularSetId, request.UserId, request.NewTeamAssignment))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRegularTeam(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_InvalidTeam_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateRegularTeamRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            NewTeamAssignment = 3  // Invalid team assignment
+        };
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Invalid team assignment value");
+        _regularService.Setup(x => x.UpdateRegularTeam(request.RegularSetId, request.UserId, request.NewTeamAssignment))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.UpdateRegularTeam(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Invalid team assignment value", response.Message);
+    }
 }

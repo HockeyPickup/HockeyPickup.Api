@@ -11,6 +11,8 @@ public interface IRegularService
 {
     Task<ServiceResult<RegularSetDetailedResponse>> DuplicateRegularSet(DuplicateRegularSetRequest request);
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularSet(UpdateRegularSetRequest request);
+    Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, int newPosition);
+    Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, int newTeamAssignment);
 }
 
 public class RegularService : IRegularService
@@ -86,6 +88,92 @@ public class RegularService : IRegularService
         {
             _logger.LogError(ex, "Error updating regular set {RegularSetId}", request.RegularSetId);
             return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred while updating the regular set. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, int newPosition)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User not found");
+            }
+
+            var regularSet = await _regularRepository.GetRegularSetAsync(regularSetId);
+            if (regularSet == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Regular set not found");
+            }
+
+            var currentRegular = regularSet.Regulars?.FirstOrDefault(r => r.UserId == userId);
+            if (currentRegular == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User is not part of this Regular set");
+            }
+
+            if (currentRegular.PositionPreference == newPosition)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("New position is the same as the current position");
+            }
+
+            var updatedSet = await _regularRepository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+            if (updatedSet == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Failed to update player position");
+            }
+
+            return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(updatedSet,
+                $"{user.FirstName} {user.LastName}'s position preference updated to {newPosition.ParsePositionName()}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating regular player position for set: {RegularSetId}, user: {UserId}", regularSetId, userId);
+            return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred updating player position: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, int newTeamAssignment)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User not found");
+            }
+
+            var regularSet = await _regularRepository.GetRegularSetAsync(regularSetId);
+            if (regularSet == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Regular set not found");
+            }
+
+            var currentRegular = regularSet.Regulars?.FirstOrDefault(r => r.UserId == userId);
+            if (currentRegular == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User is not part of this Regular set");
+            }
+
+            if (currentRegular.TeamAssignment == newTeamAssignment)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("New team assignment is the same as the current team assignment");
+            }
+
+            var updatedSet = await _regularRepository.UpdatePlayerTeamAsync(regularSetId, userId, newTeamAssignment);
+            if (updatedSet == null)
+            {
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Failed to update player team");
+            }
+
+            return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(updatedSet,
+                $"{user.FirstName} {user.LastName}'s team assignment updated to {newTeamAssignment.ParseTeamName()}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating regular player team for set: {RegularSetId}, user: {UserId}", regularSetId, userId);
+            return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred updating player team: {ex.Message}");
         }
     }
 }

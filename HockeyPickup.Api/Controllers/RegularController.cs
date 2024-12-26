@@ -54,4 +54,32 @@ public class RegularController : ControllerBase
         var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-regular-position")]
+    [Description("Updates a regular player's position preference")]
+    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> UpdateRegularPosition([FromBody] UpdateRegularPositionRequest request)
+    {
+        var result = await _regularService.UpdateRegularPosition(request.RegularSetId, request.UserId, request.NewPosition);
+        var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("update-regular-team")]
+    [Description("Updates a regular player's team assignment")]
+    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> UpdateRegularTeam([FromBody] UpdateRegularTeamRequest request)
+    {
+        var result = await _regularService.UpdateRegularTeam(request.RegularSetId, request.UserId, request.NewTeamAssignment);
+        var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }

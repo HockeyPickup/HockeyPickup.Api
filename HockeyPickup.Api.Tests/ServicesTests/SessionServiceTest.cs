@@ -133,7 +133,7 @@ public partial class SessionServiceTests
 
         // Assert
         Assert.False(result.IsSuccess);
-        Assert.Equal("Roster player not found", result.Message);
+        Assert.Equal("User not found", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
@@ -347,7 +347,7 @@ public partial class SessionServiceTests
 
         // Assert
         Assert.False(result.IsSuccess);
-        Assert.Equal("Roster player not found", result.Message);
+        Assert.Equal("User not found", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 
@@ -654,5 +654,121 @@ public partial class SessionServiceTests
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()
         ));
+    }
+
+    [Fact]
+    public async Task UpdateRosterPosition_UserNotInSession_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var newPosition = 1;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession("differentUser", 2, 1); // Note: Different user
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, newPosition);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User is not part of this session's current roster", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPosition_EmptyRoster_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var newPosition = 1;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = new SessionDetailedResponse
+        {
+            SessionId = sessionId,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.Date,
+            Note = string.Empty,
+            CurrentRosters = new List<Models.Responses.RosterPlayer>() // Empty roster
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, newPosition);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User is not part of this session's current roster", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_UserNotInSession_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var newTeam = 1;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession("differentUser", 1, 2); // Note: Different user
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User is not part of this session's current roster", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_EmptyRoster_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var newTeam = 1;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = new SessionDetailedResponse
+        {
+            SessionId = sessionId,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.Date,
+            Note = string.Empty,
+            CurrentRosters = new List<Models.Responses.RosterPlayer>() // Empty roster
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User is not part of this session's current roster", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
     }
 }

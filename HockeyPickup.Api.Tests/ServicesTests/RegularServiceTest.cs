@@ -345,4 +345,778 @@ public class RegularServiceTests
                 It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task UpdateRegularPosition_Success_ReturnsSuccess()
+    {
+        // Arrange
+        var userId = "test-user";
+        var regularSetId = 1;
+        var newPosition = 1;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new() {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = 2,
+                TeamAssignment = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        var updatedSet = CreateTestRegularSet();
+        updatedSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new() {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = newPosition,
+                TeamAssignment = 1
+            }
+        };
+
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+            .ReturnsAsync(updatedSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Message.Should().Contain($"{user.FirstName} {user.LastName}'s position preference updated to");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_Success_ReturnsSuccess()
+    {
+        // Arrange
+        var userId = "test-user";
+        var regularSetId = 1;
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new() {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                TeamAssignment = 1,
+                PositionPreference = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        var updatedSet = CreateTestRegularSet();
+        updatedSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new() {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                TeamAssignment = newTeam,
+                PositionPreference = 1
+            }
+        };
+
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+            .ReturnsAsync(updatedSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Message.Should().Contain($"{user.FirstName} {user.LastName}'s team assignment updated to");
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_UserNotInRegularSet_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user";
+        var regularSetId = 1;
+        var newPosition = 1;
+
+        var user = new AspNetUser { Id = userId };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new() {
+                UserId = "different-user",
+                RegularSetId = regularSetId,
+                PositionPreference = 1,
+                TeamAssignment = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+        _mockRegularRepository.Verify(x => x.UpdatePlayerPositionAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_UserNotInRegularSet_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "test-user";
+        var regularSetId = 1;
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new() {
+                UserId = "different-user",
+                RegularSetId = regularSetId,
+                TeamAssignment = 1,
+                PositionPreference = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+        _mockRegularRepository.Verify(x => x.UpdatePlayerTeamAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_SamePosition_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var currentPosition = 1;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+    {
+        new()
+        {
+            UserId = userId,
+            RegularSetId = regularSetId,
+            PositionPreference = currentPosition,
+            TeamAssignment = 1
+        }
+    };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, currentPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("New position is the same as the current position");
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_FailedToUpdate_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = 1,
+                TeamAssignment = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+            .ReturnsAsync((RegularSetDetailedResponse) null);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to update player position");
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_ThrowsException_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+    {
+        new()
+        {
+            UserId = userId,
+            RegularSetId = regularSetId,
+            PositionPreference = 1,
+            TeamAssignment = 1
+        }
+    };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().StartWith("An error occurred updating player position");
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_SameTeam_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var currentTeam = 1;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                TeamAssignment = currentTeam,
+                PositionPreference = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, currentTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("New team assignment is the same as the current team assignment");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_FailedToUpdate_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                TeamAssignment = 1,
+                PositionPreference = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+            .ReturnsAsync((RegularSetDetailedResponse) null);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to update player team");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_ThrowsException_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                TeamAssignment = 1,
+                PositionPreference = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().StartWith("An error occurred updating player team");
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_RegularSetNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync((RegularSetDetailedResponse) null!);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Regular set not found");
+    }
+
+    // Fix logger verification in exception tests
+    [Fact]
+    public async Task UpdateRegularPosition_ThrowsException_LogsError()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = 1,
+                TeamAssignment = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)), // Note the nullable Exception?
+            Times.Once);
+    }
+
+    // Similar tests for UpdateRegularTeam
+    [Fact]
+    public async Task UpdateRegularTeam_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_RegularSetNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync((RegularSetDetailedResponse) null!);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Regular set not found");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_ThrowsException_LogsError()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                TeamAssignment = 1,
+                PositionPreference = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)), // Note the nullable Exception?
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_RegularSetWithNoRegulars_ReturnsUserNotFoundFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>(); // Empty regulars list
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_NullRegularsCollection_ReturnsUserNotFoundFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = null!; // Null regulars collection
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_RegularSetWithNoRegulars_ReturnsUserNotFoundFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>(); // Empty regulars list
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_NullRegularsCollection_ReturnsUserNotFoundFailure()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = null!; // Null regulars collection
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+    }
+
+    [Fact]
+    public async Task UpdateRegularPosition_PositionNullCheck_HandlesNonMatchingPosition()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 2;
+        var initialPosition = 1;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId, 
+                // Make sure this doesn't match newPosition
+                PositionPreference = initialPosition,
+                TeamAssignment = 1
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        var updatedSet = CreateTestRegularSet();
+        updatedSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = newPosition,
+                TeamAssignment = 1
+            }
+        };
+
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+            .ReturnsAsync(updatedSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.PositionPreference == newPosition);
+    }
+
+    [Fact]
+    public async Task UpdateRegularTeam_TeamNullCheck_HandlesNonMatchingTeam()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+        var initialTeam = 1;
+
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = 1,
+                // Make sure this doesn't match newTeam
+                TeamAssignment = initialTeam
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
+            .ReturnsAsync(regularSet);
+
+        var updatedSet = CreateTestRegularSet();
+        updatedSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = userId,
+                RegularSetId = regularSetId,
+                PositionPreference = 1,
+                TeamAssignment = newTeam
+            }
+        };
+
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+            .ReturnsAsync(updatedSet);
+
+        // Act
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.TeamAssignment == newTeam);
+    }
 }

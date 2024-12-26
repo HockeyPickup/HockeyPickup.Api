@@ -9,4 +9,6 @@ public interface IRegularRepository
     Task<RegularSetDetailedResponse?> GetRegularSetAsync(int regularSetId);
     Task<RegularSetDetailedResponse?> DuplicateRegularSetAsync(int regularSetId, string description);
     Task<RegularSetDetailedResponse?> UpdateRegularSetAsync(int regularSetId, string description, int dayOfWeek, bool archived);
+    Task<RegularSetDetailedResponse?> UpdatePlayerPositionAsync(int regularSetId, string userId, int position);
+    Task<RegularSetDetailedResponse?> UpdatePlayerTeamAsync(int regularSetId, string userId, int team);
 }

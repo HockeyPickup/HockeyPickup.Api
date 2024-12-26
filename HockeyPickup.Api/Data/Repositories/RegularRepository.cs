@@ -126,6 +126,52 @@ public class RegularRepository : IRegularRepository
             return null;
         }
     }
+
+    public async Task<RegularSetDetailedResponse?> UpdatePlayerPositionAsync(int regularSetId, string userId, int position)
+    {
+        try
+        {
+            var regular = await _context.Regulars!
+                .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+
+            if (regular == null)
+                return null;
+
+            regular.PositionPreference = position;
+            await _context.SaveChangesAsync();
+
+            // Fetch and return updated regular set details
+            return await GetRegularSetAsync(regularSetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating regular player position for set {RegularSetId}, user {UserId}", regularSetId, userId);
+            return null;
+        }
+    }
+
+    public async Task<RegularSetDetailedResponse?> UpdatePlayerTeamAsync(int regularSetId, string userId, int team)
+    {
+        try
+        {
+            var regular = await _context.Regulars!
+                .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+
+            if (regular == null)
+                return null;
+
+            regular.TeamAssignment = team;
+            await _context.SaveChangesAsync();
+
+            // Fetch and return updated regular set details
+            return await GetRegularSetAsync(regularSetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating regular player team for set {RegularSetId}, user {UserId}", regularSetId, userId);
+            return null;
+        }
+    }
 }
 
 public static class UserMappingExtensions

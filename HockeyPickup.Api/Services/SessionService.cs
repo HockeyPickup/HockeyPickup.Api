@@ -101,7 +101,7 @@ public class SessionService : ISessionService
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                return ServiceResult<SessionDetailedResponse>.CreateFailure("Roster player not found");
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User not found");
             }
 
             var session = await _sessionRepository.GetSessionAsync(sessionId);
@@ -111,6 +111,11 @@ public class SessionService : ISessionService
             }
 
             var currentRoster = session.CurrentRosters.Where(u => u.UserId == userId).FirstOrDefault();
+            if (currentRoster == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User is not part of this session's current roster");
+            }
+
             if (currentRoster.Position == newPosition)
             {
                 return ServiceResult<SessionDetailedResponse>.CreateFailure("New position is the same as the current position");
@@ -138,7 +143,7 @@ public class SessionService : ISessionService
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                return ServiceResult<SessionDetailedResponse>.CreateFailure("Roster player not found");
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User not found");
             }
 
             var session = await _sessionRepository.GetSessionAsync(sessionId);
@@ -148,6 +153,11 @@ public class SessionService : ISessionService
             }
 
             var currentRoster = session.CurrentRosters.Where(u => u.UserId == userId).FirstOrDefault();
+            if (currentRoster == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User is not part of this session's current roster");
+            }
+
             if (currentRoster.TeamAssignment == newTeamAssignment)
             {
                 return ServiceResult<SessionDetailedResponse>.CreateFailure("New team assignment is the same as the current team assignment");

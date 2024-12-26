@@ -497,4 +497,152 @@ public class RegularRepositoryTests : IDisposable
         updatedEntity.DayOfWeek.Should().Be(newDayOfWeek);
         updatedEntity.Archived.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_ValidRequest_UpdatesPosition()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var userId = "user1";
+        var newPosition = 1;
+
+        // Act
+        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.RegularSetId.Should().Be(regularSetId);
+        result.Regulars.Should().Contain(r =>
+            r.UserId == userId &&
+            r.PositionPreference == newPosition);
+
+        var updatedEntity = await _context.Regulars
+            .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+        updatedEntity.Should().NotBeNull();
+        updatedEntity!.PositionPreference.Should().Be(newPosition);
+    }
+
+    [Fact]
+    public async Task UpdatePlayerTeamAsync_ValidRequest_UpdatesTeam()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var userId = "user1";
+        var newTeam = 2;
+
+        // Act
+        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, newTeam);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.RegularSetId.Should().Be(regularSetId);
+        result.Regulars.Should().Contain(r =>
+            r.UserId == userId &&
+            r.TeamAssignment == newTeam);
+
+        var updatedEntity = await _context.Regulars
+            .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+        updatedEntity.Should().NotBeNull();
+        updatedEntity!.TeamAssignment.Should().Be(newTeam);
+    }
+
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_DatabaseError_ReturnsNull()
+    {
+        // Arrange
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Test database error"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        // Act
+        var result = await repository.UpdatePlayerPositionAsync(1, "user1", 1);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdatePlayerTeamAsync_DatabaseError_ReturnsNull()
+    {
+        // Arrange
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("Test database error"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        // Act
+        var result = await repository.UpdatePlayerTeamAsync(1, "user1", 1);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_InvalidRegularSetId_ReturnsNull()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 999;
+        var userId = "user1";
+        var newPosition = 1;
+
+        // Act
+        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdatePlayerPositionAsync_InvalidUserId_ReturnsNull()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var userId = "invalid-user";
+        var newPosition = 1;
+
+        // Act
+        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdatePlayerTeamAsync_InvalidRegularSetId_ReturnsNull()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 999;
+        var userId = "user1";
+        var newTeam = 2;
+
+        // Act
+        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, newTeam);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdatePlayerTeamAsync_InvalidUserId_ReturnsNull()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var userId = "invalid-user";
+        var newTeam = 2;
+
+        // Act
+        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, newTeam);
+
+        // Assert
+        result.Should().BeNull();
+    }
 }
