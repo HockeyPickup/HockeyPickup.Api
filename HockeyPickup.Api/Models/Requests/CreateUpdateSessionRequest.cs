@@ -8,12 +8,31 @@ namespace HockeyPickup.Api.Models.Requests;
 
 public class CreateSessionRequest
 {
+    private DateTime _sessionDate;
+
     [Required]
     [Description("Date and time when the session is scheduled")]
     [DataType(DataType.DateTime)]
     [JsonPropertyName("SessionDate")]
     [JsonProperty(nameof(SessionDate), Required = Required.Always)]
-    public required DateTime SessionDate { get; set; }
+    public required DateTime SessionDate
+    {
+        get => _sessionDate;
+        set
+        {
+            // If incoming date is UTC, convert to Pacific Time
+            if (value.Kind == DateTimeKind.Utc)
+            {
+                var pacificZone = TimeZoneInfo.FindSystemTimeZoneById("America/Los_Angeles");
+                _sessionDate = TimeZoneInfo.ConvertTimeFromUtc(value, pacificZone);
+            }
+            else
+            {
+                // If not UTC, assume it's already in Pacific Time
+                _sessionDate = DateTime.SpecifyKind(value, DateTimeKind.Unspecified);
+            }
+        }
+    }
 
     [Description("Notes about the session")]
     [DataType(DataType.MultilineText)]
