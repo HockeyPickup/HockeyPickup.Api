@@ -235,7 +235,8 @@ public class SessionRepository : ISessionRepository
             LastBuySellId = r.LastBuySellId,
             Position = r.Position,
             CurrentPosition = r.CurrentPosition,
-            JoinedDateTime = r.JoinedDateTime
+            JoinedDateTime = r.JoinedDateTime,
+            PhotoUrl = r.PhotoUrl
         }).ToList();
     }
 
@@ -352,6 +353,7 @@ public class SessionRepository : ISessionRepository
             VenmoAccount = user.VenmoAccount,
             PayPalEmail = user.PayPalEmail,
             NotificationPreference = (NotificationPreference) user.NotificationPreference,
+            PhotoUrl = user.PhotoUrl,
             DateCreated = user.DateCreated,
             Roles = user.Roles.ToRoleNames(),
         };

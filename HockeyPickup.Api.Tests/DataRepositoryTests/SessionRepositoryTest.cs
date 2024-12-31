@@ -1662,7 +1662,8 @@ public class RosterPlayerResponseTests
             Preferred = true,
             PreferredPlus = false,
             LastBuySellId = 5,
-            JoinedDateTime = _testDate
+            JoinedDateTime = _testDate,
+            PhotoUrl = "https://example.com/photo.jpg"
         };
 
         // Assert

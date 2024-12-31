@@ -71,6 +71,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.LockoutEndDateUtc)
                         .HasColumnName("LockoutEndDateUtc")
                         .HasColumnType("datetime");
+            entity.Property(e => e.PhotoUrl).HasColumnType("nvarchar(512)");
 
             // Ignore LockoutEnd as it's handled through LockoutEndDateUtc
             entity.Ignore(e => e.LockoutEnd);

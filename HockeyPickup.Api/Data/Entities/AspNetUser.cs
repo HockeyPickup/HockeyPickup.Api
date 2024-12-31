@@ -55,6 +55,7 @@ public partial class AspNetUser : IdentityUser<string>
     public string? EmergencyName { get; set; }
     public string? EmergencyPhone { get; set; }
     public bool LockerRoom13 { get; set; }
+    public string? PhotoUrl { get; set; }
     public DateTime DateCreated { get; set; }
 
     // Virtual navigation property

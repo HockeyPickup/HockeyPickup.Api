@@ -143,6 +143,7 @@ public class RosterPlayer
     public decimal Rating { get; set; }
     public bool Preferred { get; set; }
     public bool PreferredPlus { get; set; }
+    public string PhotoUrl { get; set; } = null!;
     public int? LastBuySellId { get; set; }
     public DateTime JoinedDateTime { get; set; }
     public int Position { get; set; }

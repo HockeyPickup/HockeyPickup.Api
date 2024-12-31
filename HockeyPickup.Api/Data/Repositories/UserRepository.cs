@@ -1,6 +1,7 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -39,6 +40,7 @@ public class UserRepository : IUserRepository
                 VenmoAccount = u.VenmoAccount,
                 PayPalEmail = u.PayPalEmail,
                 NotificationPreference = (NotificationPreference) u.NotificationPreference,
+                PhotoUrl = u.PhotoUrl,
                 DateCreated = u.DateCreated,
                 Roles = u.Roles.ToRoleNames(),
             })
@@ -69,6 +71,7 @@ public class UserRepository : IUserRepository
                 VenmoAccount = u.VenmoAccount,
                 PayPalEmail = u.PayPalEmail,
                 NotificationPreference = (NotificationPreference) u.NotificationPreference,
+                PhotoUrl = u.PhotoUrl,
                 DateCreated = u.DateCreated,
                 Roles = u.Roles.ToRoleNames(),
             })

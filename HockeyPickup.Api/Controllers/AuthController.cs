@@ -17,7 +17,7 @@ namespace HockeyPickup.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-[Consumes("application/json")]
+[Consumes("application/json", "multipart/form-data")]
 [Produces("application/json")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -175,6 +175,60 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse>> AdminUpdateUser([FromBody] AdminUserUpdateRequest request)
     {
         var result = await _userService.AdminUpdateUserAsync(request);
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
+    [HttpPost("upload-photo")]
+    [Consumes("multipart/form-data")]
+    [Description("Uploads a profile photo for the authenticated user")]
+    [ProducesResponseType(typeof(ApiDataResponse<PhotoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<PhotoResponse>>> UploadPhoto(IFormFile file)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        var result = await _userService.UploadProfilePhotoAsync(userId, file);
+        var response = ApiDataResponse<PhotoResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
+    [HttpDelete("delete-photo")]
+    [Description("Deletes the profile photo of the authenticated user")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse>> DeletePhoto()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+        var result = await _userService.DeleteProfilePhotoAsync(userId);
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("admin/upload-photo")]
+    [Consumes("multipart/form-data")]
+    [Description("Admin endpoint to upload a profile photo for any user")]
+    [ProducesResponseType(typeof(ApiDataResponse<PhotoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<PhotoResponse>>> AdminUploadPhoto([FromForm] AdminPhotoUploadRequest request)
+    {
+        var result = await _userService.AdminUploadProfilePhotoAsync(request.UserId, request.File);
+        var response = ApiDataResponse<PhotoResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("admin/delete-photo")]
+    [Description("Admin endpoint to delete a profile photo for any user")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse>> AdminDeletePhoto([FromBody] AdminPhotoDeleteRequest request)
+    {
+        var result = await _userService.AdminDeleteProfilePhotoAsync(request.UserId);
         var response = ApiResponse.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }

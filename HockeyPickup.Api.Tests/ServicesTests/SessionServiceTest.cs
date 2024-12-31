@@ -83,7 +83,8 @@ public partial class SessionServiceTests
                     LastBuySellId = null,
                     JoinedDateTime = DateTime.UtcNow,
                     Position = position,
-                    CurrentPosition = "Defense"
+                    CurrentPosition = "Defense",
+                    PhotoUrl = "https://example.com/photo.jpg"
                 }
             }
         };

@@ -145,6 +145,15 @@ public class UserDetailedResponse
     [GraphQLDescription("Indicates if user has Locker Room 13 access")]
     public bool LockerRoom13 { get; set; }
 
+    [Description("Profile Photo Url")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("PhotoUrl")]
+    [JsonProperty(nameof(PhotoUrl), Required = Required.Default)]
+    [GraphQLName("PhotoUrl")]
+    [GraphQLDescription("Profile Photo Url")]
+    public string? PhotoUrl { get; set; }
+
     [Description("Date and time when lockout ends")]
     [DataType(DataType.DateTime)]
     [JsonPropertyName("DateCreated")]

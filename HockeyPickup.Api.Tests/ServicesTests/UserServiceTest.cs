@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using HockeyPickup.Api.Models.Requests;
 using System.Net;
+using Azure.Storage.Blobs;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -21,6 +22,8 @@ public partial class UserServiceTest
     private readonly Mock<IServiceBus> _mockServiceBus;
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<ILogger<UserService>> _mockLogger;
+    private readonly Mock<BlobServiceClient> _mockBlobServiceClient;
+
     private readonly UserService _service;
 
     public UserServiceTest()
@@ -66,13 +69,15 @@ public partial class UserServiceTest
         _mockServiceBus = new Mock<IServiceBus>();
         _mockConfiguration = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<UserService>>();
+        _mockBlobServiceClient = new Mock<BlobServiceClient>();
 
         _service = new UserService(
             _mockUserManager.Object,
             _mockSignInManager.Object,
             _mockServiceBus.Object,
             _mockConfiguration.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            _mockBlobServiceClient.Object
         );
     }
 

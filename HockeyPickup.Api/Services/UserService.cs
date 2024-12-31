@@ -1,9 +1,15 @@
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
+using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
+using System;
+using System.Linq;
 using System.Net;
+using Path = System.IO.Path;
 
 namespace HockeyPickup.Api.Services;
 
@@ -20,6 +26,10 @@ public interface IUserService
     Task<AspNetUser?> GetUserByIdAsync(string userId);
     Task<string[]> GetUserRolesAsync(AspNetUser user);
     Task<bool> IsInRoleAsync(AspNetUser user, string role);
+    Task<ServiceResult<PhotoResponse>> UploadProfilePhotoAsync(string userId, IFormFile file);
+    Task<ServiceResult> DeleteProfilePhotoAsync(string userId);
+    Task<ServiceResult<PhotoResponse>> AdminUploadProfilePhotoAsync(string userId, IFormFile file);
+    Task<ServiceResult> AdminDeleteProfilePhotoAsync(string userId);
 }
 
 public class UserService : IUserService
@@ -29,14 +39,19 @@ public class UserService : IUserService
     private readonly IServiceBus _serviceBus;
     private readonly IConfiguration _configuration;
     private readonly ILogger<UserService> _logger;
+    private readonly BlobServiceClient _blobServiceClient;
+    private const string CONTAINER_NAME = "profile-photos";
+    private const int MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+    private readonly string[] ALLOWED_EXTENSIONS = { ".jpg", ".jpeg", ".png" };
 
-    public UserService(UserManager<AspNetUser> userManager, SignInManager<AspNetUser> signInManager, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger)
+    public UserService(UserManager<AspNetUser> userManager, SignInManager<AspNetUser> signInManager, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, BlobServiceClient blobServiceClient)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _serviceBus = serviceBus;
         _configuration = configuration;
         _logger = logger;
+        _blobServiceClient = blobServiceClient;
     }
 
     public async Task<ServiceResult> AdminUpdateUserAsync(AdminUserUpdateRequest request)
@@ -48,8 +63,9 @@ public class UserService : IUserService
                 return ServiceResult.CreateFailure("User not found");
 
             UpdateUserPropertiesEx(user, request);
-            var result = await _userManager.UpdateAsync(user);
 
+            await _userManager.UpdateSecurityStampAsync(user);
+            var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
                 return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to update user");
 
@@ -457,6 +473,155 @@ public class UserService : IUserService
         {
             _logger.LogError(ex, "Error checking role {Role} for user {UserId}", role, user.Id);
             return false;
+        }
+    }
+
+    public async Task<ServiceResult<PhotoResponse>> UploadProfilePhotoAsync(string userId, IFormFile file)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<PhotoResponse>.CreateFailure("User not found");
+
+            return await ProcessPhotoUploadAsync(user, file);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading profile photo for user {UserId}", userId);
+            return ServiceResult<PhotoResponse>.CreateFailure($"An error occurred while uploading the photo. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> DeleteProfilePhotoAsync(string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult.CreateFailure("User not found");
+
+            return await ProcessPhotoDeleteAsync(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile photo for user {UserId}", userId);
+            return ServiceResult.CreateFailure($"An error occurred while deleting the photo. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<PhotoResponse>> AdminUploadProfilePhotoAsync(string userId, IFormFile file)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<PhotoResponse>.CreateFailure("User not found");
+
+            return await ProcessPhotoUploadAsync(user, file);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading profile photo for user {UserId} by admin", userId);
+            return ServiceResult<PhotoResponse>.CreateFailure($"An error occurred while uploading the photo. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> AdminDeleteProfilePhotoAsync(string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult.CreateFailure("User not found");
+
+            return await ProcessPhotoDeleteAsync(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile photo for user {UserId} by admin", userId);
+            return ServiceResult.CreateFailure($"An error occurred while deleting the photo. Error: {ex.Message}");
+        }
+    }
+
+    private async Task<ServiceResult<PhotoResponse>> ProcessPhotoUploadAsync(AspNetUser user, IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return ServiceResult<PhotoResponse>.CreateFailure("No file uploaded");
+
+        if (file.Length > MAX_PHOTO_SIZE)
+            return ServiceResult<PhotoResponse>.CreateFailure("File size exceeds 5MB limit");
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!ALLOWED_EXTENSIONS.Contains(extension))
+            return ServiceResult<PhotoResponse>.CreateFailure("Invalid file type. Only JPG and PNG files are allowed");
+
+        try
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(CONTAINER_NAME);
+            await containerClient.CreateIfNotExistsAsync();
+            await containerClient.SetAccessPolicyAsync(PublicAccessType.Blob);
+
+            // Delete old photo if exists
+            if (!string.IsNullOrEmpty(user.PhotoUrl))
+            {
+                var oldBlobName = user.PhotoUrl.Split('/').Last();
+                var oldBlobClient = containerClient.GetBlobClient(oldBlobName);
+                await oldBlobClient.DeleteIfExistsAsync();
+            }
+
+            // Generate unique blob name
+            var timestamp = DateTime.UtcNow.Ticks;
+            var blobName = $"{user.Id}-{timestamp}{extension}";
+            var blobClient = containerClient.GetBlobClient(blobName);
+
+            await using var stream = file.OpenReadStream();
+            await blobClient.UploadAsync(stream, overwrite: true);
+
+            // Update user's PhotoUrl
+            user.PhotoUrl = blobClient.Uri.ToString();
+
+            await _userManager.UpdateSecurityStampAsync(user);
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return ServiceResult<PhotoResponse>.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to update user photo URL");
+
+            return ServiceResult<PhotoResponse>.CreateSuccess(new PhotoResponse
+            {
+                PhotoUrl = user.PhotoUrl,
+                UpdateDateTime = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing photo upload for user {UserId}", user.Id);
+            return ServiceResult<PhotoResponse>.CreateFailure($"An error occurred while processing the photo. Error: {ex.Message}");
+        }
+    }
+
+    private async Task<ServiceResult> ProcessPhotoDeleteAsync(AspNetUser user)
+    {
+        if (string.IsNullOrEmpty(user.PhotoUrl))
+            return ServiceResult.CreateFailure("No photo to delete");
+
+        try
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(CONTAINER_NAME);
+            var blobName = user.PhotoUrl.Split('/').Last();
+            var blobClient = containerClient.GetBlobClient(blobName);
+            await blobClient.DeleteIfExistsAsync();
+
+            user.PhotoUrl = null;
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to update user");
+
+            return ServiceResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing photo deletion for user {UserId}", user.Id);
+            return ServiceResult.CreateFailure($"An error occurred while deleting the photo. Error: {ex.Message}");
         }
     }
 }

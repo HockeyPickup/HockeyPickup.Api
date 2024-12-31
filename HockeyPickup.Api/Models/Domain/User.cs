@@ -186,6 +186,13 @@ public class User
     [JsonProperty(nameof(LockerRoom13), Required = Required.Always)]
     public bool LockerRoom13 { get; set; }
 
+    [Description("Profile Photo Url")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("PhotoUrl")]
+    [JsonProperty(nameof(PhotoUrl), Required = Required.Default)]
+    public string? PhotoUrl { get; set; }
+
     [Description("Date and time when lockout ends")]
     [DataType(DataType.DateTime)]
     [JsonPropertyName("DateCreated")]
@@ -218,6 +225,7 @@ public class User
             EmergencyName = EmergencyName,
             EmergencyPhone = EmergencyPhone,
             LockerRoom13 = LockerRoom13,
+            PhotoUrl = PhotoUrl,
             DateCreated = DateCreated,
             Rating = Rating,
             Roles = Roles

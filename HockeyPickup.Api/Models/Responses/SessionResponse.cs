@@ -574,6 +574,16 @@ public class RosterPlayer
     public required bool Preferred { get; set; }
 
     [Required]
+    [Description("Profile Photo Url")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("PhotoUrl")]
+    [JsonProperty(nameof(PhotoUrl), Required = Required.Default)]
+    [GraphQLName("PhotoUrl")]
+    [GraphQLDescription("Profile Photo Url")]
+    public required string PhotoUrl { get; set; }
+
+    [Required]
     [Description("Indicates if the player has preferred plus status")]
     [JsonPropertyName("PreferredPlus")]
     [JsonProperty(nameof(PreferredPlus), Required = Required.Always)]

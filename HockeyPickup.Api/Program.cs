@@ -1,5 +1,6 @@
 #pragma warning disable IDE0057 // Use range operator
 using Azure.Messaging.ServiceBus;
+using Azure.Storage.Blobs;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.GraphQL;
@@ -159,6 +160,8 @@ public class Program
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
             .AddAuthorizationCore();
+
+        builder.Services.AddSingleton(x => new BlobServiceClient(builder.Configuration.GetConnectionString("AzureStorage")));
 
         builder.Services.AddHealthChecks()
             .AddCheck("Api", () => HealthCheckResult.Healthy("Api is healthy"))
