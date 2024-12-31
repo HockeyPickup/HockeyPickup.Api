@@ -82,7 +82,7 @@ public class SessionService : ISessionService
             };
 
             var updatedSession = await _sessionRepository.UpdateSessionAsync(session);
-            var msg = $"Session updated for {request.SessionDate:MM/dd/yyyy}";
+            var msg = $"Edited Session";
 
             updatedSession = await _sessionRepository.AddActivityAsync(updatedSession.SessionId, msg);
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
