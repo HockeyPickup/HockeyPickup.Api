@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using HockeyPickup.Api.Data.Entities;
 using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;
 
@@ -1026,5 +1027,279 @@ public partial class AuthControllerTest
         var response = badRequestResult.Value.Should().BeOfType<ApiResponse>().Subject;
         response.Success.Should().BeFalse();
         response.Message.Should().Be(errorMessage);
+    }
+}
+
+public partial class AuthControllerTest
+{
+    [Fact]
+    public async Task UploadPhoto_ValidFile_ReturnsOkResponse()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var file = CreateTestFormFile("test.jpg", "image/jpeg");
+        var expectedResponse = new PhotoResponse
+        {
+            PhotoUrl = "https://example.com/photos/test.jpg",
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        SetupUserClaims(userId);
+
+        _mockUserService
+            .Setup(x => x.UploadProfilePhotoAsync(userId, file))
+            .ReturnsAsync(ServiceResult<PhotoResponse>.CreateSuccess(expectedResponse));
+
+        // Act
+        var result = await _controller.UploadPhoto(file);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiDataResponse<PhotoResponse>>().Subject;
+
+        response.Success.Should().BeTrue();
+        response.Data.Should().NotBeNull();
+        response.Data!.PhotoUrl.Should().Be(expectedResponse.PhotoUrl);
+        response.Errors.Should().BeEmpty();
+
+        _mockUserService.Verify(x => x.UploadProfilePhotoAsync(userId, file), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadPhoto_ServiceFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var file = CreateTestFormFile("test.jpg", "image/jpeg");
+        var errorMessage = "Invalid file format";
+
+        SetupUserClaims(userId);
+
+        _mockUserService
+            .Setup(x => x.UploadProfilePhotoAsync(userId, file))
+            .ReturnsAsync(ServiceResult<PhotoResponse>.CreateFailure(errorMessage));
+
+        // Act
+        var result = await _controller.UploadPhoto(file);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<PhotoResponse>>().Subject;
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be(errorMessage);
+        response.Data.Should().BeNull();
+        response.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be(errorMessage);
+    }
+
+    [Fact]
+    public async Task DeletePhoto_Success_ReturnsOkResponse()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        SetupUserClaims(userId);
+
+        _mockUserService
+            .Setup(x => x.DeleteProfilePhotoAsync(userId))
+            .ReturnsAsync(ServiceResult.CreateSuccess());
+
+        // Act
+        var result = await _controller.DeletePhoto();
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse>().Subject;
+
+        response.Success.Should().BeTrue();
+        response.Errors.Should().BeEmpty();
+
+        _mockUserService.Verify(x => x.DeleteProfilePhotoAsync(userId), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeletePhoto_ServiceFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var errorMessage = "Photo not found";
+
+        SetupUserClaims(userId);
+
+        _mockUserService
+            .Setup(x => x.DeleteProfilePhotoAsync(userId))
+            .ReturnsAsync(ServiceResult.CreateFailure(errorMessage));
+
+        // Act
+        var result = await _controller.DeletePhoto();
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiResponse>().Subject;
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be(errorMessage);
+        response.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be(errorMessage);
+    }
+
+    [Fact]
+    public async Task AdminUploadPhoto_ServiceFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var targetUserId = "target-user-id";
+        var file = CreateTestFormFile("test.jpg", "image/jpeg");
+        var request = new AdminPhotoUploadRequest
+        {
+            UserId = targetUserId,
+            File = file
+        };
+        var errorMessage = "Invalid file format";
+
+        _mockUserService
+            .Setup(x => x.AdminUploadProfilePhotoAsync(targetUserId, file))
+            .ReturnsAsync(ServiceResult<PhotoResponse>.CreateFailure(errorMessage));
+
+        // Act
+        var result = await _controller.AdminUploadPhoto(request);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<PhotoResponse>>().Subject;
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be(errorMessage);
+        response.Data.Should().BeNull();
+        response.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be(errorMessage);
+    }
+
+    [Fact]
+    public async Task AdminUploadPhoto_ValidRequest_ReturnsOkResponse()
+    {
+        // Arrange
+        var targetUserId = "target-user-id";
+        var file = CreateTestFormFile("test.jpg", "image/jpeg");
+        var request = new AdminPhotoUploadRequest
+        {
+            UserId = targetUserId,
+            File = file
+        };
+
+        var expectedResponse = new PhotoResponse
+        {
+            PhotoUrl = "https://example.com/photos/test.jpg",
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        _mockUserService
+            .Setup(x => x.AdminUploadProfilePhotoAsync(targetUserId, file))
+            .ReturnsAsync(ServiceResult<PhotoResponse>.CreateSuccess(expectedResponse));
+
+        // Act
+        var result = await _controller.AdminUploadPhoto(request);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiDataResponse<PhotoResponse>>().Subject;
+
+        response.Success.Should().BeTrue();
+        response.Data.Should().NotBeNull();
+        response.Data!.PhotoUrl.Should().Be(expectedResponse.PhotoUrl);
+        response.Errors.Should().BeEmpty();
+
+        _mockUserService.Verify(x => x.AdminUploadProfilePhotoAsync(targetUserId, file), Times.Once);
+    }
+
+    [Fact]
+    public async Task AdminDeletePhoto_ValidRequest_ReturnsOkResponse()
+    {
+        // Arrange
+        var targetUserId = "target-user-id";
+        var request = new AdminPhotoDeleteRequest { UserId = targetUserId };
+
+        _mockUserService
+            .Setup(x => x.AdminDeleteProfilePhotoAsync(targetUserId))
+            .ReturnsAsync(ServiceResult.CreateSuccess());
+
+        // Act
+        var result = await _controller.AdminDeletePhoto(request);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse>().Subject;
+
+        response.Success.Should().BeTrue();
+        response.Errors.Should().BeEmpty();
+
+        _mockUserService.Verify(x => x.AdminDeleteProfilePhotoAsync(targetUserId), Times.Once);
+    }
+
+    [Fact]
+    public async Task AdminDeletePhoto_ServiceFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var targetUserId = "target-user-id";
+        var request = new AdminPhotoDeleteRequest { UserId = targetUserId };
+        var errorMessage = "User not found";
+
+        _mockUserService
+            .Setup(x => x.AdminDeleteProfilePhotoAsync(targetUserId))
+            .ReturnsAsync(ServiceResult.CreateFailure(errorMessage));
+
+        // Act
+        var result = await _controller.AdminDeletePhoto(request);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiResponse>().Subject;
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be(errorMessage);
+        response.Errors.Should().ContainSingle()
+            .Which.Message.Should().Be(errorMessage);
+    }
+
+    private static IFormFile CreateTestFormFile(string filename, string contentType)
+    {
+        var content = new byte[] { 0x42, 0x43, 0x44 }; // Dummy file content
+        var stream = new MemoryStream(content);
+
+        var file = new Mock<IFormFile>();
+        file.Setup(f => f.FileName).Returns(filename);
+        file.Setup(f => f.ContentType).Returns(contentType);
+        file.Setup(f => f.Length).Returns(stream.Length);
+        file.Setup(f => f.OpenReadStream()).Returns(stream);
+        file.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        return file.Object;
+    }
+}
+
+public class UploadPhotoRequestTests
+{
+    [Fact]
+    public void UploadPhotoRequest_WithValidFile_ShouldValidate()
+    {
+        // Arrange
+        var file = new FormFile(
+            baseStream: new MemoryStream(),
+            baseStreamOffset: 0,
+            length: 1024,
+            name: "file",
+            fileName: "test.jpg"
+        );
+
+        var request = new UploadPhotoRequest { File = file };
+
+        // Act
+        var validationContext = new ValidationContext(request);
+        var validationResults = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(request, validationContext, validationResults, true);
+
+        // Assert
+        Assert.True(isValid);
+        Assert.Empty(validationResults);
     }
 }
