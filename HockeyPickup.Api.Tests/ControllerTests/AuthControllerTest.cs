@@ -11,7 +11,6 @@ using HockeyPickup.Api.Helpers;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using HockeyPickup.Api.Data.Entities;
-using System.Text.Json;
 using System.ComponentModel.DataAnnotations;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;

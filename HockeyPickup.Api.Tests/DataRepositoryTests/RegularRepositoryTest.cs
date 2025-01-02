@@ -8,7 +8,6 @@ using System.Reflection;
 using Moq;
 using Microsoft.Data.SqlClient;
 using System.Data;
-using HockeyPickup.Api.Controllers;
 using Microsoft.Extensions.Logging;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
