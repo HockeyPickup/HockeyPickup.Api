@@ -78,6 +78,30 @@ public class SessionBasicResponse
 [GraphQLName("SessionDetailed")]
 public class SessionDetailedResponse : SessionBasicResponse
 {
+    [Description("Buy window for the session")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("BuyWindow")]
+    [JsonProperty(nameof(BuyWindow))]
+    [GraphQLName("BuyWindow")]
+    [GraphQLDescription("Buy window for the session")]
+    public DateTime BuyWindow => SessionDate.AddDays(-BuyDayMinimum.GetValueOrDefault()).AddHours(2);
+
+    [Description("Buy window for preferred users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("BuyWindowPreferred")]
+    [JsonProperty(nameof(BuyWindowPreferred))]
+    [GraphQLName("BuyWindowPreferred")]
+    [GraphQLDescription("Buy window for preferred users")]
+    public DateTime BuyWindowPreferred => SessionDate.AddDays(-BuyDayMinimum.GetValueOrDefault() - 1).AddHours(2);
+
+    [Description("Buy window for preferred plus users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("BuyWindowPreferredPlus")]
+    [JsonProperty(nameof(BuyWindowPreferredPlus))]
+    [GraphQLName("BuyWindowPreferredPlus")]
+    [GraphQLDescription("Buy window for preferred plus users")]
+    public DateTime BuyWindowPreferredPlus => SessionDate.AddDays(-BuyDayMinimum.GetValueOrDefault() - 1).AddHours(2).AddMinutes(-5);
+
     [Description("Buy/sell transactions associated with the session")]
     [JsonPropertyName("BuySells")]
     [JsonProperty(nameof(BuySells))]
