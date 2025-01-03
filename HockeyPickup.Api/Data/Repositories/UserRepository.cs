@@ -1,10 +1,10 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
-using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HockeyPickup.Api.Data.Repositories;
 
@@ -133,5 +133,14 @@ public class UserRepository : IUserRepository
         return await query
             .OrderBy(r => r.SessionDate)
             .ToListAsync();
+    }
+
+    [ExcludeFromCodeCoverage]
+    public async Task<UserStatsResponse?> GetUserStatsAsync(string userId)
+    {
+        return (await _context.Database
+            .SqlQuery<UserStatsResponse>($"EXEC GetUserStats @UserId={userId}")
+            .ToListAsync())
+            .FirstOrDefault();
     }
 }

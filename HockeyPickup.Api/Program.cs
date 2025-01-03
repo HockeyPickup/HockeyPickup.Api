@@ -71,6 +71,7 @@ public class Program
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<AspNetUser>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ApiResponse>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ApiDataResponse<object>>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<UserStatsResponse>());
         });
         builder.Services.AddSwaggerGen(o =>
         {
@@ -89,6 +90,7 @@ public class Program
             o.DocumentFilter<CustomModelDocumentFilter<AspNetUser>>();
             o.DocumentFilter<CustomModelDocumentFilter<ApiResponse>>();
             o.DocumentFilter<CustomModelDocumentFilter<ApiDataResponse<object>>>();
+            o.DocumentFilter<CustomModelDocumentFilter<UserStatsResponse>>();
 
             o.SwaggerDoc("v1", new OpenApiInfo()
             {

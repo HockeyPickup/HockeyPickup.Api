@@ -69,4 +69,13 @@ public class Query
     {
         return await regularRepository.GetRegularSetAsync(regularSetId);
     }
+
+    [Authorize]
+    [GraphQLDescription("Retrieves user statistics")]
+    [GraphQLType(typeof(UserStatsResponse))]
+    [GraphQLName("UserStats")]
+    public async Task<UserStatsResponse> GetUserStats([GraphQLName("UserId")][GraphQLDescription("The ID of the user")] string userId, [Service] IUserRepository userRepository)
+    {
+        return await userRepository.GetUserStatsAsync(userId);
+    }
 }

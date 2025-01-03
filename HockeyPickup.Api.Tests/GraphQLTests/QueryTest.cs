@@ -227,4 +227,62 @@ public class GraphQLTests
         result.Should().BeEquivalentTo(expectedSession);
         sessionRepositoryMock.Verify(r => r.GetSessionAsync(1), Times.Once);
     }
+
+    [Fact]
+    public async Task GetUserStats_ReturnsUserStats()
+    {
+        // Arrange 
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        var loggerMock = new Mock<ILogger<Query>>();
+        var userRepositoryMock = new Mock<IUserRepository>();
+        var testDate = DateTime.UtcNow;
+
+        var expectedStats = new UserStatsResponse
+        {
+            MemberSince = testDate.AddYears(-1),
+            CurrentYearGamesPlayed = 5,
+            PriorYearGamesPlayed = 10,
+            CurrentYearBoughtTotal = 2,
+            PriorYearBoughtTotal = 3,
+            LastBoughtSessionDate = testDate,
+            CurrentYearSoldTotal = 1,
+            PriorYearSoldTotal = 2,
+            LastSoldSessionDate = testDate.AddDays(-7),
+            MostPlayedPosition = "Defense",
+            CurrentBuyRequests = 1
+        };
+
+        userRepositoryMock.Setup(repo => repo.GetUserStatsAsync("user1"))
+            .ReturnsAsync(expectedStats);
+
+        var query = new Query(httpContextAccessorMock.Object, loggerMock.Object);
+
+        // Act
+        var result = await query.GetUserStats("user1", userRepositoryMock.Object);
+
+        // Assert
+        result.Should().BeEquivalentTo(expectedStats);
+        userRepositoryMock.Verify(r => r.GetUserStatsAsync("user1"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUserStats_WhenUserNotFound_ReturnsNull()
+    {
+        // Arrange
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        var loggerMock = new Mock<ILogger<Query>>();
+        var userRepositoryMock = new Mock<IUserRepository>();
+
+        userRepositoryMock.Setup(repo => repo.GetUserStatsAsync("nonexistent"))
+            .ReturnsAsync((UserStatsResponse?) null);
+
+        var query = new Query(httpContextAccessorMock.Object, loggerMock.Object);
+
+        // Act
+        var result = await query.GetUserStats("nonexistent", userRepositoryMock.Object);
+
+        // Assert
+        result.Should().BeNull();
+        userRepositoryMock.Verify(r => r.GetUserStatsAsync("nonexistent"), Times.Once);
+    }
 }
