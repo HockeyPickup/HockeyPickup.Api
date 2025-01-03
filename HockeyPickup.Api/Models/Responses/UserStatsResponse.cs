@@ -90,4 +90,20 @@ public class UserStatsResponse
     [GraphQLName("CurrentBuyRequests")]
     [GraphQLDescription("Current active buy requests")]
     public required int CurrentBuyRequests { get; set; }
+
+    [Required]
+    [Description("Indicates if user is a regular for upcoming Wednesday sessions")]
+    [JsonPropertyName("WednesdayRegular")]
+    [JsonProperty(nameof(WednesdayRegular), Required = Required.Always)]
+    [GraphQLName("WednesdayRegular")]
+    [GraphQLDescription("Indicates if user is a regular for upcoming Wednesday sessions")]
+    public required bool WednesdayRegular { get; set; }
+
+    [Required]
+    [Description("Indicates if user is a regular for upcoming Friday sessions")]
+    [JsonPropertyName("FridayRegular")]
+    [JsonProperty(nameof(FridayRegular), Required = Required.Always)]
+    [GraphQLName("FridayRegular")]
+    [GraphQLDescription("Indicates if user is a regular for upcoming Friday sessions")]
+    public required bool FridayRegular { get; set; }
 }
