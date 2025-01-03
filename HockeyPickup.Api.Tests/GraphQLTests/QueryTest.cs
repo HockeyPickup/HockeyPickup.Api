@@ -249,7 +249,9 @@ public class GraphQLTests
             PriorYearSoldTotal = 2,
             LastSoldSessionDate = testDate.AddDays(-7),
             MostPlayedPosition = "Defense",
-            CurrentBuyRequests = 1
+            CurrentBuyRequests = 1,
+            WednesdayRegular = true,
+            FridayRegular = true,
         };
 
         userRepositoryMock.Setup(repo => repo.GetUserStatsAsync("user1"))
