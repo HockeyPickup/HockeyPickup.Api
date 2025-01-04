@@ -635,7 +635,8 @@ public partial class AuthControllerTest
             MobileLast4 = "1234",
             EmergencyName = invalidValue,
             EmergencyPhone = invalidValue,
-            NotificationPreference = NotificationPreference.OnlyMyBuySell
+            NotificationPreference = NotificationPreference.OnlyMyBuySell,
+            PositionPreference = PositionPreference.TBD
         };
 
         _mockUserService
@@ -671,7 +672,8 @@ public partial class AuthControllerTest
             MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
-            NotificationPreference = NotificationPreference.OnlyMyBuySell
+            NotificationPreference = NotificationPreference.OnlyMyBuySell,
+            PositionPreference = PositionPreference.TBD
         };
 
         _mockUserService
@@ -705,6 +707,40 @@ public partial class AuthControllerTest
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = preference
+        };
+
+        SetupUserClaims(userId);
+
+        _mockUserService
+            .Setup(x => x.SaveUserAsync(userId, request))
+            .ReturnsAsync(ServiceResult.CreateSuccess());
+
+        // Act
+        var result = await _controller.SaveUser(request);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiResponse>().Subject;
+        response.Success.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(PositionPreference.TBD)]
+    [InlineData(PositionPreference.Forward)]
+    public async Task SaveUser_ValidPositionPreference_ReturnsOkResponse(PositionPreference preference)
+    {
+        // Arrange
+        var userId = "test-user-id";
+        var request = new SaveUserRequest
+        {
+            FirstName = "John",
+            LastName = "Doe",
+            PayPalEmail = "john.doe@paypal.com",
+            VenmoAccount = "@johndoe",
+            MobileLast4 = "1234",
+            EmergencyName = "Jane Doe",
+            EmergencyPhone = "555-123-4567",
+            PositionPreference = preference
         };
 
         SetupUserClaims(userId);

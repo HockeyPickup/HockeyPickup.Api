@@ -21,6 +21,7 @@ public partial class AspNetUser : IdentityUser<string>
         LockoutEnabled = false;
         AccessFailedCount = 0;
         NotificationPreference = 1;
+        PositionPreference = 0;
         Active = false;
         Rating = 0;
         PreferredPlus = false;
@@ -45,6 +46,7 @@ public partial class AspNetUser : IdentityUser<string>
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public int NotificationPreference { get; set; }
+    public int PositionPreference { get; set; }
     public string? PayPalEmail { get; set; } = null!;
     public bool Active { get; set; }
     public bool Preferred { get; set; }

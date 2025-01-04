@@ -98,6 +98,7 @@ public class DetailedSessionTestContext : HockeyPickupContext
             entity.Property(e => e.LastName);
             entity.Property(e => e.PayPalEmail);
             entity.Property(e => e.NotificationPreference);
+            entity.Property(e => e.PositionPreference);
 
             // Configure relationships
             entity.HasMany(u => u.BuyerTransactions).WithOne(b => b.Buyer);
@@ -263,7 +264,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             FirstName = "Test",
             LastName = "User",
             PayPalEmail = "test@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         _context.Users.Add(user);
 
@@ -435,7 +437,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test@example.com",
             Email = "test@example.com",
             PayPalEmail = "test@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         _context.Users.Add(user);
 
@@ -481,7 +484,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test@example.com",
             Email = "test@example.com",
             PayPalEmail = "test@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         _context.Users.Add(user);
 
@@ -588,7 +592,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test1@example.com",
             Email = "test1@example.com",
             PayPalEmail = "test1@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         var user2 = new AspNetUser
         {
@@ -596,7 +601,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test2@example.com",
             Email = "test2@example.com",
             PayPalEmail = "test2@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         _context.Users.AddRange(user1, user2);
 
@@ -1951,7 +1957,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 PayPalEmail = "test@example.com",
-                NotificationPreference = 1
+                NotificationPreference = 1,
+                PositionPreference = 1
             };
             context.Users!.Add(user);
 
@@ -2017,7 +2024,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 PayPalEmail = "test@example.com",
-                NotificationPreference = 1
+                NotificationPreference = 1,
+                PositionPreference = 1
             };
             context.Users!.Add(user);
 
@@ -2080,7 +2088,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 PayPalEmail = "test@example.com",
-                NotificationPreference = 1
+                NotificationPreference = 1,
+                PositionPreference = 1
             };
             context.Users!.Add(user);
 
@@ -2127,7 +2136,8 @@ public partial class DetailedSessionRepositoryTests
             UserName = "test@example.com",
             Email = "test@example.com",
             PayPalEmail = "test@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         context.Users!.Add(user);
         await context.SaveChangesAsync();
@@ -2165,7 +2175,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 PayPalEmail = "test@example.com",
-                NotificationPreference = 1
+                NotificationPreference = 1,
+                PositionPreference = 1
             };
             context.Users!.Add(user);
 
@@ -2231,7 +2242,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 PayPalEmail = "test@example.com",
-                NotificationPreference = 1
+                NotificationPreference = 1,
+                PositionPreference = 1
             };
             context.Users!.Add(user);
 
@@ -2294,7 +2306,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 PayPalEmail = "test@example.com",
-                NotificationPreference = 1
+                NotificationPreference = 1,
+                PositionPreference = 1
             };
             context.Users!.Add(user);
 
@@ -2341,7 +2354,8 @@ public partial class DetailedSessionRepositoryTests
             UserName = "test@example.com",
             Email = "test@example.com",
             PayPalEmail = "test@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         context.Users!.Add(user);
         await context.SaveChangesAsync();

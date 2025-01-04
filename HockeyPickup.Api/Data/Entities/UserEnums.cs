@@ -13,6 +13,18 @@ public enum NotificationPreference
     OnlyMyBuySell
 }
 
+public enum PositionPreference
+{
+    [Display(Name = @"TBD")]
+    TBD,
+    [Display(Name = @"Forward")]
+    Forward,
+    [Display(Name = @"Defense")]
+    Defense,
+    [Display(Name = @"Goalie")]
+    Goalie
+}
+
 public enum PlayerStatus
 {
     [Description("Regular player in the roster")]

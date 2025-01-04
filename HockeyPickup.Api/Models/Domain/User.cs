@@ -115,6 +115,13 @@ public class User
     public int NotificationPreference { get; set; }
 
     [Required]
+    [Description("User's position preferences")]
+    [Range(0, int.MaxValue)]
+    [JsonPropertyName("PositionPreference")]
+    [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
+    public int PositionPreference { get; set; }
+
+    [Required]
     [Description("User's PayPal email address")]
     [MaxLength(256)]
     [EmailAddress]
@@ -219,6 +226,7 @@ public class User
             Preferred = Preferred,
             PreferredPlus = PreferredPlus,
             NotificationPreference = (NotificationPreference) NotificationPreference,
+            PositionPreference = (PositionPreference) PositionPreference,
             VenmoAccount = VenmoAccount,
             PayPalEmail = PayPalEmail,
             MobileLast4 = MobileLast4,

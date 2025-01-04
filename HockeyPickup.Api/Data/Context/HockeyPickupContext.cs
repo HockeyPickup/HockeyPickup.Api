@@ -83,6 +83,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.FirstName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.LastName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
+            entity.Property(e => e.PositionPreference).HasDefaultValue(1);
             entity.Property(e => e.PayPalEmail).HasColumnType("nvarchar(max)").HasDefaultValue("");
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);

@@ -75,6 +75,12 @@ public class SaveUserRequest
     [JsonProperty(nameof(NotificationPreference), Required = Required.Default)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public NotificationPreference? NotificationPreference { get; set; }
+
+    [Description("User's position preference setting")]
+    [JsonPropertyName("PositionPreference")]
+    [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PositionPreference? PositionPreference { get; set; }
 }
 
 public class SaveUserRequestEx : SaveUserRequest

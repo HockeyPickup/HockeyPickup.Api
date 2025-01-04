@@ -21,6 +21,7 @@ public partial class UserServiceTest
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-1234",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
+            PositionPreference = PositionPreference.TBD,
         };
     }
 
@@ -53,6 +54,7 @@ public partial class UserServiceTest
         user.EmergencyName.Should().Be(request.EmergencyName);
         user.EmergencyPhone.Should().Be(request.EmergencyPhone);
         user.NotificationPreference.Should().Be((int) request.NotificationPreference!.Value);
+        user.PositionPreference.Should().Be((int) request.PositionPreference!.Value);
     }
 
     [Fact]
@@ -66,7 +68,8 @@ public partial class UserServiceTest
             FirstName = "Original",
             LastName = "Name",
             PayPalEmail = "original@pay.com",
-            NotificationPreference = (int) NotificationPreference.None
+            NotificationPreference = (int) NotificationPreference.None,
+            PositionPreference = (int) PositionPreference.TBD
         };
 
         var request = new SaveUserRequest
@@ -94,6 +97,7 @@ public partial class UserServiceTest
         // Verify untouched fields
         user.LastName.Should().Be("Name");
         user.NotificationPreference.Should().Be((int) NotificationPreference.None);
+        user.PositionPreference.Should().Be((int) PositionPreference.TBD);
     }
 
     [Fact]
@@ -176,12 +180,14 @@ public partial class UserServiceTest
         var user = new AspNetUser
         {
             Id = userId,
-            NotificationPreference = (int) NotificationPreference.None
+            NotificationPreference = (int) NotificationPreference.None,
+            PositionPreference = (int) PositionPreference.TBD
         };
 
         var request = new SaveUserRequest
         {
-            NotificationPreference = NotificationPreference.None
+            NotificationPreference = NotificationPreference.None,
+            PositionPreference = PositionPreference.TBD
         };
 
         _mockUserManager.Setup(x => x.FindByIdAsync(userId))
@@ -196,6 +202,7 @@ public partial class UserServiceTest
         // Assert
         result.IsSuccess.Should().BeTrue();
         user.NotificationPreference.Should().Be((int) NotificationPreference.None);
+        user.PositionPreference.Should().Be((int) PositionPreference.TBD);
     }
 
     [Fact]
@@ -440,7 +447,8 @@ public partial class UserServiceTest
             PreferredPlus = false,
             LockerRoom13 = false,
             PayPalEmail = "john.pay@example.com",
-            NotificationPreference = NotificationPreference.OnlyMyBuySell
+            NotificationPreference = NotificationPreference.OnlyMyBuySell,
+            PositionPreference = PositionPreference.TBD
         };
     }
 

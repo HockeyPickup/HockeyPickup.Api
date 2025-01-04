@@ -226,7 +226,8 @@ public partial class UserServiceTest
                 u.EmailConfirmed == false &&
                 u.LockoutEnabled == false &&
                 u.PayPalEmail == request.Email &&
-                u.NotificationPreference == (int) NotificationPreference.OnlyMyBuySell),
+                u.NotificationPreference == (int) NotificationPreference.OnlyMyBuySell &&
+                u.PositionPreference == (int) PositionPreference.TBD),
             request.Password),
             Times.Once);
 

@@ -353,6 +353,7 @@ public class SessionRepository : ISessionRepository
             VenmoAccount = user.VenmoAccount,
             PayPalEmail = user.PayPalEmail,
             NotificationPreference = (NotificationPreference) user.NotificationPreference,
+            PositionPreference = (PositionPreference) user.PositionPreference,
             PhotoUrl = user.PhotoUrl,
             DateCreated = user.DateCreated,
             Roles = user.Roles.ToRoleNames(),

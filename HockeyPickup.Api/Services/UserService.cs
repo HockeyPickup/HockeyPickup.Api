@@ -122,6 +122,7 @@ public class UserService : IUserService
         if (request.EmergencyName != null) user.EmergencyName = request.EmergencyName;
         if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
         if (request.NotificationPreference.HasValue) user.NotificationPreference = (int) request.NotificationPreference.Value;
+        if (request.PositionPreference.HasValue) user.PositionPreference = (int) request.PositionPreference.Value;
     }
 
     public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request)
@@ -304,7 +305,8 @@ public class UserService : IUserService
                 EmailConfirmed = false,
                 LockoutEnabled = false,
                 PayPalEmail = request.Email,
-                NotificationPreference = (int) NotificationPreference.OnlyMyBuySell
+                NotificationPreference = (int) NotificationPreference.OnlyMyBuySell,
+                PositionPreference = (int) PositionPreference.TBD
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
@@ -390,6 +392,7 @@ public class UserService : IUserService
                 Preferred = aspNetUser.Preferred,
                 PreferredPlus = aspNetUser.PreferredPlus,
                 NotificationPreference = aspNetUser.NotificationPreference,
+                PositionPreference = aspNetUser.PositionPreference,
                 Active = aspNetUser.Active,
                 EmergencyName = aspNetUser.EmergencyName,
                 EmergencyPhone = aspNetUser.EmergencyPhone,

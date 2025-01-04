@@ -50,6 +50,7 @@ public class RegularRepositoryTests : IDisposable
                 LastName = "Doe",
                 PayPalEmail = "test1@paypal.com",
                 NotificationPreference = 1,
+                PositionPreference = 1,
                 Rating = 4.5m,
                 Preferred = true,
                 PreferredPlus = false,
@@ -70,6 +71,7 @@ public class RegularRepositoryTests : IDisposable
                 LastName = "Smith",
                 PayPalEmail = "test2@paypal.com",
                 NotificationPreference = 2,
+                PositionPreference = 2,
                 Rating = 3.5m,
                 Preferred = false,
                 PreferredPlus = true,
@@ -169,6 +171,7 @@ public class RegularRepositoryTests : IDisposable
         firstRegular.User.VenmoAccount.Should().Be("@johndoe");
         firstRegular.User.PayPalEmail.Should().Be("test1@paypal.com");
         firstRegular.User.NotificationPreference.Should().Be(NotificationPreference.All);
+        firstRegular.User.PositionPreference.Should().Be(PositionPreference.Forward);
         firstRegular.User.LockerRoom13.Should().BeTrue();
         firstRegular.User.DateCreated.Should().Be(_testDate);
         firstRegular.User.Roles.Should().NotBeNull();

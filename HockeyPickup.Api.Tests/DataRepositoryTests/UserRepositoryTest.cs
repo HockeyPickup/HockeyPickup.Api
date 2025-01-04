@@ -38,6 +38,7 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
             entity.Property(e => e.PayPalEmail).HasDefaultValue("");
             entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
+            entity.Property(e => e.PositionPreference).HasDefaultValue(1);
 
             // Ignore navigation properties
             entity.Ignore(e => e.Roles);
@@ -228,6 +229,7 @@ public partial class UserRepositoryTest
             PreferredPlus = true,
             Active = true,
             NotificationPreference = NotificationPreference.All,
+            PositionPreference = PositionPreference.TBD,
             DateCreated = DateTime.Parse("02/25/1969")
         });
     }

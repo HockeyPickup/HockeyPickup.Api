@@ -98,6 +98,13 @@ public class UserDetailedResponse
     [GraphQLDescription("User's notification preferences")]
     public NotificationPreference? NotificationPreference { get; set; }
 
+    [Description("User's position preferences")]
+    [JsonPropertyName("PositionPreference")]
+    [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
+    [GraphQLName("PositionPreference")]
+    [GraphQLDescription("User's position preferences")]
+    public PositionPreference? PositionPreference { get; set; }
+
     [Description("User's Venmo account")]
     [MaxLength(255)]
     [RegularExpression(@"^[^\\\./:\@\*\?\""<>\|]{1}[^\\/:\@\*\?\""<>\|]{0,254}$")]

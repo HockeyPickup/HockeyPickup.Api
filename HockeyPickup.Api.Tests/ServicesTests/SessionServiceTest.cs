@@ -255,7 +255,8 @@ public partial class SessionServiceTests
             UserName = "test@example.com",
             Email = "test@example.com",
             PayPalEmail = "test@example.com",
-            NotificationPreference = 1
+            NotificationPreference = 1,
+            PositionPreference = 1
         };
         context.Users!.Add(user);
 
