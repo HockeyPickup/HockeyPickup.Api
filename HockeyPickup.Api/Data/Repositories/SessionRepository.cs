@@ -349,6 +349,7 @@ public class SessionRepository : ISessionRepository
             LockerRoom13 = user.LockerRoom13,
             EmergencyName = user.EmergencyName,
             EmergencyPhone = user.EmergencyPhone,
+            JerseyNumber = user.JerseyNumber,
             MobileLast4 = user.MobileLast4,
             VenmoAccount = user.VenmoAccount,
             PayPalEmail = user.PayPalEmail,

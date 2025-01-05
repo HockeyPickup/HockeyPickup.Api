@@ -93,6 +93,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
             entity.Property(e => e.EmergencyName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.EmergencyPhone).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.JerseyNumber).HasDefaultValue(0);
             entity.Property(e => e.LockerRoom13).HasDefaultValue(false);
 
             // New Identity columns

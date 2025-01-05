@@ -123,6 +123,7 @@ public class UserService : IUserService
         if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
         if (request.NotificationPreference.HasValue) user.NotificationPreference = (int) request.NotificationPreference.Value;
         if (request.PositionPreference.HasValue) user.PositionPreference = (int) request.PositionPreference.Value;
+        user.JerseyNumber = request.JerseyNumber;
     }
 
     public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request)
@@ -396,6 +397,7 @@ public class UserService : IUserService
                 Active = aspNetUser.Active,
                 EmergencyName = aspNetUser.EmergencyName,
                 EmergencyPhone = aspNetUser.EmergencyPhone,
+                JerseyNumber = aspNetUser.JerseyNumber,
                 LockerRoom13 = aspNetUser.LockerRoom13,
                 MobileLast4 = aspNetUser.MobileLast4,
                 PayPalEmail = aspNetUser.PayPalEmail,

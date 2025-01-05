@@ -88,6 +88,7 @@ public class CustomUserStore : UserStore<AspNetUser, AspNetRole, HockeyPickupCon
                     PreferredPlus = @PreferredPlus,
                     EmergencyName = @EmergencyName,
                     EmergencyPhone = @EmergencyPhone,
+                    JerseyNumber = @JerseyNumber,
                     LockerRoom13 = @LockerRoom13,
                     DateCreated = @DateCreated,
                     PhotoUrl = @PhotoUrl
@@ -121,6 +122,7 @@ public class CustomUserStore : UserStore<AspNetUser, AspNetRole, HockeyPickupCon
                 new Microsoft.Data.SqlClient.SqlParameter("@PreferredPlus", user.PreferredPlus),
                 new Microsoft.Data.SqlClient.SqlParameter("@EmergencyName", user.EmergencyName ?? (object) DBNull.Value),
                 new Microsoft.Data.SqlClient.SqlParameter("@EmergencyPhone", user.EmergencyPhone ?? (object) DBNull.Value),
+                new Microsoft.Data.SqlClient.SqlParameter("@JerseyNumber", user.JerseyNumber),
                 new Microsoft.Data.SqlClient.SqlParameter("@LockerRoom13", user.LockerRoom13),
                 new Microsoft.Data.SqlClient.SqlParameter("@DateCreated", user.DateCreated),
                 new Microsoft.Data.SqlClient.SqlParameter("@PhotoUrl", user.PhotoUrl ?? (object) DBNull.Value),

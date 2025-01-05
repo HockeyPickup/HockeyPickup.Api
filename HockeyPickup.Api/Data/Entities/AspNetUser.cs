@@ -56,6 +56,7 @@ public partial class AspNetUser : IdentityUser<string>
     public bool PreferredPlus { get; set; }
     public string? EmergencyName { get; set; }
     public string? EmergencyPhone { get; set; }
+    public int JerseyNumber { get; set; }
     public bool LockerRoom13 { get; set; }
     public string? PhotoUrl { get; set; }
     public DateTime DateCreated { get; set; }

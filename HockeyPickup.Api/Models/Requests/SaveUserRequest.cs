@@ -70,6 +70,13 @@ public class SaveUserRequest
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? EmergencyPhone { get; set; }
 
+    [Required]
+    [Description("Jersey Number")]
+    [Range(0, 98)]
+    [JsonPropertyName("JerseyNumber")]
+    [JsonProperty(nameof(JerseyNumber), Required = Required.Always)]
+    public int JerseyNumber { get; set; }
+
     [Description("User's notification preference setting")]
     [JsonPropertyName("NotificationPreference")]
     [JsonProperty(nameof(NotificationPreference), Required = Required.Default)]

@@ -188,6 +188,13 @@ public class User
     public string? EmergencyPhone { get; set; }
 
     [Required]
+    [Description("Jersey Number")]
+    [Range(0, 98)]
+    [JsonPropertyName("JerseyNumber")]
+    [JsonProperty(nameof(JerseyNumber), Required = Required.Always)]
+    public int JerseyNumber { get; set; }
+
+    [Required]
     [Description("Indicates if user has Locker Room 13 access")]
     [JsonPropertyName("LockerRoom13")]
     [JsonProperty(nameof(LockerRoom13), Required = Required.Always)]
