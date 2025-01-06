@@ -63,8 +63,10 @@ Create a new file at the root of the HockeyPickup.Api project named `appsettings
   "ServiceBusCommsQueueName": "comms-dev",
   "ServiceBusHealthCheckQueueName": "health-dev",
   "RegistrationInviteCode": "<InviteCode>",
-  "SessionBuyPrice": "27.00"
-  }
+  "SessionBuyPrice": "27.00",
+  "SiteTitle": "Hockey Pickup",
+  "RinkLocation": "Toyota Sports Performance Center, 555 N Nash Street, El Segundo, CA 90245",
+  "BaseUrl": "https://localhost:5174"
 }
 ```
 
