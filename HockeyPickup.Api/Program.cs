@@ -287,6 +287,8 @@ public class Program
             await next();
         });
 
+        app.UseWebSockets();
+        app.UseMiddleware<WebSocketMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<TokenRenewalMiddleware>();

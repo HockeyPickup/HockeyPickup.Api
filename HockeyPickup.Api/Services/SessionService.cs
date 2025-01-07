@@ -85,6 +85,7 @@ public class SessionService : ISessionService
             var msg = $"Edited Session";
 
             updatedSession = await _sessionRepository.AddActivityAsync(updatedSession.SessionId, msg);
+            await WebSocketMiddleware.NotifySessionUpdate(request.SessionId, updatedSession);
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
         catch (Exception ex)
@@ -126,6 +127,7 @@ public class SessionService : ISessionService
             var msg = $"{user.FirstName} {user.LastName} changed position from {currentRoster.Position.ParsePositionName()} to {newPosition.ParsePositionName()}";
 
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
+            await WebSocketMiddleware.NotifySessionUpdate(sessionId, updatedSession);
 
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
@@ -168,6 +170,7 @@ public class SessionService : ISessionService
             var msg = $"{user.FirstName} {user.LastName} changed team assignment from {currentRoster.TeamAssignment.ParseTeamName()} to {newTeamAssignment.ParseTeamName()}";
 
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
+            await WebSocketMiddleware.NotifySessionUpdate(sessionId, updatedSession);
 
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
