@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
@@ -159,6 +160,9 @@ public class Program
         builder.Services.AddScoped<IRegularService, RegularService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();
 
+        builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
+        builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();
+
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
@@ -289,6 +293,7 @@ public class Program
 
         app.UseWebSockets();
         app.UseMiddleware<WebSocketMiddleware>();
+
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<TokenRenewalMiddleware>();
