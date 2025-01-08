@@ -14,6 +14,46 @@ public interface ISubscriptionHandler
     Task Cleanup(string socketId);
 }
 
+public abstract class BaseSubscriptionHandler : ISubscriptionHandler
+{
+    private readonly HashSet<string> _subscribedSockets = new();
+    private readonly ConcurrentDictionary<string, string> _subscriptionIds = new();
+    private readonly IWebSocketService _webSocketService;
+
+    protected BaseSubscriptionHandler(IWebSocketService webSocketService)
+    {
+        _webSocketService = webSocketService;
+    }
+
+    public abstract string OperationType { get; }
+    protected abstract object WrapData(object data);
+
+    public Task HandleSubscription(string socketId, string id)
+    {
+        _subscriptionIds[socketId] = id;
+        _subscribedSockets.Add(socketId);
+        return Task.CompletedTask;
+    }
+
+    public async Task HandleUpdate(object data)
+    {
+        foreach (var socketId in _subscribedSockets)
+        {
+            if (_subscriptionIds.TryGetValue(socketId, out var subscriptionId))
+            {
+                await _webSocketService.SendMessageToSocket(socketId, WrapData(data), subscriptionId);
+            }
+        }
+    }
+
+    public Task Cleanup(string socketId)
+    {
+        _subscribedSockets.Remove(socketId);
+        _subscriptionIds.TryRemove(socketId, out _);
+        return Task.CompletedTask;
+    }
+}
+
 public class WebSocketConnection
 {
     public WebSocket Socket { get; set; }
@@ -213,4 +253,46 @@ public class WebSocketMiddleware
             }
         }
     }
+}
+
+public interface IWebSocketService
+{
+    Task SendMessageToSocket(string socketId, object payload, string subscriptionId);
+    bool IsSocketConnected(string socketId);
+}
+
+[ExcludeFromCodeCoverage]
+public class WebSocketService : IWebSocketService
+{
+    private readonly ConcurrentDictionary<string, WebSocketConnection> _connections;
+
+    public WebSocketService(ConcurrentDictionary<string, WebSocketConnection> connections)
+    {
+        _connections = connections;
+    }
+
+    public async Task SendMessageToSocket(string socketId, object payload, string subscriptionId)
+    {
+        if (_connections.TryGetValue(socketId, out var connection) &&
+            connection.Socket.State == WebSocketState.Open)
+        {
+            var message = JsonSerializer.Serialize(new
+            {
+                type = "next",
+                id = subscriptionId,
+                 payload
+            });
+            var bytes = Encoding.UTF8.GetBytes(message);
+            await connection.Socket.SendAsync(
+                new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text,
+                true,
+                CancellationToken.None
+            );
+        }
+    }
+
+    public bool IsSocketConnected(string socketId) =>
+        _connections.TryGetValue(socketId, out var connection) &&
+        connection.Socket.State == WebSocketState.Open;
 }

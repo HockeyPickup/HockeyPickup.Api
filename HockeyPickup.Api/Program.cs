@@ -162,6 +162,7 @@ public class Program
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();
+        builder.Services.AddSingleton<IWebSocketService, WebSocketService>();
 
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
