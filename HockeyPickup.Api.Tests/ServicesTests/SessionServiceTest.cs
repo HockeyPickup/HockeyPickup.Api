@@ -24,6 +24,7 @@ public partial class SessionServiceTests
     private readonly Mock<IServiceBus> _serviceBus;
     private readonly Mock<IConfiguration> _configuration;
     private readonly Mock<ILogger<UserService>> _mockLogger;
+    private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly SessionService _sessionService;
 
     public SessionServiceTests()
@@ -45,13 +46,15 @@ public partial class SessionServiceTests
         _serviceBus = new Mock<IServiceBus>();
         _configuration = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<UserService>>();
+        _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
 
         _sessionService = new SessionService(
             _userManager.Object,
             _mockSessionRepository.Object,
             _serviceBus.Object,
             _configuration.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockSubscriptionHandler.Object);
     }
 
     private static SessionDetailedResponse CreateTestSession(string userId, int position, int team)

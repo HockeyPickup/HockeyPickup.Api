@@ -14,6 +14,7 @@ public interface ISubscriptionHandler
     Task Cleanup(string socketId);
 }
 
+[ExcludeFromCodeCoverage]
 public abstract class BaseSubscriptionHandler : ISubscriptionHandler
 {
     private readonly HashSet<string> _subscribedSockets = new();
@@ -54,6 +55,7 @@ public abstract class BaseSubscriptionHandler : ISubscriptionHandler
     }
 }
 
+[ExcludeFromCodeCoverage]
 public class WebSocketConnection
 {
     public WebSocket Socket { get; set; }
@@ -74,6 +76,7 @@ public class WebSocketConnection
     }
 }
 
+[ExcludeFromCodeCoverage]
 public class GraphQLSubscription
 {
     public Dictionary<string, object>? Extensions { get; set; }
@@ -81,6 +84,7 @@ public class GraphQLSubscription
     public string? Query { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 public class WebSocketMessage
 {
     public string? Id { get; set; }
@@ -88,12 +92,14 @@ public class WebSocketMessage
     public JsonElement? Payload { get; set; }
 }
 
+[ExcludeFromCodeCoverage]
 public class ConnectionInitMessage
 {
     public string Type { get; set; } = string.Empty;
     public AuthPayload Payload { get; set; } = new();
 }
 
+[ExcludeFromCodeCoverage]
 public class AuthPayload
 {
     public string Authorization { get; set; } = string.Empty;

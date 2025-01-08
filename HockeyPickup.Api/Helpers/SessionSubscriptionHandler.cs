@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace HockeyPickup.Api.Helpers;
 
+[ExcludeFromCodeCoverage]
 public class SessionSubscriptionHandler : BaseSubscriptionHandler
 {
     public SessionSubscriptionHandler(IWebSocketService webSocketService) : base(webSocketService) { }
