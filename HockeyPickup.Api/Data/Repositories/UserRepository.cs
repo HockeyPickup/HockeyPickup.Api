@@ -85,7 +85,10 @@ public class UserRepository : IUserRepository
 
     public async Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync()
     {
-        var currentDate = DateTime.UtcNow;
+        var currentDate = TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.UtcNow,
+            TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time")
+        );
 
         var query =
             from session in _context.Sessions
