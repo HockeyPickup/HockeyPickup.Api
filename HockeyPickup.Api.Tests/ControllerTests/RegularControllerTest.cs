@@ -340,4 +340,42 @@ public class RegularControllerTests
         Assert.False(response.Success);
         Assert.Equal("Invalid team assignment value", response.Message);
     }
+
+    [Fact]
+    public async Task DeleteRegularSet_Success_ReturnsOkResponse()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var serviceResponse = ServiceResult.CreateSuccess("Success");
+        _regularService.Setup(x => x.DeleteRegularSet(regularSetId))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.DeleteRegularSet(regularSetId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiResponse>(okResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal("Success", response.Message);
+    }
+
+    [Fact]
+    public async Task DeleteRegularSet_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var regularSetId = 1;
+        var serviceResponse = ServiceResult.CreateFailure("Cannot delete: in use");
+        _regularService.Setup(x => x.DeleteRegularSet(regularSetId))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.DeleteRegularSet(regularSetId);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiResponse>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Cannot delete: in use", response.Message);
+    }
 }

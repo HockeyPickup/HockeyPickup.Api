@@ -13,6 +13,7 @@ public interface IRegularService
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularSet(UpdateRegularSetRequest request);
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, int newPosition);
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, int newTeamAssignment);
+    Task<ServiceResult> DeleteRegularSet(int regularSetId);
 }
 
 public class RegularService : IRegularService
@@ -174,6 +175,26 @@ public class RegularService : IRegularService
         {
             _logger.LogError(ex, "Error updating regular player team for set: {RegularSetId}, user: {UserId}", regularSetId, userId);
             return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred updating player team: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> DeleteRegularSet(int regularSetId)
+    {
+        try
+        {
+            var (Success, Message) = await _regularRepository.DeleteRegularSetAsync(regularSetId);
+            if (!Success)
+            {
+                return ServiceResult.CreateFailure(Message);
+            }
+
+            _logger.LogInformation("Regular set {RegularSetId} deleted successfully", regularSetId);
+            return ServiceResult.CreateSuccess("Regular set deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting regular set {RegularSetId}", regularSetId);
+            return ServiceResult.CreateFailure($"An error occurred while deleting the regular set: {ex.Message}");
         }
     }
 }

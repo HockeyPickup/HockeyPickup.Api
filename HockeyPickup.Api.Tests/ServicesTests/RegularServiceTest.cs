@@ -1119,4 +1119,59 @@ public class RegularServiceTests
         result.Data.Should().NotBeNull();
         result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.TeamAssignment == newTeam);
     }
+
+    [Fact]
+    public async Task DeleteRegularSet_Success_ReturnsSuccessResult()
+    {
+        // Arrange
+        var regularSetId = 1;
+        _mockRegularRepository.Setup(x => x.DeleteRegularSetAsync(regularSetId))
+            .ReturnsAsync((true, "Regular set deleted successfully"));
+
+        // Act
+        var result = await _regularService.DeleteRegularSet(regularSetId);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be("Regular set deleted successfully");
+    }
+
+    [Fact]
+    public async Task DeleteRegularSet_InUse_ReturnsFailureResult()
+    {
+        // Arrange
+        var regularSetId = 1;
+        _mockRegularRepository.Setup(x => x.DeleteRegularSetAsync(regularSetId))
+            .ReturnsAsync((false, "Cannot delete regular set as it is being used by one or more sessions"));
+
+        // Act
+        var result = await _regularService.DeleteRegularSet(regularSetId);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Cannot delete regular set as it is being used by one or more sessions");
+    }
+
+    [Fact]
+    public async Task DeleteRegularSet_Exception_ReturnsFailureResult()
+    {
+        // Arrange
+        var regularSetId = 1;
+        _mockRegularRepository.Setup(x => x.DeleteRegularSetAsync(regularSetId))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _regularService.DeleteRegularSet(regularSetId);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Test exception");
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
 }

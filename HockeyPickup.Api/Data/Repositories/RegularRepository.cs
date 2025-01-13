@@ -172,6 +172,41 @@ public class RegularRepository : IRegularRepository
             return null;
         }
     }
+
+    public async Task<(bool Success, string Message)> DeleteRegularSetAsync(int regularSetId)
+    {
+        try
+        {
+            // Check if RegularSetId is used in any Sessions
+            var hasActiveSessions = await _context.Sessions!.AnyAsync(s => s.RegularSetId == regularSetId);
+            if (hasActiveSessions)
+            {
+                return (false, "Cannot delete regular set as it is being used by one or more sessions");
+            }
+
+            // Delete associated regulars first
+            var regularsToDelete = await _context.Regulars!.Where(r => r.RegularSetId == regularSetId).ToListAsync();
+
+            _context.Regulars!.RemoveRange(regularsToDelete);
+
+            // Delete the regular set
+            var regularSet = await _context.RegularSets!.FirstOrDefaultAsync(rs => rs.RegularSetId == regularSetId);
+            if (regularSet == null)
+            {
+                return (false, "Regular set not found");
+            }
+
+            _context.RegularSets!.Remove(regularSet);
+            await _context.SaveChangesAsync();
+
+            return (true, "Regular set deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting regular set {RegularSetId}", regularSetId);
+            return (false, $"Error deleting regular set: {ex.Message}");
+        }
+    }
 }
 
 public static class UserMappingExtensions

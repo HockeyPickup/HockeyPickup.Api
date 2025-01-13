@@ -647,4 +647,83 @@ public class RegularRepositoryTests : IDisposable
         // Assert
         result.Should().BeNull();
     }
+
+    [Fact]
+    public async Task DeleteRegularSetAsync_Success_DeletesSetAndRegulars()
+    {
+        await SeedTestData();
+        var regularSetId = 1;
+
+        var (success, message) = await _repository.DeleteRegularSetAsync(regularSetId);
+
+        success.Should().BeTrue();
+        message.Should().Be("Regular set deleted successfully");
+
+        var regularSet = await _context.RegularSets.FindAsync(regularSetId);
+        regularSet.Should().BeNull();
+
+        var regulars = await _context.Regulars
+            .Where(r => r.RegularSetId == regularSetId)
+            .ToListAsync();
+        regulars.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteRegularSetAsync_WithActiveSessions_ReturnsFalse()
+    {
+        await SeedTestData();
+        var regularSetId = 1;
+        var session = new Session
+        {
+            SessionId = 1,
+            RegularSetId = regularSetId,
+            SessionDate = DateTime.UtcNow,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+        await _context.Sessions.AddAsync(session);
+        await _context.SaveChangesAsync();
+
+        var (success, message) = await _repository.DeleteRegularSetAsync(regularSetId);
+
+        success.Should().BeFalse();
+        message.Should().Be("Cannot delete regular set as it is being used by one or more sessions");
+
+        var regularSet = await _context.RegularSets.FindAsync(regularSetId);
+        regularSet.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteRegularSetAsync_InvalidId_ReturnsFalse()
+    {
+        await SeedTestData();
+        var regularSetId = 999;
+
+        var (success, message) = await _repository.DeleteRegularSetAsync(regularSetId);
+
+        success.Should().BeFalse();
+        message.Should().Be("Regular set not found");
+    }
+
+    [Fact]
+    public async Task DeleteRegularSetAsync_DbError_ReturnsFalse()
+    {
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        var (success, message) = await repository.DeleteRegularSetAsync(1);
+
+        success.Should().BeFalse();
+        message.Should().Contain("Error deleting regular set");
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
 }

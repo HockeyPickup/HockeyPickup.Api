@@ -82,4 +82,18 @@ public class RegularController : ControllerBase
         var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("delete-regular-set/{regularSetId}")]
+    [Description("Deletes a Regular Set if it's not in use")]
+    [Produces(typeof(ApiResponse))]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse>> DeleteRegularSet(int regularSetId)
+    {
+        var result = await _regularService.DeleteRegularSet(regularSetId);
+        var response = ApiResponse.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }
