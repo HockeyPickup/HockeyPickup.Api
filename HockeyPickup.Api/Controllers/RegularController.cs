@@ -96,4 +96,32 @@ public class RegularController : ControllerBase
         var response = ApiResponse.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("add-regular")]
+    [Description("Adds a player to a Regular Set")]
+    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> AddRegular([FromBody] AddRegularRequest request)
+    {
+        var result = await _regularService.AddRegular(request);
+        var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? CreatedAtAction(nameof(AddRegular), new { id = result.Data.RegularSetId }, response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("delete-regular")]
+    [Description("Removes a player from a Regular Set")]
+    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> DeleteRegular([FromBody] DeleteRegularRequest request)
+    {
+        var result = await _regularService.DeleteRegular(request);
+        var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }

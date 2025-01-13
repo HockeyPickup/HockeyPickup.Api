@@ -378,4 +378,112 @@ public class RegularControllerTests
         Assert.False(response.Success);
         Assert.Equal("Cannot delete: in use", response.Message);
     }
+
+    [Fact]
+    public async Task AddRegular_Success_ReturnsCreatedResponse()
+    {
+        // Arrange
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
+            CreateTestRegularSet(), "Success");
+
+        _regularService.Setup(x => x.AddRegular(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.AddRegular(request);
+
+        // Assert 
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(createdResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(1, response.Data.RegularSetId);
+    }
+
+    [Fact]
+    public async Task AddRegular_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Test error");
+
+        _regularService.Setup(x => x.AddRegular(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.AddRegular(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
+
+    [Fact]
+    public async Task DeleteRegular_Success_ReturnsOkResponse()
+    {
+        // Arrange
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id"
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
+            CreateTestRegularSet(), "Success");
+
+        _regularService.Setup(x => x.DeleteRegular(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.DeleteRegular(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(okResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(1, response.Data.RegularSetId);
+    }
+
+    [Fact]
+    public async Task DeleteRegular_Failure_ReturnsBadRequest()
+    {
+        // Arrange  
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user-id"
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Test error");
+
+        _regularService.Setup(x => x.DeleteRegular(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.DeleteRegular(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
 }

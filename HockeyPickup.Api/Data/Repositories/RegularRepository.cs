@@ -207,6 +207,52 @@ public class RegularRepository : IRegularRepository
             return (false, $"Error deleting regular set: {ex.Message}");
         }
     }
+
+    public async Task<RegularSetDetailedResponse?> AddPlayerAsync(int regularSetId, string userId, int teamAssignment, int positionPreference)
+    {
+        try
+        {
+            var regular = new Regular
+            {
+                RegularSetId = regularSetId,
+                UserId = userId,
+                TeamAssignment = teamAssignment,
+                PositionPreference = positionPreference
+            };
+
+            await _context.Regulars!.AddAsync(regular);
+            await _context.SaveChangesAsync();
+
+            return await GetRegularSetAsync(regularSetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding regular player to set {RegularSetId}, user {UserId}", regularSetId, userId);
+            return null;
+        }
+    }
+
+    public async Task<RegularSetDetailedResponse?> RemovePlayerAsync(int regularSetId, string userId)
+    {
+        try
+        {
+            var regular = await _context.Regulars!
+                .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+
+            if (regular == null)
+                return null;
+
+            _context.Regulars!.Remove(regular);
+            await _context.SaveChangesAsync();
+
+            return await GetRegularSetAsync(regularSetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing regular player from set {RegularSetId}, user {UserId}", regularSetId, userId);
+            return null;
+        }
+    }
 }
 
 public static class UserMappingExtensions

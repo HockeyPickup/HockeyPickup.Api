@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Linq.Expressions;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -1173,5 +1174,402 @@ public class RegularServiceTests
             It.IsAny<Exception>(),
             It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task AddRegular_Success_ReturnsSuccess()
+    {
+        // Arrange
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var user = new AspNetUser { Id = "test-user", FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        var updatedSet = CreateTestRegularSet();
+        updatedSet.Regulars = new List<RegularDetailedResponse>
+    {
+        new() {
+            UserId = request.UserId,
+            RegularSetId = request.RegularSetId,
+            TeamAssignment = request.TeamAssignment,
+            PositionPreference = request.PositionPreference
+        }
+    };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.AddPlayerAsync(request.RegularSetId, request.UserId,
+            request.TeamAssignment, request.PositionPreference))
+            .ReturnsAsync(updatedSet);
+
+        // Act
+        var result = await _regularService.AddRegular(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Message.Should().Contain($"{user.FirstName} {user.LastName} added to Regular set");
+    }
+
+    [Fact]
+    public async Task AddRegular_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        // Act
+        var result = await _regularService.AddRegular(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task DeleteRegular_Success_ReturnsSuccess()
+    {
+        // Arrange
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        var user = new AspNetUser { Id = "test-user", FirstName = "Test", LastName = "User" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+    {
+        new() {
+            UserId = request.UserId,
+            RegularSetId = request.RegularSetId,
+            TeamAssignment = 1,
+            PositionPreference = 2
+        }
+    };
+
+        var updatedSet = CreateTestRegularSet();
+        updatedSet.Regulars = new List<RegularDetailedResponse>();
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.RemovePlayerAsync(request.RegularSetId, request.UserId))
+            .ReturnsAsync(updatedSet);
+
+        // Act
+        var result = await _regularService.DeleteRegular(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Message.Should().Contain($"{user.FirstName} {user.LastName} removed from Regular set");
+    }
+
+    [Fact]
+    public async Task DeleteRegular_UserNotInSet_ReturnsFailure()
+    {
+        // Arrange
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>();
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+
+        // Act
+        var result = await _regularService.DeleteRegular(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
+    }
+
+
+    // Service tests
+    [Fact]
+    public async Task AddRegular_RegularSetNotFound_ReturnsFailure()
+    {
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync((RegularSetDetailedResponse) null!);
+
+        var result = await _regularService.AddRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Regular set not found");
+    }
+
+    [Fact]
+    public async Task AddRegular_UserAlreadyInSet_ReturnsFailure()
+    {
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = request.UserId,
+                RegularSetId = request.RegularSetId,
+                TeamAssignment = request.TeamAssignment,
+                PositionPreference = request.PositionPreference
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+
+        var result = await _regularService.AddRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is already in this Regular set");
+    }
+
+    [Fact]
+    public async Task AddRegular_AddPlayerFails_ReturnsFailure()
+    {
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        var regularSet = CreateTestRegularSet();
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.AddPlayerAsync(It.IsAny<int>(), It.IsAny<string>(),
+            It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync((RegularSetDetailedResponse) null!);
+
+        var result = await _regularService.AddRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to add player to Regular set");
+    }
+
+    [Fact]
+    public async Task AddRegular_ThrowsException_ReturnsFailure()
+    {
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var result = await _regularService.AddRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Test exception");
+        _mockLogger.Verify(LogError(), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteRegular_UserNotFound_ReturnsFailure()
+    {
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync((AspNetUser) null!);
+
+        var result = await _regularService.DeleteRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User not found");
+    }
+
+    [Fact]
+    public async Task DeleteRegular_RegularSetNotFound_ReturnsFailure()
+    {
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync((RegularSetDetailedResponse) null!);
+
+        var result = await _regularService.DeleteRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Regular set not found");
+    }
+
+    [Fact]
+    public async Task DeleteRegular_RemovePlayerFails_ReturnsFailure()
+    {
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = new List<RegularDetailedResponse>
+        {
+            new()
+            {
+                UserId = request.UserId,
+                RegularSetId = request.RegularSetId,
+                TeamAssignment = 1,
+                PositionPreference = 2
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.RemovePlayerAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync((RegularSetDetailedResponse) null!);
+
+        var result = await _regularService.DeleteRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to remove player from Regular set");
+    }
+
+    [Fact]
+    public async Task DeleteRegular_ThrowsException_ReturnsFailure()
+    {
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var result = await _regularService.DeleteRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Test exception");
+        _mockLogger.Verify(LogError(), Times.Once);
+    }
+
+    private static Expression<Action<ILogger<UserService>>> LogError()
+    {
+        return x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true));
+    }
+
+    [Fact]
+    public async Task AddRegular_NullRegularsCollection_DoesNotThrow()
+    {
+        var request = new AddRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user",
+            TeamAssignment = 1,
+            PositionPreference = 2
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = null!;  // Explicitly set Regulars to null
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+        _mockRegularRepository.Setup(x => x.AddPlayerAsync(It.IsAny<int>(), It.IsAny<string>(),
+            It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(regularSet);
+
+        var result = await _regularService.AddRegular(request);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeleteRegular_NullRegularsCollection_ReturnsFailure()
+    {
+        var request = new DeleteRegularRequest
+        {
+            RegularSetId = 1,
+            UserId = "test-user"
+        };
+
+        var user = new AspNetUser { Id = "test-user" };
+        var regularSet = CreateTestRegularSet();
+        regularSet.Regulars = null!;
+
+        _userManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+        _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
+            .ReturnsAsync(regularSet);
+
+        var result = await _regularService.DeleteRegular(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("User is not part of this Regular set");
     }
 }

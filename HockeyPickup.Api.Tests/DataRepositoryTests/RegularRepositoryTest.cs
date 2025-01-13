@@ -9,6 +9,10 @@ using Moq;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using Microsoft.Extensions.Logging;
+using HockeyPickup.Api.Models.Requests;
+using HockeyPickup.Api.Services;
+using Microsoft.AspNetCore.Identity;
+using System.Linq.Expressions;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -722,6 +726,117 @@ public class RegularRepositoryTests : IDisposable
             LogLevel.Error,
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AddPlayerAsync_ValidRequest_AddsPlayer()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var userId = "user3"; // New user
+        var teamAssignment = 1;
+        var positionPreference = 2;
+
+        // Act
+        var result = await _repository.AddPlayerAsync(regularSetId, userId, teamAssignment, positionPreference);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.RegularSetId.Should().Be(regularSetId);
+        result.Regulars.Should().Contain(r =>
+            r.UserId == userId &&
+            r.TeamAssignment == teamAssignment &&
+            r.PositionPreference == positionPreference);
+
+        var addedEntity = await _context.Regulars
+            .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+        addedEntity.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RemovePlayerAsync_ValidRequest_RemovesPlayer()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 1;
+        var userId = "user1";
+
+        // Act
+        var result = await _repository.RemovePlayerAsync(regularSetId, userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.RegularSetId.Should().Be(regularSetId);
+        result.Regulars.Should().NotContain(r => r.UserId == userId);
+
+        var removedEntity = await _context.Regulars
+            .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
+        removedEntity.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RemovePlayerAsync_InvalidRequest_ReturnsNull()
+    {
+        // Arrange
+        await SeedTestData();
+        var regularSetId = 999;
+        var userId = "nonexistent";
+
+        // Act
+        var result = await _repository.RemovePlayerAsync(regularSetId, userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    // Repository tests
+    [Fact]
+    public async Task AddPlayerAsync_DatabaseError_LogsAndReturnsNull()
+    {
+        // Arrange
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        // Act
+        var result = await repository.AddPlayerAsync(1, "user1", 1, 1);
+
+        // Assert
+        result.Should().BeNull();
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error adding regular player")),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RemovePlayerAsync_DatabaseError_LogsAndReturnsNull()
+    {
+        // Arrange
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        // Act
+        var result = await repository.RemovePlayerAsync(1, "user1");
+
+        // Assert
+        result.Should().BeNull();
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error removing regular player")),
             It.IsAny<Exception>(),
             It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);

@@ -14,6 +14,8 @@ public interface IRegularService
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, int newPosition);
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, int newTeamAssignment);
     Task<ServiceResult> DeleteRegularSet(int regularSetId);
+    Task<ServiceResult<RegularSetDetailedResponse>> AddRegular(AddRegularRequest request);
+    Task<ServiceResult<RegularSetDetailedResponse>> DeleteRegular(DeleteRegularRequest request);
 }
 
 public class RegularService : IRegularService
@@ -195,6 +197,64 @@ public class RegularService : IRegularService
         {
             _logger.LogError(ex, "Error deleting regular set {RegularSetId}", regularSetId);
             return ServiceResult.CreateFailure($"An error occurred while deleting the regular set: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<RegularSetDetailedResponse>> AddRegular(AddRegularRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User not found");
+
+            var regularSet = await _regularRepository.GetRegularSetAsync(request.RegularSetId);
+            if (regularSet == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Regular set not found");
+
+            if (regularSet.Regulars?.Any(r => r.UserId == request.UserId) == true)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User is already in this Regular set");
+
+            var updatedSet = await _regularRepository.AddPlayerAsync(request.RegularSetId, request.UserId, request.TeamAssignment, request.PositionPreference);
+            if (updatedSet == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Failed to add player to Regular set");
+
+            return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(updatedSet,
+                $"{user.FirstName} {user.LastName} added to Regular set as {request.TeamAssignment.ParseTeamName()}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding regular player to set: {RegularSetId}, user: {UserId}", request.RegularSetId, request.UserId);
+            return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred adding player: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<RegularSetDetailedResponse>> DeleteRegular(DeleteRegularRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User not found");
+
+            var regularSet = await _regularRepository.GetRegularSetAsync(request.RegularSetId);
+            if (regularSet == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Regular set not found");
+
+            if (regularSet.Regulars?.Any(r => r.UserId == request.UserId) != true)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("User is not part of this Regular set");
+
+            var updatedSet = await _regularRepository.RemovePlayerAsync(request.RegularSetId, request.UserId);
+            if (updatedSet == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Failed to remove player from Regular set");
+
+            return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(updatedSet,
+                $"{user.FirstName} {user.LastName} removed from Regular set");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing regular player from set: {RegularSetId}, user: {UserId}", request.RegularSetId, request.UserId);
+            return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred removing player: {ex.Message}");
         }
     }
 }
