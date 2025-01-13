@@ -307,7 +307,11 @@ public class UserService : IUserService
                 LockoutEnabled = false,
                 PayPalEmail = request.Email,
                 NotificationPreference = (int) NotificationPreference.OnlyMyBuySell,
-                PositionPreference = (int) PositionPreference.TBD
+                PositionPreference = (int) PositionPreference.TBD,
+                NormalizedEmail = request.Email.ToUpperInvariant(),
+                NormalizedUserName = request.Email.ToUpperInvariant(),
+                SecurityStamp = Guid.NewGuid().ToString(),
+                PhotoUrl = string.Empty,
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
