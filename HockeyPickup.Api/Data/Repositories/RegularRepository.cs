@@ -253,6 +253,30 @@ public class RegularRepository : IRegularRepository
             return null;
         }
     }
+
+    public async Task<RegularSetDetailedResponse?> CreateRegularSetAsync(string description, int dayOfWeek)
+    {
+        try
+        {
+            var regularSet = new RegularSet
+            {
+                Description = description,
+                DayOfWeek = dayOfWeek,
+                CreateDateTime = DateTime.UtcNow,
+                Archived = false
+            };
+
+            await _context.RegularSets!.AddAsync(regularSet);
+            await _context.SaveChangesAsync();
+
+            return await GetRegularSetAsync(regularSet.RegularSetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating regular set");
+            return null;
+        }
+    }
 }
 
 public static class UserMappingExtensions

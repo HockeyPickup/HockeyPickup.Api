@@ -14,4 +14,5 @@ public interface IRegularRepository
     Task<(bool Success, string Message)> DeleteRegularSetAsync(int regularSetId);
     Task<RegularSetDetailedResponse?> AddPlayerAsync(int regularSetId, string userId, int teamAssignment, int positionPreference);
     Task<RegularSetDetailedResponse?> RemovePlayerAsync(int regularSetId, string userId);
+    Task<RegularSetDetailedResponse?> CreateRegularSetAsync(string description, int dayOfWeek);
 }

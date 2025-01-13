@@ -1572,4 +1572,130 @@ public class RegularServiceTests
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("User is not part of this Regular set");
     }
+
+    [Fact]
+    public async Task CreateRegularSet_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "New Regular Set",
+            DayOfWeek = 1
+        };
+
+        var newSet = CreateTestRegularSet();
+        newSet.Description = request.Description;
+        newSet.DayOfWeek = request.DayOfWeek;
+
+        _mockRegularRepository.Setup(x => x.CreateRegularSetAsync(
+            request.Description, request.DayOfWeek))
+            .ReturnsAsync(newSet);
+
+        // Act
+        var result = await _regularService.CreateRegularSet(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data.Description.Should().Be(request.Description);
+        result.Data.DayOfWeek.Should().Be(request.DayOfWeek);
+
+        _mockRegularRepository.Verify(x => x.CreateRegularSetAsync(
+            request.Description, request.DayOfWeek), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_EmptyDescription_ReturnsFailure()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "",
+            DayOfWeek = 1
+        };
+
+        // Act
+        var result = await _regularService.CreateRegularSet(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Description is required");
+        _mockRegularRepository.Verify(x => x.CreateRegularSetAsync(
+            It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_InvalidDayOfWeek_ReturnsFailure()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "Test Set",
+            DayOfWeek = 7 // Invalid
+        };
+
+        // Act
+        var result = await _regularService.CreateRegularSet(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Day of week must be between 0 and 6");
+        _mockRegularRepository.Verify(x => x.CreateRegularSetAsync(
+            It.IsAny<string>(), It.IsAny<int>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_CreateFailed_ReturnsFailure()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "Test Set",
+            DayOfWeek = 1
+        };
+
+        _mockRegularRepository.Setup(x => x.CreateRegularSetAsync(
+            request.Description, request.DayOfWeek))
+            .ReturnsAsync((RegularSetDetailedResponse) null);
+
+        // Act
+        var result = await _regularService.CreateRegularSet(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Failed to create regular set");
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_ExceptionThrown_ReturnsFailure()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "Test Set",
+            DayOfWeek = 1
+        };
+
+        _mockRegularRepository.Setup(x => x.CreateRegularSetAsync(
+            request.Description, request.DayOfWeek))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        // Act
+        var result = await _regularService.CreateRegularSet(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Test exception");
+
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
 }

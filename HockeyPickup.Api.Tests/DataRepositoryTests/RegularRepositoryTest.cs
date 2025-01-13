@@ -841,4 +841,121 @@ public class RegularRepositoryTests : IDisposable
             It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
     }
+
+    [Fact]
+    public async Task CreateRegularSetAsync_ValidRequest_CreatesAndReturnsSet()
+    {
+        // Arrange
+        var description = "New Regular Set";
+        var dayOfWeek = 1;
+
+        // Act
+        var result = await _repository.CreateRegularSetAsync(description, dayOfWeek);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Description.Should().Be(description);
+        result.DayOfWeek.Should().Be(dayOfWeek);
+        result.Archived.Should().BeFalse();
+        result.Regulars.Should().BeEmpty();
+
+        var savedSet = await _context.RegularSets!.FirstOrDefaultAsync(rs => rs.Description == description);
+        savedSet.Should().NotBeNull();
+        savedSet!.Description.Should().Be(description);
+        savedSet.DayOfWeek.Should().Be(dayOfWeek);
+        savedSet.Archived.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CreateRegularSetAsync_DbError_LogsAndReturnsNull()
+    {
+        // Arrange
+        var mockContext = new Mock<HockeyPickupContext>(_options);
+        mockContext.Setup(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
+
+        // Act
+        var result = await repository.CreateRegularSetAsync("Test Set", 1);
+
+        // Assert
+        result.Should().BeNull();
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error creating regular set")),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateRegularSetAsync_SetsCreateDateTime()
+    {
+        // Arrange
+        var description = "Test Set";
+        var dayOfWeek = 1;
+        var beforeCreate = DateTime.UtcNow;
+
+        // Act
+        var result = await _repository.CreateRegularSetAsync(description, dayOfWeek);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.CreateDateTime.Should().BeAfter(beforeCreate);
+        result.CreateDateTime.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task CreateRegularSetAsync_CreatesSingleSet()
+    {
+        // Arrange
+        var description = "Test Set";
+        var dayOfWeek = 1;
+
+        // Act
+        await _repository.CreateRegularSetAsync(description, dayOfWeek);
+
+        // Assert
+        var sets = await _context.RegularSets!.ToListAsync();
+        sets.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task CreateRegularSetAsync_ReturnsMappedResponse()
+    {
+        // Arrange
+        var description = "Test Set";
+        var dayOfWeek = 1;
+
+        // Act
+        var result = await _repository.CreateRegularSetAsync(description, dayOfWeek);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeOfType<RegularSetDetailedResponse>();
+        result!.Description.Should().Be(description);
+        result.DayOfWeek.Should().Be(dayOfWeek);
+        result.Regulars.Should().NotBeNull();
+        result.Regulars.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateRegularSetAsync_GeneratesNewId()
+    {
+        // Arrange
+        var firstDescription = "First Set";
+        var secondDescription = "Second Set";
+        var dayOfWeek = 1;
+
+        // Act
+        var firstResult = await _repository.CreateRegularSetAsync(firstDescription, dayOfWeek);
+        var secondResult = await _repository.CreateRegularSetAsync(secondDescription, dayOfWeek);
+
+        // Assert
+        firstResult.Should().NotBeNull();
+        secondResult.Should().NotBeNull();
+        secondResult!.RegularSetId.Should().BeGreaterThan(firstResult!.RegularSetId);
+    }
 }

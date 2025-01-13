@@ -478,4 +478,108 @@ public class RegularControllerTests
         Assert.False(response.Success);
         Assert.Equal("Test error", response.Message);
     }
+
+    [Fact]
+    public async Task CreateRegularSet_Success_ReturnsCreatedResponse()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "New Regular Set",
+            DayOfWeek = 1
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
+            CreateTestRegularSet(), "Success");
+
+        _regularService.Setup(x => x.CreateRegularSet(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.CreateRegularSet(request);
+
+        // Assert
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(createdResult.Value);
+        Assert.True(response.Success);
+        Assert.Equal(1, response.Data.RegularSetId);
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "New Regular Set",
+            DayOfWeek = 1
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Test error");
+
+        _regularService.Setup(x => x.CreateRegularSet(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.CreateRegularSet(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Test error", response.Message);
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_InvalidDayOfWeek_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "New Regular Set",
+            DayOfWeek = 7 // Invalid day
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Day of week must be between 0 and 6");
+
+        _regularService.Setup(x => x.CreateRegularSet(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.CreateRegularSet(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Day of week must be between 0 and 6", response.Message);
+    }
+
+    [Fact]
+    public async Task CreateRegularSet_EmptyDescription_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new CreateRegularSetRequest
+        {
+            Description = "", // Empty description
+            DayOfWeek = 2
+        };
+
+        var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
+            "Description is required");
+
+        _regularService.Setup(x => x.CreateRegularSet(request))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.CreateRegularSet(request);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Description is required", response.Message);
+    }
 }

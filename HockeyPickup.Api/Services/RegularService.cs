@@ -16,6 +16,7 @@ public interface IRegularService
     Task<ServiceResult> DeleteRegularSet(int regularSetId);
     Task<ServiceResult<RegularSetDetailedResponse>> AddRegular(AddRegularRequest request);
     Task<ServiceResult<RegularSetDetailedResponse>> DeleteRegular(DeleteRegularRequest request);
+    Task<ServiceResult<RegularSetDetailedResponse>> CreateRegularSet(CreateRegularSetRequest request);
 }
 
 public class RegularService : IRegularService
@@ -255,6 +256,34 @@ public class RegularService : IRegularService
         {
             _logger.LogError(ex, "Error removing regular player from set: {RegularSetId}, user: {UserId}", request.RegularSetId, request.UserId);
             return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred removing player: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<RegularSetDetailedResponse>> CreateRegularSet(CreateRegularSetRequest request)
+    {
+        try
+        {
+            // Basic validation
+            if (string.IsNullOrWhiteSpace(request.Description))
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Description is required");
+
+            if (request.DayOfWeek is < 0 or > 6)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Day of week must be between 0 and 6");
+
+            // Create new regular set using repository
+            var newSet = await _regularRepository.CreateRegularSetAsync(request.Description, request.DayOfWeek);
+            if (newSet == null)
+                return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Failed to create regular set");
+
+            _logger.LogInformation("Regular set created with Id {RegularSetId}", newSet.RegularSetId);
+
+            return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(newSet,
+                $"Regular set created successfully with Id {newSet.RegularSetId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating regular set");
+            return ServiceResult<RegularSetDetailedResponse>.CreateFailure($"An error occurred while creating the regular set: {ex.Message}");
         }
     }
 }

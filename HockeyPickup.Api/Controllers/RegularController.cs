@@ -123,4 +123,20 @@ public class RegularController : ControllerBase
         var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("new-regular-set")]
+    [Description("Creates a new Regular Set")]
+    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> CreateRegularSet([FromBody] CreateRegularSetRequest request)
+    {
+        var result = await _regularService.CreateRegularSet(request);
+        var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(CreateRegularSet), new { id = result.Data.RegularSetId }, response)
+            : BadRequest(response);
+    }
 }
