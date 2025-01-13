@@ -438,23 +438,19 @@ public class RegularControllerTests
     [Fact]
     public async Task DeleteRegular_Success_ReturnsOkResponse()
     {
-        // Arrange
-        var request = new DeleteRegularRequest
-        {
-            RegularSetId = 1,
-            UserId = "test-user-id"
-        };
+        var regularSetId = 1;
+        var userId = "test-user-id";
+        var request = new DeleteRegularRequest { RegularSetId = regularSetId, UserId = userId };
 
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
             CreateTestRegularSet(), "Success");
 
-        _regularService.Setup(x => x.DeleteRegular(request))
+        _regularService.Setup(x => x.DeleteRegular(It.Is<DeleteRegularRequest>(r =>
+            r.RegularSetId == regularSetId && r.UserId == userId)))
             .ReturnsAsync(serviceResponse);
 
-        // Act
-        var result = await _controller.DeleteRegular(request);
+        var result = await _controller.DeleteRegular(regularSetId, userId);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(okResult.Value);
         Assert.True(response.Success);
@@ -464,23 +460,19 @@ public class RegularControllerTests
     [Fact]
     public async Task DeleteRegular_Failure_ReturnsBadRequest()
     {
-        // Arrange  
-        var request = new DeleteRegularRequest
-        {
-            RegularSetId = 1,
-            UserId = "test-user-id"
-        };
+        var regularSetId = 1;
+        var userId = "test-user-id";
+        var request = new DeleteRegularRequest { RegularSetId = regularSetId, UserId = userId };
 
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
             "Test error");
 
-        _regularService.Setup(x => x.DeleteRegular(request))
+        _regularService.Setup(x => x.DeleteRegular(It.Is<DeleteRegularRequest>(r =>
+            r.RegularSetId == regularSetId && r.UserId == userId)))
             .ReturnsAsync(serviceResponse);
 
-        // Act
-        var result = await _controller.DeleteRegular(request);
+        var result = await _controller.DeleteRegular(regularSetId, userId);
 
-        // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
         var response = Assert.IsType<ApiDataResponse<RegularSetDetailedResponse>>(badRequestResult.Value);
         Assert.False(response.Success);

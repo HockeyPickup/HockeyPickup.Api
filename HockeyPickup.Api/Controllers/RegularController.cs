@@ -112,14 +112,13 @@ public class RegularController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpDelete("delete-regular")]
+    [HttpDelete("delete-regular/{regularSetId}/{userId}")]
     [Description("Removes a player from a Regular Set")]
-    [Produces(typeof(ApiDataResponse<RegularSetDetailedResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiDataResponse<RegularSetDetailedResponse>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> DeleteRegular([FromBody] DeleteRegularRequest request)
+    public async Task<ActionResult<ApiDataResponse<RegularSetDetailedResponse>>> DeleteRegular(int regularSetId, string userId)
     {
+        var request = new DeleteRegularRequest { RegularSetId = regularSetId, UserId = userId };
         var result = await _regularService.DeleteRegular(request);
         var response = ApiDataResponse<RegularSetDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
