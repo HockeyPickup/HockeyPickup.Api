@@ -195,6 +195,13 @@ public class UserDetailedResponse
     [GraphQLName("Rating")]
     [GraphQLDescription("User's rating")]
     public required decimal Rating { get; set; }
+
+    [Description("User's payment methods")]
+    [JsonPropertyName("PaymentMethods")]
+    [JsonProperty(nameof(PaymentMethods))]
+    [GraphQLName("PaymentMethods")]
+    [GraphQLDescription("User's payment methods")]
+    public ICollection<UserPaymentMethodResponse>? PaymentMethods { get; set; }
 }
 
 [GraphQLName("LockerRoom13Players")]

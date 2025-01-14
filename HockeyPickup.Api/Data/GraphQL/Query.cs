@@ -21,8 +21,7 @@ public class Query
     [GraphQLName("UsersEx")]
     public async Task<IEnumerable<UserDetailedResponse>> UsersEx([Service] IUserRepository userRepository)
     {
-        var detailedUsers = await userRepository.GetDetailedUsersAsync();
-        return detailedUsers;
+        return await userRepository.GetDetailedUsersAsync();
     }
 
     [GraphQLDescription("Retrieves a list of LockerRoom13 status for each upcoming session.")]
@@ -30,8 +29,7 @@ public class Query
     [GraphQLName("LockerRoom13")]
     public async Task<IEnumerable<LockerRoom13Response>> LockerRoom13([Service] IUserRepository userRepository)
     {
-        var lockerRoom13Response = await userRepository.GetLockerRoom13SessionsAsync();
-        return lockerRoom13Response;
+        return await userRepository.GetLockerRoom13SessionsAsync();
     }
 
     [Authorize]
@@ -77,5 +75,14 @@ public class Query
     public async Task<UserStatsResponse> GetUserStats([GraphQLName("UserId")][GraphQLDescription("The ID of the user")] string userId, [Service] IUserRepository userRepository)
     {
         return await userRepository.GetUserStatsAsync(userId);
+    }
+
+    [Authorize]
+    [GraphQLDescription("Retrieves user payment methods")]
+    [GraphQLType(typeof(UserPaymentMethodResponse))]
+    [GraphQLName("UserPaymentMethod")]
+    public async Task<IEnumerable<UserPaymentMethodResponse>> GetPaymentMethods([GraphQLName("UserId")][GraphQLDescription("The ID of the user")] string userId, [Service] IUserRepository userRepository)
+    {
+        return await userRepository.GetUserPaymentMethodsAsync(userId);
     }
 }

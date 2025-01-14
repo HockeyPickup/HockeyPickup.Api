@@ -8,20 +8,23 @@ using HockeyPickup.Api.Models.Responses;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
+using HockeyPickup.Api.Services;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;
 
 public partial class UsersControllerTest
 {
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<IUserService> _mockUserService;
     private readonly Mock<ILogger<UsersController>> _mockLogger;
     private readonly UsersController _controller;
 
     public UsersControllerTest()
     {
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockUserService = new Mock<IUserService>();
         _mockLogger = new Mock<ILogger<UsersController>>();
-        _controller = new UsersController(_mockUserRepository.Object, _mockLogger.Object);
+        _controller = new UsersController(_mockUserRepository.Object, _mockLogger.Object, _mockUserService.Object);
     }
 
     private class ApiErrorResponse

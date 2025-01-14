@@ -230,7 +230,8 @@ public partial class UserRepositoryTest
             Active = true,
             NotificationPreference = NotificationPreference.All,
             PositionPreference = PositionPreference.TBD,
-            DateCreated = DateTime.Parse("02/25/1969")
+            DateCreated = DateTime.Parse("02/25/1969"),
+            PaymentMethods = []
         });
     }
 

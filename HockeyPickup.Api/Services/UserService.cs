@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
@@ -28,6 +29,11 @@ public interface IUserService
     Task<ServiceResult> DeleteProfilePhotoAsync(string userId);
     Task<ServiceResult<PhotoResponse>> AdminUploadProfilePhotoAsync(string userId, IFormFile file);
     Task<ServiceResult> AdminDeleteProfilePhotoAsync(string userId);
+    Task<ServiceResult<IEnumerable<UserPaymentMethodResponse>>> GetUserPaymentMethodsAsync(string userId);
+    Task<ServiceResult<UserPaymentMethodResponse>> GetUserPaymentMethodAsync(string userId, int paymentMethodId);
+    Task<ServiceResult<UserPaymentMethodResponse>> AddUserPaymentMethodAsync(string userId, UserPaymentMethodRequest request);
+    Task<ServiceResult<UserPaymentMethodResponse>> UpdateUserPaymentMethodAsync(string userId, int paymentMethodId, UserPaymentMethodRequest request);
+    Task<ServiceResult<UserPaymentMethodResponse>> DeleteUserPaymentMethodAsync(string userId, int paymentMethodId);
 }
 
 public class UserService : IUserService
@@ -41,8 +47,9 @@ public class UserService : IUserService
     private const string CONTAINER_NAME = "profile-photos";
     private const int MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
     private readonly string[] ALLOWED_EXTENSIONS = { ".jpg", ".jpeg", ".png" };
+    private readonly IUserRepository _userRepository;
 
-    public UserService(UserManager<AspNetUser> userManager, SignInManager<AspNetUser> signInManager, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, BlobServiceClient blobServiceClient)
+    public UserService(UserManager<AspNetUser> userManager, SignInManager<AspNetUser> signInManager, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, BlobServiceClient blobServiceClient, IUserRepository userRepository)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -50,6 +57,7 @@ public class UserService : IUserService
         _configuration = configuration;
         _logger = logger;
         _blobServiceClient = blobServiceClient;
+        _userRepository = userRepository;
     }
 
     public async Task<ServiceResult> AdminUpdateUserAsync(AdminUserUpdateRequest request)
@@ -633,6 +641,126 @@ public class UserService : IUserService
         {
             _logger.LogError(ex, "Error processing photo deletion for user {UserId}", user.Id);
             return ServiceResult.CreateFailure($"An error occurred while deleting the photo. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<IEnumerable<UserPaymentMethodResponse>>> GetUserPaymentMethodsAsync(string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<IEnumerable<UserPaymentMethodResponse>>.CreateFailure("User not found");
+
+            var paymentMethods = await _userRepository.GetUserPaymentMethodsAsync(userId);
+            return ServiceResult<IEnumerable<UserPaymentMethodResponse>>.CreateSuccess(paymentMethods);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting payment methods for user {UserId}", userId);
+            return ServiceResult<IEnumerable<UserPaymentMethodResponse>>.CreateFailure($"An error occurred while retrieving payment methods. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<UserPaymentMethodResponse>> GetUserPaymentMethodAsync(string userId, int paymentMethodId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("User not found");
+
+            var paymentMethod = await _userRepository.GetUserPaymentMethodAsync(userId, paymentMethodId);
+            if (paymentMethod == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("Payment method not found");
+
+            return ServiceResult<UserPaymentMethodResponse>.CreateSuccess(paymentMethod);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting payment method {PaymentMethodId} for user {UserId}", paymentMethodId, userId);
+            return ServiceResult<UserPaymentMethodResponse>.CreateFailure($"An error occurred while retrieving payment method. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<UserPaymentMethodResponse>> AddUserPaymentMethodAsync(string userId, UserPaymentMethodRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("User not found");
+
+            var paymentMethod = new UserPaymentMethod
+            {
+                MethodType = request.MethodType,
+                Identifier = request.Identifier,
+                PreferenceOrder = request.PreferenceOrder,
+                IsActive = request.IsActive
+            };
+
+            var response = await _userRepository.AddUserPaymentMethodAsync(userId, paymentMethod);
+            return ServiceResult<UserPaymentMethodResponse>.CreateSuccess(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding payment method for user {UserId}", userId);
+            return ServiceResult<UserPaymentMethodResponse>.CreateFailure($"An error occurred while adding payment method. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<UserPaymentMethodResponse>> UpdateUserPaymentMethodAsync(string userId, int paymentMethodId, UserPaymentMethodRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("User not found");
+
+            var paymentMethod = new UserPaymentMethod
+            {
+                UserPaymentMethodId = paymentMethodId,
+                MethodType = request.MethodType,
+                Identifier = request.Identifier,
+                PreferenceOrder = request.PreferenceOrder,
+                IsActive = request.IsActive
+            };
+
+            var response = await _userRepository.UpdateUserPaymentMethodAsync(userId, paymentMethod);
+            if (response == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("Payment method not found");
+
+            return ServiceResult<UserPaymentMethodResponse>.CreateSuccess(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating payment method {PaymentMethodId} for user {UserId}", paymentMethodId, userId);
+            return ServiceResult<UserPaymentMethodResponse>.CreateFailure($"An error occurred while updating payment method. Error: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<UserPaymentMethodResponse>> DeleteUserPaymentMethodAsync(string userId, int paymentMethodId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("User not found");
+
+            var paymentMethod = await _userRepository.GetUserPaymentMethodAsync(userId, paymentMethodId);
+            if (paymentMethod == null)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("Payment method not found");
+
+            var success = await _userRepository.DeleteUserPaymentMethodAsync(userId, paymentMethodId);
+            if (!success)
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure("Failed to delete payment method");
+
+            return ServiceResult<UserPaymentMethodResponse>.CreateSuccess(paymentMethod);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting payment method {PaymentMethodId} for user {UserId}", paymentMethodId, userId);
+            return ServiceResult<UserPaymentMethodResponse>.CreateFailure($"An error occurred while deleting payment method. Error: {ex.Message}");
         }
     }
 }

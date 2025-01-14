@@ -1,7 +1,6 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
-using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -46,6 +45,17 @@ public class UserRepository : IUserRepository
                 PhotoUrl = u.PhotoUrl,
                 DateCreated = u.DateCreated,
                 Roles = u.Roles.ToRoleNames(),
+                PaymentMethods = u.PaymentMethods
+                    .OrderBy(p => p.PreferenceOrder)
+                    .Select(p => new UserPaymentMethodResponse
+                    {
+                        UserPaymentMethodId = p.UserPaymentMethodId,
+                        MethodType = p.MethodType,
+                        Identifier = p.Identifier,
+                        PreferenceOrder = p.PreferenceOrder,
+                        IsActive = p.IsActive
+                    })
+                    .ToList()
             })
             .OrderBy(p => p.LastName)
             .ThenBy(p => p.FirstName)
@@ -79,6 +89,17 @@ public class UserRepository : IUserRepository
                 PhotoUrl = u.PhotoUrl,
                 DateCreated = u.DateCreated,
                 Roles = u.Roles.ToRoleNames(),
+                PaymentMethods = u.PaymentMethods
+                    .OrderBy(p => p.PreferenceOrder)
+                    .Select(p => new UserPaymentMethodResponse
+                    {
+                        UserPaymentMethodId = p.UserPaymentMethodId,
+                        MethodType = p.MethodType,
+                        Identifier = p.Identifier,
+                        PreferenceOrder = p.PreferenceOrder,
+                        IsActive = p.IsActive
+                    })
+                    .ToList()
             })
             .FirstOrDefaultAsync();
     }
@@ -150,5 +171,93 @@ public class UserRepository : IUserRepository
             .SqlQuery<UserStatsResponse>($"EXEC GetUserStats @UserId={userId}")
             .ToListAsync())
             .FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<UserPaymentMethodResponse>> GetUserPaymentMethodsAsync(string userId)
+    {
+        return await _context.UserPaymentMethods
+            .Where(p => p.UserId == userId)
+            .OrderBy(p => p.PreferenceOrder)
+            .Select(p => new UserPaymentMethodResponse
+            {
+                UserPaymentMethodId = p.UserPaymentMethodId,
+                MethodType = p.MethodType,
+                Identifier = p.Identifier,
+                PreferenceOrder = p.PreferenceOrder,
+                IsActive = p.IsActive
+            })
+            .ToListAsync();
+    }
+
+    public async Task<UserPaymentMethodResponse?> GetUserPaymentMethodAsync(string userId, int paymentMethodId)
+    {
+        return await _context.UserPaymentMethods
+            .Where(p => p.UserId == userId && p.UserPaymentMethodId == paymentMethodId)
+            .Select(p => new UserPaymentMethodResponse
+            {
+                UserPaymentMethodId = p.UserPaymentMethodId,
+                MethodType = p.MethodType,
+                Identifier = p.Identifier,
+                PreferenceOrder = p.PreferenceOrder,
+                IsActive = p.IsActive
+            })
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<UserPaymentMethodResponse> AddUserPaymentMethodAsync(string userId, UserPaymentMethod paymentMethod)
+    {
+        paymentMethod.UserId = userId;
+        paymentMethod.CreatedAt = DateTime.UtcNow;
+
+        _context.UserPaymentMethods.Add(paymentMethod);
+        await _context.SaveChangesAsync();
+
+        return new UserPaymentMethodResponse
+        {
+            UserPaymentMethodId = paymentMethod.UserPaymentMethodId,
+            MethodType = paymentMethod.MethodType,
+            Identifier = paymentMethod.Identifier,
+            PreferenceOrder = paymentMethod.PreferenceOrder,
+            IsActive = paymentMethod.IsActive
+        };
+    }
+
+    public async Task<UserPaymentMethodResponse?> UpdateUserPaymentMethodAsync(string userId, UserPaymentMethod paymentMethod)
+    {
+        var existing = await _context.UserPaymentMethods
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.UserPaymentMethodId == paymentMethod.UserPaymentMethodId);
+
+        if (existing == null)
+            return null;
+
+        existing.MethodType = paymentMethod.MethodType;
+        existing.Identifier = paymentMethod.Identifier;
+        existing.PreferenceOrder = paymentMethod.PreferenceOrder;
+        existing.IsActive = paymentMethod.IsActive;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return new UserPaymentMethodResponse
+        {
+            UserPaymentMethodId = existing.UserPaymentMethodId,
+            MethodType = existing.MethodType,
+            Identifier = existing.Identifier,
+            PreferenceOrder = existing.PreferenceOrder,
+            IsActive = existing.IsActive
+        };
+    }
+
+    public async Task<bool> DeleteUserPaymentMethodAsync(string userId, int paymentMethodId)
+    {
+        var paymentMethod = await _context.UserPaymentMethods
+            .FirstOrDefaultAsync(p => p.UserId == userId && p.UserPaymentMethodId == paymentMethodId);
+
+        if (paymentMethod == null)
+            return false;
+
+        _context.UserPaymentMethods.Remove(paymentMethod);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }
