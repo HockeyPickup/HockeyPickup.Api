@@ -44,6 +44,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     public DbSet<ActivityLog>? ActivityLogs { get; set; }
     public DbSet<RosterPlayer>? CurrentSessionRosters { get; set; }
     public DbSet<BuyingQueue>? SessionBuyingQueues { get; set; }
+    public DbSet<UserPaymentMethod> UserPaymentMethods { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -395,5 +396,21 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .HasConstraintName("FK_dbo.SessionRosters_AspNetUsers");
         });
         modelBuilder.HasAnnotation("Relational:IsStoredInDatabase", true);
+
+        modelBuilder.Entity<UserPaymentMethod>(entity =>
+        {
+            entity.ToTable("UserPaymentMethods");
+
+            entity.HasKey(e => e.UserPaymentMethodId);
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(e => new { e.UserId, e.MethodType }).IsUnique();  // One record per payment method type per user
+
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.PaymentMethods)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

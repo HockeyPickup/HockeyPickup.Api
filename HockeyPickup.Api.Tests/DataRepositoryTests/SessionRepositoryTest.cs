@@ -1450,7 +1450,7 @@ public class BuyingQueueTests
 
         // Act & Assert
         queueItem.TeamAssignment.Should().BeOneOf(1, 2, 0);
-        queueItem.TeamAssignment.Should().BeGreaterOrEqualTo(0);
+        queueItem.TeamAssignment.Should().BeGreaterThanOrEqualTo(0);
     }
 
     [Fact]
