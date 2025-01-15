@@ -123,6 +123,23 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
         modelBuilder.Ignore<IdentityUserToken<string>>();
         modelBuilder.Ignore<IdentityRoleClaim<string>>();
         modelBuilder.Ignore<AspNetRole>();
+
+        // Add to OnModelCreating in UserTestHockeyPickupContext
+        modelBuilder.Entity<UserPaymentMethod>(entity =>
+        {
+            entity.HasKey(e => e.UserPaymentMethodId);
+
+            entity.Property(e => e.UserId).HasMaxLength(128).IsRequired();
+            entity.Property(e => e.MethodType).IsRequired();
+            entity.Property(e => e.Identifier).HasMaxLength(256).IsRequired();
+            entity.Property(e => e.PreferenceOrder).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt);
+
+            // Ignore navigation properties
+            entity.Ignore(e => e.User);
+        });
     }
 }
 
@@ -542,5 +559,249 @@ public partial class UserRepositoryTest
             session.LockerRoom13Players.Should().BeInAscendingOrder(p => p.LastName)
                 .And.ThenBeInAscendingOrder(p => p.FirstName);
         }
+    }
+}
+
+public partial class UserRepositoryTest
+{
+    private async Task SeedPaymentMethods()
+    {
+        var paymentMethods = new[]
+        {
+            new UserPaymentMethod
+            {
+                UserPaymentMethodId = 1,
+                UserId = "user1",
+                MethodType = PaymentMethodType.PayPal,
+                Identifier = "user1@example.com",
+                PreferenceOrder = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new UserPaymentMethod
+            {
+                UserPaymentMethodId = 2,
+                UserId = "user1",
+                MethodType = PaymentMethodType.Venmo,
+                Identifier = "@user1",
+                PreferenceOrder = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new UserPaymentMethod
+            {
+                UserPaymentMethodId = 3,
+                UserId = "user2",
+                MethodType = PaymentMethodType.PayPal,
+                Identifier = "user2@example.com",
+                PreferenceOrder = 1,
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+
+        _context.UserPaymentMethods.AddRange(paymentMethods);
+        await _context.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task GetUserPaymentMethodsAsync_ReturnsOrderedMethods()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.GetUserPaymentMethodsAsync("user1");
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Should().BeInAscendingOrder(p => p.PreferenceOrder);
+
+        var firstMethod = result.First();
+        firstMethod.MethodType.Should().Be(PaymentMethodType.PayPal);
+        firstMethod.Identifier.Should().Be("user1@example.com");
+        firstMethod.PreferenceOrder.Should().Be(1);
+        firstMethod.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetUserPaymentMethodsAsync_UserWithNoMethods_ReturnsEmptyList()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.GetUserPaymentMethodsAsync("nonexistent-user");
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUserPaymentMethodAsync_ExistingMethod_ReturnsMethod()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.GetUserPaymentMethodAsync("user1", 1);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.UserPaymentMethodId.Should().Be(1);
+        result.MethodType.Should().Be(PaymentMethodType.PayPal);
+        result.Identifier.Should().Be("user1@example.com");
+        result.PreferenceOrder.Should().Be(1);
+        result.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetUserPaymentMethodAsync_NonexistentMethod_ReturnsNull()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.GetUserPaymentMethodAsync("user1", 999);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetUserPaymentMethodAsync_WrongUser_ReturnsNull()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.GetUserPaymentMethodAsync("wrong-user", 1);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddUserPaymentMethodAsync_ValidMethod_AddsAndReturnsMethod()
+    {
+        // Arrange
+        var newMethod = new UserPaymentMethod
+        {
+            MethodType = PaymentMethodType.PayPal,
+            Identifier = "new@example.com",
+            PreferenceOrder = 1,
+            IsActive = true
+        };
+
+        // Act
+        var result = await _repository.AddUserPaymentMethodAsync("user3", newMethod);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Identifier.Should().Be("new@example.com");
+        result.MethodType.Should().Be(PaymentMethodType.PayPal);
+        result.PreferenceOrder.Should().Be(1);
+        result.IsActive.Should().BeTrue();
+
+        // Verify it was added to the context
+        var savedMethod = await _context.UserPaymentMethods
+            .FirstOrDefaultAsync(p => p.UserId == "user3" && p.Identifier == "new@example.com");
+        savedMethod.Should().NotBeNull();
+        savedMethod!.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task UpdateUserPaymentMethodAsync_ExistingMethod_UpdatesAndReturnsMethod()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+        var updateMethod = new UserPaymentMethod
+        {
+            UserPaymentMethodId = 1,
+            MethodType = PaymentMethodType.Venmo,
+            Identifier = "updated@example.com",
+            PreferenceOrder = 2,
+            IsActive = false
+        };
+
+        // Act
+        var result = await _repository.UpdateUserPaymentMethodAsync("user1", updateMethod);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.UserPaymentMethodId.Should().Be(1);
+        result.MethodType.Should().Be(PaymentMethodType.Venmo);
+        result.Identifier.Should().Be("updated@example.com");
+        result.PreferenceOrder.Should().Be(2);
+        result.IsActive.Should().BeFalse();
+
+        // Verify the update in context
+        var updatedMethod = await _context.UserPaymentMethods.FindAsync(1);
+        updatedMethod.Should().NotBeNull();
+        updatedMethod!.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task UpdateUserPaymentMethodAsync_NonexistentMethod_ReturnsNull()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+        var updateMethod = new UserPaymentMethod
+        {
+            UserPaymentMethodId = 999,
+            MethodType = PaymentMethodType.PayPal,
+            Identifier = "nonexistent@example.com",
+            PreferenceOrder = 1,
+            IsActive = true
+        };
+
+        // Act
+        var result = await _repository.UpdateUserPaymentMethodAsync("user1", updateMethod);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteUserPaymentMethodAsync_ExistingMethod_DeletesAndReturnsTrue()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.DeleteUserPaymentMethodAsync("user1", 1);
+
+        // Assert
+        result.Should().BeTrue();
+
+        // Verify deletion
+        var deletedMethod = await _context.UserPaymentMethods.FindAsync(1);
+        deletedMethod.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteUserPaymentMethodAsync_NonexistentMethod_ReturnsFalse()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.DeleteUserPaymentMethodAsync("user1", 999);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteUserPaymentMethodAsync_WrongUser_ReturnsFalse()
+    {
+        // Arrange
+        await SeedPaymentMethods();
+
+        // Act
+        var result = await _repository.DeleteUserPaymentMethodAsync("wrong-user", 1);
+
+        // Assert
+        result.Should().BeFalse();
     }
 }

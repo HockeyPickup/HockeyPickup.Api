@@ -287,4 +287,66 @@ public class GraphQLTests
         result.Should().BeNull();
         userRepositoryMock.Verify(r => r.GetUserStatsAsync("nonexistent"), Times.Once);
     }
+
+    [Fact]
+    public async Task GetPaymentMethods_ReturnsUserPaymentMethods()
+    {
+        // Arrange
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        var loggerMock = new Mock<ILogger<Query>>();
+        var userRepositoryMock = new Mock<IUserRepository>();
+        var query = new Query(httpContextAccessorMock.Object, loggerMock.Object);
+
+        var expectedMethods = new List<UserPaymentMethodResponse>
+    {
+        new()
+        {
+            UserPaymentMethodId = 1,
+            MethodType = PaymentMethodType.PayPal,
+            Identifier = "test@example.com",
+            PreferenceOrder = 1,
+            IsActive = true
+        },
+        new()
+        {
+            UserPaymentMethodId = 2,
+            MethodType = PaymentMethodType.Venmo,
+            Identifier = "@testuser",
+            PreferenceOrder = 2,
+            IsActive = true
+        }
+    };
+
+        userRepositoryMock.Setup(repo => repo.GetUserPaymentMethodsAsync("user1"))
+            .ReturnsAsync(expectedMethods);
+
+        // Act
+        var result = await query.GetPaymentMethods("user1", userRepositoryMock.Object);
+
+        // Assert
+        var resultList = result.ToList();
+        resultList.Should().HaveCount(2);
+        resultList.Should().BeEquivalentTo(expectedMethods);
+        userRepositoryMock.Verify(r => r.GetUserPaymentMethodsAsync("user1"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPaymentMethods_WhenNoMethods_ReturnsEmptyList()
+    {
+        // Arrange
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        var loggerMock = new Mock<ILogger<Query>>();
+        var userRepositoryMock = new Mock<IUserRepository>();
+        var query = new Query(httpContextAccessorMock.Object, loggerMock.Object);
+
+        userRepositoryMock.Setup(repo => repo.GetUserPaymentMethodsAsync("user1"))
+            .ReturnsAsync(new List<UserPaymentMethodResponse>());
+
+        // Act
+        var result = await query.GetPaymentMethods("user1", userRepositoryMock.Object);
+
+        // Assert
+        result.Should().BeEmpty();
+        userRepositoryMock.Verify(r => r.GetUserPaymentMethodsAsync("user1"), Times.Once);
+    }
 }

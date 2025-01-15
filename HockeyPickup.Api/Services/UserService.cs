@@ -691,6 +691,11 @@ public class UserService : IUserService
             if (user == null)
                 return ServiceResult<UserPaymentMethodResponse>.CreateFailure("User not found");
 
+            // Get existing payment methods to check for duplicates
+            var existingMethods = await _userRepository.GetUserPaymentMethodsAsync(userId);
+            if (existingMethods.Any(m => m.MethodType == request.MethodType))
+                return ServiceResult<UserPaymentMethodResponse>.CreateFailure($"Payment method type {request.MethodType} already exists for this user");
+
             var paymentMethod = new UserPaymentMethod
             {
                 MethodType = request.MethodType,
