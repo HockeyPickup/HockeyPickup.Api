@@ -630,9 +630,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = invalidValue,
             EmergencyPhone = invalidValue,
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -654,43 +651,6 @@ public partial class AuthControllerTest
     }
 
     [Theory]
-    [InlineData("invalid-email")] // Invalid email format
-    [InlineData("")] // Empty string
-    [InlineData(" ")] // Whitespace
-    public async Task SaveUser_InvalidPayPalEmail_ReturnsBadRequest(string invalidEmail)
-    {
-        // Arrange
-        var userId = "test-user-id";
-        SetupUserClaims(userId);
-
-        var request = new SaveUserRequest
-        {
-            FirstName = "John",
-            LastName = "Doe",
-            PayPalEmail = invalidEmail,
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
-            EmergencyName = "Jane Doe",
-            EmergencyPhone = "555-123-4567",
-            NotificationPreference = NotificationPreference.OnlyMyBuySell,
-            PositionPreference = PositionPreference.TBD
-        };
-
-        _mockUserService
-            .Setup(x => x.SaveUserAsync(userId, request))
-            .ReturnsAsync(ServiceResult.CreateFailure("Invalid PayPal email format"));
-
-        // Act
-        var result = await _controller.SaveUser(request);
-
-        // Assert
-        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        var response = badRequestResult.Value.Should().BeOfType<ApiResponse>().Subject;
-        response.Success.Should().BeFalse();
-        response.Message.Should().Be("Invalid PayPal email format");
-    }
-
-    [Theory]
     [InlineData(NotificationPreference.OnlyMyBuySell)]
     [InlineData(NotificationPreference.None)]
     public async Task SaveUser_ValidNotificationPreference_ReturnsOkResponse(NotificationPreference preference)
@@ -701,9 +661,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = preference
@@ -735,9 +692,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             PositionPreference = preference
@@ -764,9 +718,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell
@@ -787,9 +738,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -827,9 +775,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -867,9 +812,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -907,9 +849,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -948,9 +887,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -988,9 +924,6 @@ public partial class AuthControllerTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.doe@paypal.com",
-            VenmoAccount = "@johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,

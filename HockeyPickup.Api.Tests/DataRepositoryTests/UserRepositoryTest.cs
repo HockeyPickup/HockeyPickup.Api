@@ -36,7 +36,6 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
-            entity.Property(e => e.PayPalEmail).HasDefaultValue("");
             entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
             entity.Property(e => e.PositionPreference).HasDefaultValue(1);
 
@@ -172,7 +171,6 @@ public partial class UserRepositoryTest
                 Preferred = true,
                 PreferredPlus = false,
                 Rating = 4.5m,
-                PayPalEmail = "user1@example.com",
                 DateCreated = DateTime.Parse("02/25/1969")
             },
             new AspNetUser
@@ -187,7 +185,6 @@ public partial class UserRepositoryTest
                 Preferred = false,
                 PreferredPlus = false,
                 Rating = 3.5m,
-                PayPalEmail = "user2@example.com",
                 DateCreated = DateTime.Parse("02/25/1969")
             },
             new AspNetUser
@@ -201,7 +198,6 @@ public partial class UserRepositoryTest
                 Preferred = true,
                 PreferredPlus = true,
                 Rating = 5.0m,
-                PayPalEmail = "user3@example.com",
                 DateCreated = DateTime.Parse("02/25/1969")
             }
         });
@@ -238,7 +234,6 @@ public partial class UserRepositoryTest
             Id = "user3",
             UserName = "user3@example.com",
             Email = "user3@example.com",
-            PayPalEmail = "user3@example.com",
             FirstName = "Preferred",
             LastName = "Plus",
             Rating = 0m,

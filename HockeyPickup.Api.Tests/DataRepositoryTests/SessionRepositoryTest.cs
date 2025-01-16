@@ -96,7 +96,6 @@ public class DetailedSessionTestContext : HockeyPickupContext
             entity.Property(e => e.Email);
             entity.Property(e => e.FirstName);
             entity.Property(e => e.LastName);
-            entity.Property(e => e.PayPalEmail);
             entity.Property(e => e.NotificationPreference);
             entity.Property(e => e.PositionPreference);
 
@@ -263,7 +262,6 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Email = "test@example.com",
             FirstName = "Test",
             LastName = "User",
-            PayPalEmail = "test@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };
@@ -436,7 +434,6 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test@example.com",
             Email = "test@example.com",
-            PayPalEmail = "test@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };
@@ -483,7 +480,6 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test@example.com",
             Email = "test@example.com",
-            PayPalEmail = "test@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };
@@ -591,7 +587,6 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test1@example.com",
             Email = "test1@example.com",
-            PayPalEmail = "test1@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };
@@ -600,7 +595,6 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user2",
             UserName = "test2@example.com",
             Email = "test2@example.com",
-            PayPalEmail = "test2@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };
@@ -1956,7 +1950,6 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                PayPalEmail = "test@example.com",
                 NotificationPreference = 1,
                 PositionPreference = 1
             };
@@ -2023,7 +2016,6 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                PayPalEmail = "test@example.com",
                 NotificationPreference = 1,
                 PositionPreference = 1
             };
@@ -2087,7 +2079,6 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                PayPalEmail = "test@example.com",
                 NotificationPreference = 1,
                 PositionPreference = 1
             };
@@ -2135,7 +2126,6 @@ public partial class DetailedSessionRepositoryTests
             Id = "testUser",
             UserName = "test@example.com",
             Email = "test@example.com",
-            PayPalEmail = "test@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };
@@ -2174,7 +2164,6 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                PayPalEmail = "test@example.com",
                 NotificationPreference = 1,
                 PositionPreference = 1
             };
@@ -2241,7 +2230,6 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                PayPalEmail = "test@example.com",
                 NotificationPreference = 1,
                 PositionPreference = 1
             };
@@ -2305,7 +2293,6 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                PayPalEmail = "test@example.com",
                 NotificationPreference = 1,
                 PositionPreference = 1
             };
@@ -2353,7 +2340,6 @@ public partial class DetailedSessionRepositoryTests
             Id = "testUser",
             UserName = "test@example.com",
             Email = "test@example.com",
-            PayPalEmail = "test@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };

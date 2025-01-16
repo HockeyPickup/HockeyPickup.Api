@@ -122,15 +122,6 @@ public class User
     public int PositionPreference { get; set; }
 
     [Required]
-    [Description("User's PayPal email address")]
-    [MaxLength(256)]
-    [EmailAddress]
-    [DataType(DataType.EmailAddress)]
-    [JsonPropertyName("PayPalEmail")]
-    [JsonProperty(nameof(PayPalEmail), Required = Required.Always)]
-    public string PayPalEmail { get; set; } = null!;
-
-    [Required]
     [Description("Indicates if user account is active")]
     [JsonPropertyName("Active")]
     [JsonProperty(nameof(Active), Required = Required.Always)]
@@ -141,22 +132,6 @@ public class User
     [JsonPropertyName("Preferred")]
     [JsonProperty(nameof(Preferred), Required = Required.Always)]
     public bool Preferred { get; set; }
-
-    [Description("User's Venmo account")]
-    [MaxLength(255)]
-    [RegularExpression(@"^[^\\\./:\@\*\?\""<>\|]{1}[^\\/:\@\*\?\""<>\|]{0,254}$")]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("VenmoAccount")]
-    [JsonProperty(nameof(VenmoAccount), Required = Required.Default)]
-    public string? VenmoAccount { get; set; }
-
-    [Description("Last 4 digits of mobile number")]
-    [MaxLength(4)]
-    [RegularExpression(@"^(\d{4})$")]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("MobileLast4")]
-    [JsonProperty(nameof(MobileLast4), Required = Required.Default)]
-    public string? MobileLast4 { get; set; }
 
     [Required]
     [Description("User's rating")]
@@ -234,9 +209,6 @@ public class User
             PreferredPlus = PreferredPlus,
             NotificationPreference = (NotificationPreference) NotificationPreference,
             PositionPreference = (PositionPreference) PositionPreference,
-            VenmoAccount = VenmoAccount,
-            PayPalEmail = PayPalEmail,
-            MobileLast4 = MobileLast4,
             EmergencyName = EmergencyName,
             EmergencyPhone = EmergencyPhone,
             LockerRoom13 = LockerRoom13,

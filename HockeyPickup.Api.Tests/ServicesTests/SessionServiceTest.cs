@@ -257,7 +257,6 @@ public partial class SessionServiceTests
             Id = "testUser",
             UserName = "test@example.com",
             Email = "test@example.com",
-            PayPalEmail = "test@example.com",
             NotificationPreference = 1,
             PositionPreference = 1
         };

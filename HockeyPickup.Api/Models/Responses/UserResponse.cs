@@ -38,17 +38,6 @@ public class UserDetailedResponse
     [GraphQLDescription("Email address of the user")]
     public string? Email { get; set; }
 
-    [Required]
-    [Description("User's PayPal email address")]
-    [MaxLength(256)]
-    [EmailAddress]
-    [DataType(DataType.EmailAddress)]
-    [JsonPropertyName("PayPalEmail")]
-    [JsonProperty(nameof(PayPalEmail), Required = Required.Always)]
-    [GraphQLName("PayPalEmail")]
-    [GraphQLDescription("User's PayPal email address")]
-    public string PayPalEmail { get; set; } = null!;
-
     [Description("First name of the user")]
     [MaxLength(256)]
     [DataType(DataType.Text)]
@@ -104,26 +93,6 @@ public class UserDetailedResponse
     [GraphQLName("PositionPreference")]
     [GraphQLDescription("User's position preferences")]
     public PositionPreference? PositionPreference { get; set; }
-
-    [Description("User's Venmo account")]
-    [MaxLength(255)]
-    [RegularExpression(@"^[^\\\./:\@\*\?\""<>\|]{1}[^\\/:\@\*\?\""<>\|]{0,254}$")]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("VenmoAccount")]
-    [JsonProperty(nameof(VenmoAccount), Required = Required.Default)]
-    [GraphQLName("VenmoAccount")]
-    [GraphQLDescription("User's Venmo account")]
-    public string? VenmoAccount { get; set; }
-
-    [Description("Last 4 digits of mobile number")]
-    [MaxLength(4)]
-    [RegularExpression(@"^(\d{4})$")]
-    [DataType(DataType.Text)]
-    [JsonPropertyName("MobileLast4")]
-    [JsonProperty(nameof(MobileLast4), Required = Required.Default)]
-    [GraphQLName("MobileLast4")]
-    [GraphQLDescription("Last 4 digits of mobile number")]
-    public string? MobileLast4 { get; set; }
 
     [Description("Emergency contact name")]
     [MaxLength(256)]

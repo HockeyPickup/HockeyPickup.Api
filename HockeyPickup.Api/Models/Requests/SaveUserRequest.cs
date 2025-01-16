@@ -25,35 +25,6 @@ public class SaveUserRequest
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LastName { get; set; }
 
-    [Description("PayPal email address for payments")]
-    [MaxLength(256)]
-    [EmailAddress]
-    [DataType(DataType.EmailAddress)]
-    [JsonPropertyName("PayPalEmail")]
-    [JsonProperty(nameof(PayPalEmail), Required = Required.Default)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? PayPalEmail { get; set; }
-
-    [Description("Venmo account name for payments")]
-    [Display(Name = "Venmo Account")]
-    [MaxLength(255)]
-    [DataType(DataType.Text)]
-    [RegularExpression(@"^[^\\\./:\@\*\?\""<>\|]{1}[^\\/:\@\*\?\""<>\|]{0,254}$",
-        ErrorMessage = "Enter a valid Venmo account name")]
-    [JsonPropertyName("VenmoAccount")]
-    [JsonProperty(nameof(VenmoAccount), Required = Required.Default)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? VenmoAccount { get; set; }
-
-    [Description("Last 4 digits of mobile number")]
-    [MaxLength(4)]
-    [DataType(DataType.Text)]
-    [RegularExpression(@"^(\d{4})$", ErrorMessage = "Enter a valid 4 digit number")]
-    [JsonPropertyName("MobileLast4")]
-    [JsonProperty(nameof(MobileLast4), Required = Required.Default)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? MobileLast4 { get; set; }
-
     [Description("Emergency contact name")]
     [MaxLength(256)]
     [DataType(DataType.Text)]

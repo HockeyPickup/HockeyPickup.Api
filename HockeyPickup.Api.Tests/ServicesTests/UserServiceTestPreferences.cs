@@ -15,9 +15,6 @@ public partial class UserServiceTest
         {
             FirstName = "John",
             LastName = "Doe",
-            PayPalEmail = "john.pay@example.com",
-            VenmoAccount = "johndoe",
-            MobileLast4 = "1234",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-1234",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
@@ -48,9 +45,6 @@ public partial class UserServiceTest
         // Verify all properties were updated
         user.FirstName.Should().Be(request.FirstName);
         user.LastName.Should().Be(request.LastName);
-        user.PayPalEmail.Should().Be(request.PayPalEmail);
-        user.VenmoAccount.Should().Be(request.VenmoAccount);
-        user.MobileLast4.Should().Be(request.MobileLast4);
         user.EmergencyName.Should().Be(request.EmergencyName);
         user.EmergencyPhone.Should().Be(request.EmergencyPhone);
         user.NotificationPreference.Should().Be((int) request.NotificationPreference!.Value);
@@ -67,7 +61,6 @@ public partial class UserServiceTest
             Id = userId,
             FirstName = "Original",
             LastName = "Name",
-            PayPalEmail = "original@pay.com",
             NotificationPreference = (int) NotificationPreference.None,
             PositionPreference = (int) PositionPreference.TBD
         };
@@ -75,7 +68,6 @@ public partial class UserServiceTest
         var request = new SaveUserRequest
         {
             FirstName = "NewFirst",  // Only updating FirstName
-            PayPalEmail = "new@pay.com"  // And PayPalEmail
         };
 
         _mockUserManager.Setup(x => x.FindByIdAsync(userId))
@@ -92,7 +84,6 @@ public partial class UserServiceTest
 
         // Verify updated fields
         user.FirstName.Should().Be("NewFirst");
-        user.PayPalEmail.Should().Be("new@pay.com");
 
         // Verify untouched fields
         user.LastName.Should().Be("Name");
@@ -446,7 +437,6 @@ public partial class UserServiceTest
             Preferred = true,
             PreferredPlus = false,
             LockerRoom13 = false,
-            PayPalEmail = "john.pay@example.com",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
             PositionPreference = PositionPreference.TBD
         };

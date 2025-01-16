@@ -52,7 +52,6 @@ public class RegularRepositoryTests : IDisposable
                 Email = "test1@example.com",
                 FirstName = "John",
                 LastName = "Doe",
-                PayPalEmail = "test1@paypal.com",
                 NotificationPreference = 1,
                 PositionPreference = 1,
                 Rating = 4.5m,
@@ -61,8 +60,6 @@ public class RegularRepositoryTests : IDisposable
                 Active = true,
                 EmergencyName = "Jane Doe",
                 EmergencyPhone = "123-456-7890",
-                MobileLast4 = "1234",
-                VenmoAccount = "@johndoe",
                 LockerRoom13 = true,
                 DateCreated = _testDate
             },
@@ -73,7 +70,6 @@ public class RegularRepositoryTests : IDisposable
                 Email = "test2@example.com",
                 FirstName = "Jane",
                 LastName = "Smith",
-                PayPalEmail = "test2@paypal.com",
                 NotificationPreference = 2,
                 PositionPreference = 2,
                 Rating = 3.5m,
@@ -82,8 +78,6 @@ public class RegularRepositoryTests : IDisposable
                 Active = true,
                 EmergencyName = "John Smith",
                 EmergencyPhone = "098-765-4321",
-                MobileLast4 = "5678",
-                VenmoAccount = "@janesmith",
                 LockerRoom13 = false,
                 DateCreated = _testDate
             }
@@ -171,9 +165,6 @@ public class RegularRepositoryTests : IDisposable
         firstRegular.User.Active.Should().BeTrue();
         firstRegular.User.EmergencyName.Should().Be("Jane Doe");
         firstRegular.User.EmergencyPhone.Should().Be("123-456-7890");
-        firstRegular.User.MobileLast4.Should().Be("1234");
-        firstRegular.User.VenmoAccount.Should().Be("@johndoe");
-        firstRegular.User.PayPalEmail.Should().Be("test1@paypal.com");
         firstRegular.User.NotificationPreference.Should().Be(NotificationPreference.All);
         firstRegular.User.PositionPreference.Should().Be(PositionPreference.Forward);
         firstRegular.User.LockerRoom13.Should().BeTrue();

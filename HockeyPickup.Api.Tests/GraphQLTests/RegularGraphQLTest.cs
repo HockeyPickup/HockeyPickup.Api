@@ -25,7 +25,6 @@ public class RegularGraphQLTests
             Preferred = true,
             PreferredPlus = false,
             Active = true,
-            PayPalEmail = $"{userName}@paypal.com",
             NotificationPreference = NotificationPreference.All,
             PositionPreference = PositionPreference.TBD,
             DateCreated = DateTime.UtcNow,

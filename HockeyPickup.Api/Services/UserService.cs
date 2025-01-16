@@ -124,9 +124,6 @@ public class UserService : IUserService
     {
         if (request.FirstName != null) user.FirstName = request.FirstName;
         if (request.LastName != null) user.LastName = request.LastName;
-        if (request.PayPalEmail != null) user.PayPalEmail = request.PayPalEmail;
-        if (request.VenmoAccount != null) user.VenmoAccount = request.VenmoAccount;
-        if (request.MobileLast4 != null) user.MobileLast4 = request.MobileLast4;
         if (request.EmergencyName != null) user.EmergencyName = request.EmergencyName;
         if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
         if (request.NotificationPreference.HasValue) user.NotificationPreference = (int) request.NotificationPreference.Value;
@@ -313,7 +310,6 @@ public class UserService : IUserService
                 LastName = request.LastName,
                 EmailConfirmed = false,
                 LockoutEnabled = false,
-                PayPalEmail = request.Email,
                 NotificationPreference = (int) NotificationPreference.OnlyMyBuySell,
                 PositionPreference = (int) PositionPreference.TBD,
                 NormalizedEmail = request.Email.ToUpperInvariant(),
@@ -411,9 +407,6 @@ public class UserService : IUserService
                 EmergencyPhone = aspNetUser.EmergencyPhone,
                 JerseyNumber = aspNetUser.JerseyNumber,
                 LockerRoom13 = aspNetUser.LockerRoom13,
-                MobileLast4 = aspNetUser.MobileLast4,
-                PayPalEmail = aspNetUser.PayPalEmail,
-                VenmoAccount = aspNetUser.VenmoAccount,
                 Rating = aspNetUser.GetSecureRating(),
                 DateCreated = aspNetUser.DateCreated
             };
