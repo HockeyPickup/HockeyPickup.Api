@@ -69,6 +69,30 @@ public class UserStatsResponse
     [GraphQLDescription("Spots sold in prior year")]
     public required int PriorYearSoldTotal { get; set; }
 
+    [Required]
+    [Description("Games played two years ago")]
+    [JsonPropertyName("TwoYearsAgoGamesPlayed")]
+    [JsonProperty(nameof(TwoYearsAgoGamesPlayed), Required = Required.Always)]
+    [GraphQLName("TwoYearsAgoGamesPlayed")]
+    [GraphQLDescription("Games played two years ago")]
+    public required int TwoYearsAgoGamesPlayed { get; set; }
+
+    [Required]
+    [Description("Spots bought two years ago")]
+    [JsonPropertyName("TwoYearsAgoBoughtTotal")]
+    [JsonProperty(nameof(TwoYearsAgoBoughtTotal), Required = Required.Always)]
+    [GraphQLName("TwoYearsAgoBoughtTotal")]
+    [GraphQLDescription("Spots bought two years ago")]
+    public required int TwoYearsAgoBoughtTotal { get; set; }
+
+    [Required]
+    [Description("Spots sold two years ago")]
+    [JsonPropertyName("TwoYearsAgoSoldTotal")]
+    [JsonProperty(nameof(TwoYearsAgoSoldTotal), Required = Required.Always)]
+    [GraphQLName("TwoYearsAgoSoldTotal")]
+    [GraphQLDescription("Spots sold two years ago")]
+    public required int TwoYearsAgoSoldTotal { get; set; }
+
     [Description("Date of last sold session")]
     [JsonPropertyName("LastSoldSessionDate")]
     [JsonProperty(nameof(LastSoldSessionDate))]

@@ -252,6 +252,9 @@ public class GraphQLTests
             CurrentBuyRequests = 1,
             WednesdayRegular = true,
             FridayRegular = true,
+            TwoYearsAgoBoughtTotal = 5,
+            TwoYearsAgoGamesPlayed = 10,
+            TwoYearsAgoSoldTotal = 3,
         };
 
         userRepositoryMock.Setup(repo => repo.GetUserStatsAsync("user1"))
