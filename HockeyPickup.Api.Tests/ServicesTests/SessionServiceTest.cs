@@ -3,10 +3,12 @@ using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using HockeyPickup.Api.Tests.DataRepositoryTests;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Security.Claims;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -26,6 +29,8 @@ public partial class SessionServiceTests
     private readonly Mock<ILogger<UserService>> _mockLogger;
     private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly SessionService _sessionService;
+    private readonly Mock<IHttpContextAccessor> _mockContextAccessor;
+    private readonly Mock<IUserRepository> _mockUserRepository;
 
     public SessionServiceTests()
     {
@@ -47,6 +52,16 @@ public partial class SessionServiceTests
         _configuration = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<UserService>>();
         _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
+        _mockContextAccessor = new Mock<IHttpContextAccessor>();
+        _mockUserRepository = new Mock<IUserRepository>();
+
+        var mockHttpContext = new Mock<HttpContext>();
+        var mockUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "testUserId")
+        }));
+        mockHttpContext.Setup(x => x.User).Returns(mockUser);
+        _mockContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
 
         _sessionService = new SessionService(
             _userManager.Object,
@@ -54,7 +69,9 @@ public partial class SessionServiceTests
             _serviceBus.Object,
             _configuration.Object,
             _mockLogger.Object,
-            _mockSubscriptionHandler.Object);
+            _mockSubscriptionHandler.Object,
+            _mockContextAccessor.Object,
+            _mockUserRepository.Object);
     }
 
     private static SessionDetailedResponse CreateTestSession(string userId, int position, int team)
@@ -455,48 +472,8 @@ public partial class SessionServiceTests
 public partial class SessionServiceTests
 {
     [Fact]
-    public async Task CreateSession_Success_ReturnsSessionResponse()
-    {
-        // Arrange
-        var request = new CreateSessionRequest
-        {
-            SessionDate = DateTime.UtcNow.AddDays(1),
-            RegularSetId = 1,
-            BuyDayMinimum = 1,
-            Cost = 20.00m,
-            Note = "Test session"
-        };
-
-        var createdSession = new SessionDetailedResponse
-        {
-            SessionId = 1,
-            SessionDate = request.SessionDate,
-            RegularSetId = request.RegularSetId,
-            BuyDayMinimum = request.BuyDayMinimum,
-            Cost = request.Cost,
-            Note = request.Note,
-            CreateDateTime = DateTime.UtcNow,
-            UpdateDateTime = DateTime.UtcNow
-        };
-
-        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
-            .ReturnsAsync(createdSession);
-        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
-            .ReturnsAsync(createdSession);
-
-        // Act
-        var result = await _sessionService.CreateSession(request);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(createdSession.SessionId, result.Data.SessionId);
-        _mockSessionRepository.Verify(x => x.CreateSessionAsync(It.IsAny<Session>()), Times.Once);
-        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
-    }
-
-    [Fact]
     public async Task UpdateSession_Success_ReturnsUpdatedSession()
-    {
+        {
         // Arrange
         var request = new UpdateSessionRequest
         {
@@ -509,7 +486,7 @@ public partial class SessionServiceTests
         };
 
         var existingSession = new SessionDetailedResponse
-        {
+            {
             SessionId = request.SessionId,
             SessionDate = DateTime.UtcNow,
             RegularSetId = 2,
@@ -521,7 +498,7 @@ public partial class SessionServiceTests
         };
 
         var updatedSession = new SessionDetailedResponse
-        {
+            {
             SessionId = request.SessionId,
             SessionDate = request.SessionDate,
             RegularSetId = request.RegularSetId,
@@ -552,7 +529,7 @@ public partial class SessionServiceTests
         Assert.Equal(request.Note, result.Data.Note);
         _mockSessionRepository.Verify(x => x.UpdateSessionAsync(It.IsAny<Session>()), Times.Once);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Once);
-    }
+            }
 
     [Fact]
     public async Task UpdateSession_SessionNotFound_ReturnsFailure()
@@ -774,5 +751,184 @@ public partial class SessionServiceTests
         Assert.Equal("User is not part of this session's current roster", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(
             It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateSession_Success_SendsServiceBusMessage()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        var mockUsers = new List<UserDetailedResponse>
+        {
+            new()
+            {
+                Id = "user1",
+                Email = "user1@test.com",
+                Active = true,
+                NotificationPreference = (NotificationPreference)1,
+                FirstName = "Test",
+                LastName = "User",
+                UserName = "testuser",
+                Rating = 1.0m,
+                Preferred = false,
+                PreferredPlus = false
+            }
+        };
+
+        var testUser = new AspNetUser
+        {
+            Id = "testUserId",
+            FirstName = "Test",
+            LastName = "User"
+        };
+
+        var createdSession = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        var queueConfigured = false;
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Callback(() => queueConfigured = true)
+            .Returns("testqueue");
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns("https://test.com");
+
+        // Setup mocks with debug checks
+        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
+            .Callback<Session>(session =>
+            {
+                Assert.Equal(request.SessionDate, session.SessionDate);
+            })
+            .ReturnsAsync(createdSession);
+
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(createdSession);
+
+        var usersReturned = false;
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .Callback(() => usersReturned = true)
+            .ReturnsAsync(mockUsers);
+
+        var mockHttpContext = new DefaultHttpContext();
+        mockHttpContext.Items["UserId"] = "testUserId";
+        _mockContextAccessor.Object.HttpContext = mockHttpContext;
+
+        var userFound = false;
+        _userManager.Setup(x => x.FindByIdAsync("testUserId"))
+            .Callback<string>(id => userFound = true)
+            .ReturnsAsync(testUser);
+
+        var mockConfigSection = new Mock<IConfigurationSection>();
+        mockConfigSection.Setup(x => x.Value)
+            .Callback(() => queueConfigured = true)
+            .Returns("testqueue");
+        _configuration.Setup(x => x.GetSection("ServiceBusCommsQueueName"))
+            .Returns(mockConfigSection.Object);
+
+        var serviceBusMessageCalled = false;
+        ServiceBusCommsMessage? capturedMessage = null;
+
+        _serviceBus
+                .Setup(x => x.SendAsync(
+                    It.IsAny<ServiceBusCommsMessage>(),
+                    It.Is<string>(s => s == "CreateSession"),
+                    It.IsAny<string>(),
+                    It.Is<string>(s => s == "testqueue"),
+                    default))
+                .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, subject, corrId, queue, token) =>
+                {
+                    serviceBusMessageCalled = true;
+                    capturedMessage = msg;
+                    Console.WriteLine($"Service bus called with queue: {queue}");
+                })
+                .Returns(Task.FromResult(true));
+
+        // Act
+        var result = await _sessionService.CreateSession(request);
+
+        // Debug Assertions
+        Assert.True(userFound, "User manager was not called");
+        Assert.True(usersReturned, "User repository was not called");
+        Assert.True(queueConfigured, "Queue configuration was not accessed");
+        Assert.NotNull(result.Data);
+
+        // Main Assertions
+        Assert.True(result.IsSuccess);
+        Assert.True(serviceBusMessageCalled, "Service bus message was not sent");
+
+        if (capturedMessage != null)
+        {
+            Assert.Equal("CreateSession", capturedMessage.Metadata["Type"]);
+            Assert.Equal("Test User", capturedMessage.MessageData["CreatedByName"]);
+            Assert.Contains("user1", capturedMessage.RelatedEntities.Keys);
+            Assert.Equal("user1@test.com", capturedMessage.RelatedEntities["user1"]);
+        }
+    }
+
+    [Fact]
+    public async Task CreateSession_ServiceBusFailure_StillSucceedsWithWarning()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        var createdSession = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
+            .ReturnsAsync(createdSession);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(createdSession);
+
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .ThrowsAsync(new Exception("Service bus error"));
+
+        var mockHttpContext = new DefaultHttpContext();
+        mockHttpContext.Items["UserId"] = "testUserId";
+        _mockContextAccessor.Object.HttpContext = mockHttpContext;
+
+        // Act
+        var result = await _sessionService.CreateSession(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Contains("Create Session email could not be sent", result.Message);
+        _mockLogger.Verify(x => x.Log(
+            It.IsAny<LogLevel>(),
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 }

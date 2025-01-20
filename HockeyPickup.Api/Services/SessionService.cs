@@ -1,9 +1,11 @@
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace HockeyPickup.Api.Services;
 
@@ -23,8 +25,10 @@ public class SessionService : ISessionService
     private readonly IConfiguration _configuration;
     private readonly ILogger<UserService> _logger;
     private readonly ISubscriptionHandler _subscriptionHandler;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUserRepository _userRepository;
 
-    public SessionService(UserManager<AspNetUser> userManager, ISessionRepository sessionRepository, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, ISubscriptionHandler subscriptionHandler)
+    public SessionService(UserManager<AspNetUser> userManager, ISessionRepository sessionRepository, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, ISubscriptionHandler subscriptionHandler, IHttpContextAccessor httpContextAccessor, IUserRepository userRepository)
     {
         _userManager = userManager;
         _sessionRepository = sessionRepository;
@@ -32,6 +36,8 @@ public class SessionService : ISessionService
         _configuration = configuration;
         _logger = logger;
         _subscriptionHandler = subscriptionHandler;
+        _httpContextAccessor = httpContextAccessor;
+        _userRepository = userRepository;
     }
 
     public async Task<ServiceResult<SessionDetailedResponse>> CreateSession(CreateSessionRequest request)
@@ -53,7 +59,52 @@ public class SessionService : ISessionService
             var msg = $"Session created for {request.SessionDate:MM/dd/yyyy}";
 
             var updatedSession = await _sessionRepository.AddActivityAsync(createdSession.SessionId, msg);
-            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+
+            try
+            {
+                // Get a list of all active users with notification preference
+                var users = await _userRepository.GetDetailedUsersAsync();
+                var userList = users.Where(u => u.Active && u.NotificationPreference != (int) NotificationPreference.None).ToDictionary(u => u.Id, u => u.Email ?? string.Empty);
+
+                // Get the creating user's info
+                var userId = _httpContextAccessor.GetUserId();
+                var user = await _userManager.FindByIdAsync(userId);
+
+                var baseUrl = _configuration["BaseUrl"];
+                var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{createdSession.SessionId}";
+
+                // Send session create email via service bus
+                await _serviceBus.SendAsync(new ServiceBusCommsMessage
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "Type", "CreateSession" },
+                        { "CommunicationEventId", Guid.NewGuid().ToString() }
+                    },
+                    CommunicationMethod = new Dictionary<string, string>
+                    {
+                        { "Email", "" }
+                    },
+                    RelatedEntities = userList,
+                    MessageData = new Dictionary<string, string>
+                    {
+                        { "SessionDate", session.SessionDate.ToString() },
+                        { "SessionUrl", sessionUrl },
+                        { "Note", session.Note },
+                        { "CreatedByName", $"{user.FirstName} {user.LastName}" }
+                    }
+                },
+                subject: "CreateSession",
+                correlationId: Guid.NewGuid().ToString(),
+                queueName: _configuration["ServiceBusCommsQueueName"]);
+
+                return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send create session message");
+                return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg + ". Create Session email could not be sent");
+            }
         }
         catch (Exception ex)
         {
