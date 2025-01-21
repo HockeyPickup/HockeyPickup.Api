@@ -2604,3 +2604,244 @@ public class SessionRepositoryTests : IDisposable
         _context.Dispose();
     }
 }
+
+public class DeleteSessionRepositoryTests : IDisposable
+{
+    private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+    private readonly Mock<HttpContextAccessor> _mockContextAccessor;
+    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly SqliteConnection _connection;
+    private readonly DbContextOptions<HockeyPickupContext> _options;
+    private readonly DateTime _testDate = DateTime.UtcNow;
+
+    public DeleteSessionRepositoryTests()
+    {
+        _mockLogger = new Mock<ILogger<SessionRepository>>();
+        _mockContextAccessor = new Mock<HttpContextAccessor>();
+        _mockConfiguration = new Mock<IConfiguration>();
+        _mockConfiguration.Setup(x => x["SessionBuyPrice"]).Returns("27.00");
+
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        _options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(_connection)
+            .EnableSensitiveDataLogging()
+            .Options;
+
+        using var context = new DetailedSessionTestContext(_options);
+        context.Database.EnsureCreated();
+    }
+
+    public void Dispose()
+    {
+        _connection.Dispose();
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_WithValidId_DeletesSessionAndRelatedData()
+    {
+        // Arrange
+        await using var arrangeContext = new DetailedSessionTestContext(_options);
+        var user = new AspNetUser
+        {
+            Id = "user1",
+            UserName = "test@example.com",
+            Email = "test@example.com",
+            NotificationPreference = 1,
+            PositionPreference = 1
+        };
+        arrangeContext.Users!.Add(user);
+
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(1),
+            Note = "Test session"
+        };
+        arrangeContext.Sessions!.Add(session);
+
+        var buySell = new BuySell
+        {
+            BuySellId = 1,
+            SessionId = session.SessionId,
+            BuyerUserId = user.Id,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            TeamAssignment = 1
+        };
+        arrangeContext.BuySells!.Add(buySell);
+
+        var activityLog = new ActivityLog
+        {
+            ActivityLogId = 1,
+            SessionId = session.SessionId,
+            UserId = user.Id,
+            CreateDateTime = _testDate,
+            Activity = "Test activity"
+        };
+        arrangeContext.ActivityLogs!.Add(activityLog);
+
+        var roster = new SessionRoster
+        {
+            SessionRosterId = 1,
+            SessionId = session.SessionId,
+            UserId = user.Id,
+            TeamAssignment = 1,
+            Position = 1,
+            JoinedDateTime = _testDate
+        };
+        arrangeContext.SessionRosters!.Add(roster);
+
+        await arrangeContext.SaveChangesAsync();
+
+        // Act
+        await using var actContext = new DetailedSessionTestContext(_options);
+        var repository = new SessionRepository(actContext, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+        var result = await repository.DeleteSessionAsync(session.SessionId);
+
+        // Assert
+        result.Should().BeTrue();
+
+        // Use a new context for verification
+        await using var assertContext = new DetailedSessionTestContext(_options);
+        var deletedSession = await assertContext.Sessions!.FindAsync(session.SessionId);
+        deletedSession.Should().BeNull();
+
+        var remainingBuySells = await assertContext.BuySells!.Where(bs => bs.SessionId == session.SessionId).ToListAsync();
+        remainingBuySells.Should().BeEmpty();
+
+        var remainingActivityLogs = await assertContext.ActivityLogs!.Where(al => al.SessionId == session.SessionId).ToListAsync();
+        remainingActivityLogs.Should().BeEmpty();
+
+        var remainingRosters = await assertContext.SessionRosters!.Where(sr => sr.SessionId == session.SessionId).ToListAsync();
+        remainingRosters.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_WithInvalidId_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await using var context = new DetailedSessionTestContext(_options);
+        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+
+        // Act & Assert
+        await repository.Invoking(r => r.DeleteSessionAsync(999))
+            .Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Session not found with ID: 999");
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_TransactionBehavior_RollsBackOnError()
+    {
+        // Arrange
+        await using var context = new DetailedSessionTestContext(_options);
+
+        var user = new AspNetUser
+        {
+            Id = "user1",
+            UserName = "test@example.com",
+            Email = "test@example.com",
+            NotificationPreference = 1,
+            PositionPreference = 1
+        };
+        context.Users!.Add(user);
+
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(1),
+            Note = "Test session"
+        };
+        context.Sessions!.Add(session);
+
+        var buySell = new BuySell
+        {
+            BuySellId = 1,
+            SessionId = session.SessionId,
+            BuyerUserId = user.Id,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            TeamAssignment = 1
+        };
+        context.BuySells!.Add(buySell);
+
+        await context.SaveChangesAsync();
+
+        // Create a trigger that will cause the delete to fail
+        await context.Database.ExecuteSqlRawAsync(@"
+        CREATE TRIGGER prevent_session_delete
+        BEFORE DELETE ON Sessions
+        BEGIN
+            SELECT RAISE(ROLLBACK, 'Cannot delete session');
+        END;");
+
+        var repository = new SessionRepository(
+            context,
+            _mockLogger.Object,
+            _mockContextAccessor.Object,
+            _mockConfiguration.Object);
+
+        // Act & Assert
+        await repository.Invoking(r => r.DeleteSessionAsync(1))
+            .Should().ThrowAsync<Exception>()  // Accept any exception type
+            .Where(ex => ex is DbUpdateException || ex is SqliteException); // But verify it's one of these
+
+        // Verify nothing was deleted
+        var sessionStillExists = await context.Sessions!.FindAsync(1);
+        sessionStillExists.Should().NotBeNull("Session should still exist after failed deletion");
+
+        var buySellExists = await context.BuySells!.AnyAsync(bs => bs.SessionId == 1);
+        buySellExists.Should().BeTrue("Related BuySell should still exist after failed deletion");
+
+        // Additional verification of all related records
+        var activityLogsExist = await context.ActivityLogs!
+            .AnyAsync(al => al.SessionId == 1);
+        activityLogsExist.Should().BeFalse("There should be no activity logs yet");
+
+        var sessionRostersExist = await context.SessionRosters!
+            .AnyAsync(sr => sr.SessionId == 1);
+        sessionRostersExist.Should().BeFalse("There should be no session rosters yet");
+
+        // Verify session data integrity
+        sessionStillExists.SessionId.Should().Be(1);
+        sessionStillExists.Note.Should().Be("Test session");
+        sessionStillExists.CreateDateTime.Should().Be(_testDate);
+        sessionStillExists.UpdateDateTime.Should().Be(_testDate);
+        sessionStillExists.SessionDate.Should().Be(_testDate.AddDays(1));
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_WithoutRelatedData_DeletesSuccessfully()
+    {
+        // Arrange
+        await using var arrangeContext = new DetailedSessionTestContext(_options);
+        var session = new Session
+        {
+            SessionId = 1,
+            CreateDateTime = _testDate,
+            UpdateDateTime = _testDate,
+            SessionDate = _testDate.AddDays(1),
+            Note = "Test session"
+        };
+        arrangeContext.Sessions!.Add(session);
+        await arrangeContext.SaveChangesAsync();
+
+        // Act
+        await using var actContext = new DetailedSessionTestContext(_options);
+        var repository = new SessionRepository(actContext, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+        var result = await repository.DeleteSessionAsync(session.SessionId);
+
+        // Assert
+        result.Should().BeTrue();
+
+        // Use a fresh context for verification
+        await using var assertContext = new DetailedSessionTestContext(_options);
+        var deletedSession = await assertContext.Sessions!.FindAsync(session.SessionId);
+        deletedSession.Should().BeNull();
+    }
+}

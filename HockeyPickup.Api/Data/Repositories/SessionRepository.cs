@@ -357,4 +357,47 @@ public class SessionRepository : ISessionRepository
             Roles = user.Roles.ToRoleNames(),
         };
     }
+
+    public async Task<bool> DeleteSessionAsync(int sessionId)
+    {
+        // Get the execution strategy
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Verify session exists before attempting deletion
+                var sessionExists = await _context.Sessions!
+                    .AnyAsync(s => s.SessionId == sessionId);
+
+                if (!sessionExists)
+                {
+                    throw new KeyNotFoundException($"Session not found with ID: {sessionId}");
+                }
+
+                // Delete in order of dependency (child tables first)
+                await _context.Database.ExecuteSqlRawAsync(
+                    "DELETE FROM ActivityLogs WHERE SessionId = {0}", sessionId);
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "DELETE FROM BuySells WHERE SessionId = {0}", sessionId);
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "DELETE FROM SessionRosters WHERE SessionId = {0}", sessionId);
+
+                // Finally delete the session itself
+                var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
+                    "DELETE FROM Sessions WHERE SessionId = {0}", sessionId);
+
+                await transaction.CommitAsync();
+                return rowsAffected > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
+    }
 }

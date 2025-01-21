@@ -932,3 +932,149 @@ public partial class SessionServiceTests
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 }
+
+public partial class SessionServiceTests
+{
+    [Fact]
+    public async Task DeleteSessionAsync_Success_ReturnsTrue()
+    {
+        // Arrange
+        var sessionId = 1;
+        var existingSession = new SessionDetailedResponse
+        {
+            SessionId = sessionId,
+            SessionDate = DateTime.UtcNow,
+            RegularSetId = 1,
+            CreateDateTime = DateTime.UtcNow.AddDays(-1),
+            UpdateDateTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(existingSession);
+        _mockSessionRepository.Setup(x => x.DeleteSessionAsync(sessionId))
+            .ReturnsAsync(true);
+        _mockSubscriptionHandler.Setup(x => x.HandleDelete(sessionId))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _sessionService.DeleteSessionAsync(sessionId);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Data);
+        Assert.Equal($"Deleted Session {sessionId}", result.Message);
+        _mockSessionRepository.Verify(x => x.DeleteSessionAsync(sessionId), Times.Once);
+        _mockSubscriptionHandler.Verify(x => x.HandleDelete(sessionId), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_SessionNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync((SessionDetailedResponse) null!);
+
+        // Act
+        var result = await _sessionService.DeleteSessionAsync(sessionId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Session not found", result.Message);
+        _mockSessionRepository.Verify(x => x.DeleteSessionAsync(sessionId), Times.Never);
+        _mockSubscriptionHandler.Verify(x => x.HandleDelete(sessionId), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_DeleteFails_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var existingSession = new SessionDetailedResponse
+        {
+            SessionId = sessionId,
+            SessionDate = DateTime.UtcNow,
+            RegularSetId = 1,
+            CreateDateTime = DateTime.UtcNow.AddDays(-1),
+            UpdateDateTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(existingSession);
+        _mockSessionRepository.Setup(x => x.DeleteSessionAsync(sessionId))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _sessionService.DeleteSessionAsync(sessionId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Failed to delete session", result.Message);
+        _mockSessionRepository.Verify(x => x.DeleteSessionAsync(sessionId), Times.Once);
+        _mockSubscriptionHandler.Verify(x => x.HandleDelete(sessionId), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_ThrowsException_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var expectedException = new Exception("Test exception");
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ThrowsAsync(expectedException);
+
+        // Act
+        var result = await _sessionService.DeleteSessionAsync(sessionId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal($"An error occurred deleting the session: {expectedException.Message}", result.Message);
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteSessionAsync_SubscriptionHandlerThrows_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var expectedException = new Exception("Subscription handler error");
+        var existingSession = new SessionDetailedResponse
+        {
+            SessionId = sessionId,
+            SessionDate = DateTime.UtcNow,
+            RegularSetId = 1,
+            CreateDateTime = DateTime.UtcNow.AddDays(-1),
+            UpdateDateTime = DateTime.UtcNow.AddDays(-1)
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(existingSession);
+        _mockSessionRepository.Setup(x => x.DeleteSessionAsync(sessionId))
+            .ReturnsAsync(true);
+        _mockSubscriptionHandler.Setup(x => x.HandleDelete(sessionId))
+            .ThrowsAsync(expectedException);
+
+        // Act
+        var result = await _sessionService.DeleteSessionAsync(sessionId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal($"An error occurred deleting the session: {expectedException.Message}", result.Message);
+        _mockSessionRepository.Verify(x => x.DeleteSessionAsync(sessionId), Times.Once);
+        _mockSubscriptionHandler.Verify(x => x.HandleDelete(sessionId), Times.Once);
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+}

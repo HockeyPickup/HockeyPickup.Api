@@ -268,4 +268,58 @@ public class SessionControllerTests
         Assert.False(response.Success);
         Assert.Equal("Test error", response.Message);
     }
+
+    [Fact]
+    public async Task DeleteSession_Success_ReturnsOkResult()
+    {
+        // Arrange
+        var sessionId = 1;
+        _sessionService.Setup(s => s.DeleteSessionAsync(sessionId))
+            .ReturnsAsync(ServiceResult<bool>.CreateSuccess(true, "Session deleted successfully"));
+
+        // Act
+        var result = await _controller.DeleteSession(sessionId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<bool>>(okResult.Value);
+        Assert.True(response.Success);
+        Assert.True(response.Data);
+    }
+
+    [Fact]
+    public async Task DeleteSession_NotFound_ReturnsBadRequest()
+    {
+        // Arrange
+        var sessionId = 1;
+        _sessionService.Setup(s => s.DeleteSessionAsync(sessionId))
+            .ReturnsAsync(ServiceResult<bool>.CreateFailure("Session not found"));
+
+        // Act
+        var result = await _controller.DeleteSession(sessionId);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<bool>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Session not found", response.Message);
+    }
+
+    [Fact]
+    public async Task DeleteSession_Error_ReturnsBadRequest()
+    {
+        // Arrange
+        var sessionId = 1;
+        _sessionService.Setup(s => s.DeleteSessionAsync(sessionId))
+            .ReturnsAsync(ServiceResult<bool>.CreateFailure("An error occurred"));
+
+        // Act
+        var result = await _controller.DeleteSession(sessionId);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<bool>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("An error occurred", response.Message);
+    }
 }

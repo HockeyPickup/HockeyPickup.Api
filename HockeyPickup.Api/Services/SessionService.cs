@@ -1,3 +1,4 @@
+using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
@@ -6,6 +7,7 @@ using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace HockeyPickup.Api.Services;
 
@@ -15,6 +17,7 @@ public interface ISessionService
     Task<ServiceResult<SessionDetailedResponse>> UpdateSession(UpdateSessionRequest request);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment);
+    Task<ServiceResult<bool>> DeleteSessionAsync(int sessionId);
 }
 
 public class SessionService : ISessionService
@@ -231,6 +234,34 @@ public class SessionService : ISessionService
         {
             _logger.LogError(ex, $"Error updating player team assignment for session: {sessionId}, user: {userId}");
             return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating player team assignment: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<bool>> DeleteSessionAsync(int sessionId)
+    {
+        try
+        {
+            var existingSession = await _sessionRepository.GetSessionAsync(sessionId);
+            if (existingSession == null)
+            {
+                return ServiceResult<bool>.CreateFailure("Session not found");
+            }
+
+            var result = await _sessionRepository.DeleteSessionAsync(sessionId);
+            var msg = $"Deleted Session {sessionId}";
+
+            if (result)
+            {
+                await _subscriptionHandler.HandleDelete(sessionId);
+                return ServiceResult<bool>.CreateSuccess(true, msg);
+            }
+
+            return ServiceResult<bool>.CreateFailure("Failed to delete session");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting session: {sessionId}");
+            return ServiceResult<bool>.CreateFailure($"An error occurred deleting the session: {ex.Message}");
         }
     }
 }

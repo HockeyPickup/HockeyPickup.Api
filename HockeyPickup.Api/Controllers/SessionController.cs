@@ -82,4 +82,18 @@ public class SessionController : ControllerBase
         var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("delete-session/{sessionId}")]
+    [Description("Deletes an existing session")]
+    [Produces(typeof(ApiDataResponse<bool>))]
+    [ProducesResponseType(typeof(ApiDataResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<bool>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<bool>>> DeleteSession(int sessionId)
+    {
+        var result = await _sessionService.DeleteSessionAsync(sessionId);
+        var response = ApiDataResponse<bool>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }

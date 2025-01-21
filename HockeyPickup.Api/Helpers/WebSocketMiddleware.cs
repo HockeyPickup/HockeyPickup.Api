@@ -11,6 +11,7 @@ public interface ISubscriptionHandler
     string OperationType { get; }
     Task HandleSubscription(string socketId, string id);
     Task HandleUpdate(object data);
+    Task HandleDelete(object data);
     Task Cleanup(string socketId);
 }
 
@@ -37,6 +38,17 @@ public abstract class BaseSubscriptionHandler : ISubscriptionHandler
     }
 
     public async Task HandleUpdate(object data)
+    {
+        foreach (var socketId in _subscribedSockets)
+        {
+            if (_subscriptionIds.TryGetValue(socketId, out var subscriptionId))
+            {
+                await _webSocketService.SendMessageToSocket(socketId, WrapData(data), subscriptionId);
+            }
+        }
+    }
+
+    public async Task HandleDelete(object data)
     {
         foreach (var socketId in _subscribedSockets)
         {

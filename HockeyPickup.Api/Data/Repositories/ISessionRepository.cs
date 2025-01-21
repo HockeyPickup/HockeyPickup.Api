@@ -13,4 +13,5 @@ public interface ISessionRepository
     Task<SessionDetailedResponse> AddActivityAsync(int sessionId, string activity);
     Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, int position);
     Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, int team);
+    Task<bool> DeleteSessionAsync(int sessionId);
 }
