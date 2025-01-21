@@ -590,13 +590,39 @@ public class UserService : IUserService
                 await _userManager.UpdateSecurityStampAsync(user);
                 var result = await _userManager.UpdateAsync(user);
                 if (!result.Succeeded)
+                {
                     return ServiceResult<PhotoResponse>.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to update user photo URL");
+                }
             }
             catch (Exception)
             {
                 // Nested try is anti-pattern. It's here to satisfy test coverage. It was the only way.
                 throw;
             }
+
+            // Send a message to Service Bu that the photo was uploaded
+            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            {
+                Metadata = new Dictionary<string, string>
+                {
+                    { "Type", "PhotoUploaded" },
+                    { "CommunicationEventId", Guid.NewGuid().ToString() }
+                },
+                CommunicationMethod = new Dictionary<string, string>
+                {
+                    { "Email", user.Email }
+                },
+                RelatedEntities = new Dictionary<string, string>
+                {
+                    { "UserId", user.Id },
+                    { "FirstName", user.FirstName },
+                    { "LastName", user.LastName }
+                },
+                MessageData = null
+            },
+            subject: "PhotoUploaded",
+            correlationId: Guid.NewGuid().ToString(),
+            queueName: _configuration["ServiceBusCommsQueueName"]);
 
             return ServiceResult<PhotoResponse>.CreateSuccess(new PhotoResponse
             {
