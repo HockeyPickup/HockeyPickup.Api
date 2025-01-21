@@ -10,6 +10,7 @@ public class UserPaymentMethodRequest
 {
     [Required]
     [Description("Type of payment method")]
+    [EnumDataType(typeof(PaymentMethodType))]
     [JsonPropertyName("MethodType")]
     [JsonProperty(nameof(MethodType), Required = Required.Always)]
     public required PaymentMethodType MethodType { get; set; }

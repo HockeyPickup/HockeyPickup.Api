@@ -600,7 +600,7 @@ public class UserService : IUserService
                 throw;
             }
 
-            // Send a message to Service Bu that the photo was uploaded
+            // Send a message to Service Bus that the photo was uploaded
             await _serviceBus.SendAsync(new ServiceBusCommsMessage
             {
                 Metadata = new Dictionary<string, string>
@@ -724,6 +724,34 @@ public class UserService : IUserService
             };
 
             var response = await _userRepository.AddUserPaymentMethodAsync(userId, paymentMethod);
+
+            // Send a message to Service Bus that a payment method was added
+            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            {
+                Metadata = new Dictionary<string, string>
+                {
+                    { "Type", "AddedPaymentMethod" },
+                    { "CommunicationEventId", Guid.NewGuid().ToString() }
+                },
+                CommunicationMethod = new Dictionary<string, string>
+                {
+                    { "Email", user.Email }
+                },
+                RelatedEntities = new Dictionary<string, string>
+                {
+                    { "UserId", user.Id },
+                    { "FirstName", user.FirstName },
+                    { "LastName", user.LastName }
+                },
+                MessageData = new Dictionary<string, string>
+                {
+                    { "PaymentMethodType", request.MethodType.ToString() },
+                }
+            },
+            subject: "AddedPaymentMethod",
+            correlationId: Guid.NewGuid().ToString(),
+            queueName: _configuration["ServiceBusCommsQueueName"]);
+
             return ServiceResult<UserPaymentMethodResponse>.CreateSuccess(response);
         }
         catch (Exception ex)
