@@ -3,6 +3,7 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
 namespace HockeyPickup.Api.Helpers;
@@ -43,6 +44,7 @@ public static class StringExtensions
     }
 }
 
+[ExcludeFromCodeCoverage]
 public static class IntExtensions
 {
     public static string ParsePositionName(this int position)

@@ -36,4 +36,16 @@ public class ServiceBusCommsMessage
     [JsonPropertyName("MessageData")]
     [JsonProperty(nameof(MessageData), Required = Required.Default)]
     public Dictionary<string, string>? MessageData { get; set; }
+
+    [Description("List of email addresses to notify")]
+    [DataType("ICollection<string>")]
+    [JsonPropertyName("NotificationEmails")]
+    [JsonProperty(nameof(NotificationEmails))]
+    public ICollection<string>? NotificationEmails { get; set; }
+
+    [Description("List of device IDs for push notifications")]
+    [DataType("ICollection<string>")]
+    [JsonPropertyName("NotificationDeviceIds")]
+    [JsonProperty(nameof(NotificationDeviceIds))]
+    public ICollection<string>? NotificationDeviceIds { get; set; }
 }

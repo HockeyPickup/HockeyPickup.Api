@@ -64,7 +64,7 @@ public class SessionService : ISessionService
             {
                 // Get a list of all active users with notification preference
                 var users = await _userRepository.GetDetailedUsersAsync();
-                var userList = users.Where(u => u.Active && u.NotificationPreference != (int) NotificationPreference.None).ToDictionary(u => u.Id, u => u.Email ?? string.Empty);
+                var activeUserEmails = users.Where(u => u.Active && u.NotificationPreference != (int) NotificationPreference.None).Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).ToArray();
 
                 // Get the creating user's info
                 var userId = _httpContextAccessor.GetUserId();
@@ -85,14 +85,16 @@ public class SessionService : ISessionService
                     {
                         { "Email", "" }
                     },
-                    RelatedEntities = userList,
+                    RelatedEntities = null!,
                     MessageData = new Dictionary<string, string>
                     {
                         { "SessionDate", session.SessionDate.ToString() },
                         { "SessionUrl", sessionUrl },
                         { "Note", session.Note },
                         { "CreatedByName", $"{user.FirstName} {user.LastName}" }
-                    }
+                    },
+                    NotificationEmails = activeUserEmails!,
+                    NotificationDeviceIds = null
                 },
                 subject: "CreateSession",
                 correlationId: Guid.NewGuid().ToString(),
@@ -224,6 +226,44 @@ public class SessionService : ISessionService
 
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
             await _subscriptionHandler.HandleUpdate(updatedSession);
+
+            var users = await _userRepository.GetDetailedUsersAsync();
+            var userEmails = users.Where(u => u.Active && u.NotificationPreference == NotificationPreference.All).Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).ToArray();
+
+            var baseUrl = _configuration["BaseUrl"];
+            var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{updatedSession.SessionId}";
+
+            // Send a message to Service Bus that a payment method was added
+            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            {
+                Metadata = new Dictionary<string, string>
+                {
+                    { "Type", "TeamAssignmentChange" },
+                    { "CommunicationEventId", Guid.NewGuid().ToString() }
+                },
+                CommunicationMethod = new Dictionary<string, string>
+                {
+                    { "Email", user.Email }
+                },
+                RelatedEntities = new Dictionary<string, string>
+                {
+                    { "UserId", user.Id },
+                    { "FirstName", user.FirstName },
+                    { "LastName", user.LastName }
+                },
+                MessageData = new Dictionary<string, string>
+                {
+                    { "SessionDate", session.SessionDate.ToString() },
+                    { "SessionUrl", sessionUrl },
+                    { "FormerTeamAssignment", currentRoster.TeamAssignment.ParseTeamName() },
+                    { "NewTeamAssignment", newTeamAssignment.ParseTeamName() },
+                },
+                NotificationEmails = userEmails!,
+                NotificationDeviceIds = null
+            },
+            subject: "TeamAssignmentChange",
+            correlationId: Guid.NewGuid().ToString(),
+            queueName: _configuration["ServiceBusCommsQueueName"]);
 
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }

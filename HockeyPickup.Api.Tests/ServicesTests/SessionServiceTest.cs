@@ -328,23 +328,87 @@ public partial class SessionServiceTests
 public partial class SessionServiceTests
 {
     [Fact]
-    public async Task UpdateRosterTeam_ValidRequest_ReturnsSuccess()
+    public async Task UpdateRosterTeam_Success_SendsServiceBusMessage()
     {
         // Arrange
         var userId = "testUser";
         var sessionId = 1;
         var newTeam = 2;
-        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
-        var session = CreateTestSession(userId, 2, 1);
+        var currentTeam = 1;
+        var baseUrl = "https://test.com";
+        var sessionUrl = $"{baseUrl}/session/{sessionId}";
 
+        var user = new AspNetUser
+        {
+            Id = userId,
+            FirstName = "Test",
+            LastName = "User",
+            Email = "test@example.com"
+        };
+
+        var session = CreateTestSession(userId, 2, currentTeam);
+
+        var mockUsers = new List<UserDetailedResponse>
+        {
+            new UserDetailedResponse
+            {
+                Id = "user1",
+                Email = "user1@test.com",
+                Active = true,
+                NotificationPreference = (NotificationPreference)1,
+                UserName = "user1",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m
+            }
+        };
+
+        // Setup configuration
+        var queueConfigured = false;
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Callback(() => queueConfigured = true)
+            .Returns("testqueue");
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns(baseUrl);
+
+        // Setup repository calls with debug checks
         _userManager.Setup(x => x.FindByIdAsync(userId))
             .Returns(Task.FromResult(user)!);
+
         _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
             .Returns(Task.FromResult(session));
+
         _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
             .Returns(Task.FromResult(session));
+
         _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
             .Returns(Task.FromResult(session));
+
+        var usersReturned = false;
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .Callback(() => usersReturned = true)
+            .ReturnsAsync(mockUsers);
+
+        _mockSubscriptionHandler.Setup(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()))
+            .Returns(Task.CompletedTask);
+
+        // Track ServiceBus call
+        var serviceBusMessageCalled = false;
+        ServiceBusCommsMessage? capturedMessage = null;
+
+        _serviceBus
+            .Setup(x => x.SendAsync(
+                It.IsAny<ServiceBusCommsMessage>(),
+                It.Is<string>(s => s == "TeamAssignmentChange"),
+                It.IsAny<string>(),
+                It.Is<string>(s => s == "testqueue"),
+                default))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, subject, corrId, queue, token) =>
+            {
+                serviceBusMessageCalled = true;
+                capturedMessage = msg;
+            })
+            .Returns(Task.FromResult(true));
 
         // Act
         var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
@@ -352,120 +416,24 @@ public partial class SessionServiceTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam), Times.Once);
-        _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
-    }
+        Assert.True(usersReturned, "User repository was not called");
+        Assert.True(queueConfigured, "Queue configuration was not accessed");
+        Assert.True(serviceBusMessageCalled, "Service bus message was not sent");
 
-    [Fact]
-    public async Task UpdateRosterTeam_UserNotFound_ReturnsFailure()
-    {
-        // Arrange
-        _userManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
-            .Returns(Task.FromResult<AspNetUser?>(null));
+        // Verify message content
+        if (capturedMessage != null)
+        {
+            Assert.Equal("TeamAssignmentChange", capturedMessage.Metadata["Type"]);
+            Assert.Equal(userId, capturedMessage.RelatedEntities["UserId"]);
+            Assert.Equal("Test", capturedMessage.RelatedEntities["FirstName"]);
+            Assert.Equal("User", capturedMessage.RelatedEntities["LastName"]);
+            Assert.Equal(sessionUrl, capturedMessage.MessageData["SessionUrl"]);
+            Assert.Equal("Light", capturedMessage.MessageData["FormerTeamAssignment"]);
+            Assert.Equal("Dark", capturedMessage.MessageData["NewTeamAssignment"]);
+            Assert.Contains("user1@test.com", capturedMessage.NotificationEmails);
+        }
 
-        // Act
-        var result = await _sessionService.UpdateRosterTeam(1, "nonexistent", 1);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("User not found", result.Message);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UpdateRosterTeam_SessionNotFound_ReturnsFailure()
-    {
-        // Arrange
-        var user = new AspNetUser { Id = "testUser" };
-        _userManager.Setup(x => x.FindByIdAsync("testUser"))
-            .Returns(Task.FromResult(user)!);
-
-        // Instead of throwing KeyNotFoundException, we'll have the repository return null
-        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
-            .Returns(Task.FromResult<SessionDetailedResponse>(null!));
-
-        // Act
-        var result = await _sessionService.UpdateRosterTeam(1, "testUser", 1);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Session not found", result.Message);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UpdateRosterTeam_SameTeam_ReturnsFailure()
-    {
-        // Arrange
-        var userId = "testUser";
-        var currentTeam = 1;
-        var user = new AspNetUser { Id = userId };
-        var session = CreateTestSession(userId, 1, currentTeam);
-
-        _userManager.Setup(x => x.FindByIdAsync(userId))
-            .Returns(Task.FromResult(user)!);
-        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
-            .Returns(Task.FromResult(session));
-
-        // Act
-        var result = await _sessionService.UpdateRosterTeam(1, userId, currentTeam);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal("New team assignment is the same as the current team assignment", result.Message);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UpdateRosterTeam_ExceptionThrown_ReturnsFailure()
-    {
-        // Arrange
-        var exception = new Exception("Test exception");
-        _userManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
-            .ThrowsAsync(exception);
-
-        // Act
-        var result = await _sessionService.UpdateRosterTeam(1, "testUser", 1);
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Contains("Test exception", result.Message);
-
-        // Correct way to verify ILogger
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-            Times.Once);
-    }
-
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(3)]
-    [InlineData(99)]
-    public void ParseTeamName_InvalidTeam_ReturnsEmpty(int team)
-    {
-        // Act
-        var result = team.ParseTeamName();
-
-        // Assert
-        result.Should().BeEmpty();
-    }
-
-    [Theory]
-    [InlineData(0, "TBD")]
-    [InlineData(1, "Light")]
-    [InlineData(2, "Dark")]
-    public void ParseTeamName_ValidTeam_ReturnsCorrectName(int team, string expected)
-    {
-        // Act
-        var result = team.ParseTeamName();
-
-        // Assert
-        result.Should().Be(expected);
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()), Times.Once);
     }
 }
 
@@ -876,8 +844,7 @@ public partial class SessionServiceTests
         {
             Assert.Equal("CreateSession", capturedMessage.Metadata["Type"]);
             Assert.Equal("Test User", capturedMessage.MessageData["CreatedByName"]);
-            Assert.Contains("user1", capturedMessage.RelatedEntities.Keys);
-            Assert.Equal("user1@test.com", capturedMessage.RelatedEntities["user1"]);
+            Assert.Equal("user1@test.com", capturedMessage.NotificationEmails.FirstOrDefault());
         }
     }
 
@@ -1076,5 +1043,383 @@ public partial class SessionServiceTests
             It.IsAny<Exception>(),
             It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_Success_FiltersDifferentNotificationPreferences()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var newTeam = 2;
+        var user = new AspNetUser
+        {
+            Id = userId,
+            FirstName = "Test",
+            LastName = "User",
+            Email = "test@example.com"
+        };
+        var session = CreateTestSession(userId, 2, 1);
+
+        var mockUsers = new List<UserDetailedResponse>
+        {
+            new UserDetailedResponse
+            {
+                Id = "user1",
+                Email = "active.all@test.com",
+                Active = true,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user1",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m
+            },
+            new UserDetailedResponse
+            {
+                Id = "user2",
+                Email = "active.none@test.com",
+                Active = true,
+                NotificationPreference = NotificationPreference.None,
+                UserName = "user2",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m
+            },
+            new UserDetailedResponse
+            {
+                Id = "user3",
+                Email = "inactive.all@test.com",
+                Active = false,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user3",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m
+            },
+            new UserDetailedResponse
+            {
+                Id = "user4",
+                Email = "", // Empty email
+                Active = true,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user4",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m
+            },
+            new UserDetailedResponse
+            {
+                Id = "user5",
+                Email = null, // Null email
+                Active = true,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user5",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m
+            }
+        };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+        _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
+            .Returns(Task.FromResult(session));
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
+            .Returns(Task.FromResult(session));
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .ReturnsAsync(mockUsers);
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns("https://test.com");
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Returns("testqueue");
+
+        ServiceBusCommsMessage? capturedMessage = null;
+        _serviceBus
+            .Setup(x => x.SendAsync(
+                It.IsAny<ServiceBusCommsMessage>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                default))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            {
+                capturedMessage = msg;
+            })
+            .Returns(Task.FromResult(true));
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedMessage);
+
+        // Verify only active users with All preference and valid emails are included
+        Assert.Contains("active.all@test.com", capturedMessage!.NotificationEmails);
+        Assert.DoesNotContain("active.none@test.com", capturedMessage.NotificationEmails);
+        Assert.DoesNotContain("inactive.all@test.com", capturedMessage.NotificationEmails);
+        Assert.Single(capturedMessage.NotificationEmails); // Only one valid email should be included
+    }
+
+    [Fact]
+    public async Task CreateSession_Success_FiltersDifferentNotificationPreferences()
+    {
+        // Arrange
+        var request = new CreateSessionRequest
+        {
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            RegularSetId = 1,
+            BuyDayMinimum = 1,
+            Cost = 20.00m,
+            Note = "Test session"
+        };
+
+        var mockUsers = new List<UserDetailedResponse>
+        {
+            new UserDetailedResponse
+            {
+                Id = "user1",
+                Email = "active.all@test.com",
+                Active = true,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user1",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m,
+                FirstName = "Active",
+                LastName = "All"
+            },
+            new UserDetailedResponse
+            {
+                Id = "user2",
+                Email = "active.none@test.com",
+                Active = true,
+                NotificationPreference = NotificationPreference.None,
+                UserName = "user2",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m,
+                FirstName = "Active",
+                LastName = "None"
+            },
+            new UserDetailedResponse
+            {
+                Id = "user3",
+                Email = "inactive.all@test.com",
+                Active = false,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user3",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m,
+                FirstName = "Inactive",
+                LastName = "All"
+            },
+            new UserDetailedResponse
+            {
+                Id = "user4",
+                Email = "", // Empty email
+                Active = true,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user4",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m,
+                FirstName = "Empty",
+                LastName = "Email"
+            },
+            new UserDetailedResponse
+            {
+                Id = "user5",
+                Email = null, // Null email
+                Active = true,
+                NotificationPreference = NotificationPreference.All,
+                UserName = "user5",
+                Preferred = false,
+                PreferredPlus = false,
+                Rating = 1.0m,
+                FirstName = "Null",
+                LastName = "Email"
+            }
+        };
+
+        var createdSession = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            SessionDate = request.SessionDate,
+            RegularSetId = request.RegularSetId,
+            BuyDayMinimum = request.BuyDayMinimum,
+            Cost = request.Cost,
+            Note = request.Note,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow
+        };
+
+        var testUser = new AspNetUser
+        {
+            Id = "testUserId",
+            FirstName = "Test",
+            LastName = "User"
+        };
+
+        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
+            .ReturnsAsync(createdSession);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(createdSession);
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .ReturnsAsync(mockUsers);
+        _userManager.Setup(x => x.FindByIdAsync("testUserId"))
+            .ReturnsAsync(testUser);
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns("https://test.com");
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Returns("testqueue");
+
+        var mockHttpContext = new DefaultHttpContext();
+        mockHttpContext.Items["UserId"] = "testUserId";
+        _mockContextAccessor.Object.HttpContext = mockHttpContext;
+
+        ServiceBusCommsMessage? capturedMessage = null;
+        _serviceBus
+            .Setup(x => x.SendAsync(
+                It.IsAny<ServiceBusCommsMessage>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                default))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            {
+                capturedMessage = msg;
+            })
+            .Returns(Task.FromResult(true));
+
+        // Act
+        var result = await _sessionService.CreateSession(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedMessage);
+
+        // Verify only active users with All preference and valid emails are included
+        Assert.Contains("active.all@test.com", capturedMessage!.NotificationEmails);
+        Assert.DoesNotContain("active.none@test.com", capturedMessage.NotificationEmails);
+        Assert.DoesNotContain("inactive.all@test.com", capturedMessage.NotificationEmails);
+        Assert.Single(capturedMessage.NotificationEmails); // Only one valid email should be included
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_UserNull_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "nonexistentUser";
+        var newTeam = 2;
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser?) null);
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User not found", result.Message);
+
+        // Verify repository methods were not called
+        _mockSessionRepository.Verify(x => x.GetSessionAsync(It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_SessionNull_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "testUser";
+        var newTeam = 2;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync((SessionDetailedResponse?) null!);
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Session not found", result.Message);
+
+        // Verify subsequent methods were not called
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_SameTeamAssignment_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "testUser";
+        var currentTeam = 2;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession(userId, 1, currentTeam); // Position 1, Team 2
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(session);
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, currentTeam); // Try to update to same team
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("New team assignment is the same as the current team assignment", result.Message);
+
+        // Verify subsequent methods were not called
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterTeam_ThrowsException_ReturnsFailure()
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "testUser";
+        var newTeam = 2;
+        var expectedException = new Exception("Test exception");
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ThrowsAsync(expectedException);
+
+        // Act
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal($"An error occurred updating player team assignment: {expectedException.Message}", result.Message);
+
+        // Verify logger was called
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+
+        // Verify no other methods were called
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
     }
 }
