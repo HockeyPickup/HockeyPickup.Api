@@ -1,4 +1,3 @@
-using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
@@ -6,8 +5,6 @@ using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace HockeyPickup.Api.Services;
 

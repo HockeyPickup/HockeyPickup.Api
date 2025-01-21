@@ -4,8 +4,6 @@ using Microsoft.Extensions.Logging;
 using FluentAssertions;
 using HockeyPickup.Api.Controllers;
 using HockeyPickup.Api.Services;
-using HockeyPickup.Api.Models.Domain;
-using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc.Filters;

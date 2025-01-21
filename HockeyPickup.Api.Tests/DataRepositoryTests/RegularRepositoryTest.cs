@@ -9,10 +9,6 @@ using Moq;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using Microsoft.Extensions.Logging;
-using HockeyPickup.Api.Models.Requests;
-using HockeyPickup.Api.Services;
-using Microsoft.AspNetCore.Identity;
-using System.Linq.Expressions;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure;
-using Microsoft.Extensions.Logging;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 

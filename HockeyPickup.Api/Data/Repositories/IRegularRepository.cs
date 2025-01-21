@@ -1,4 +1,3 @@
-using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Models.Responses;
 
 namespace HockeyPickup.Api.Data.Repositories;
