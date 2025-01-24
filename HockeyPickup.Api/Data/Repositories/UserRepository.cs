@@ -95,7 +95,7 @@ public class UserRepository : IUserRepository
                     })
                     .ToList()
             })
-            .FirstOrDefaultAsync();
+        .FirstOrDefaultAsync();
     }
 
     public async Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync()
@@ -105,57 +105,70 @@ public class UserRepository : IUserRepository
             TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time")
         );
 
-        var query =
-            from session in _context.Sessions
-            where session.SessionDate > currentDate
-                && !session.Note.Contains("cancelled")
-            select new LockerRoom13Response
+        var sessionsQuery = await _context.Sessions
+            .Where(s => s.SessionDate > currentDate && !s.Note.Contains("cancelled"))
+            .OrderBy(s => s.SessionDate)
+            .ToListAsync();
+
+        var result = new List<LockerRoom13Response>();
+
+        foreach (var session in sessionsQuery)
+        {
+            var sessionRosters = await _context.SessionRosters
+                .Where(r => r.SessionId == session.SessionId)
+                .ToListAsync();
+
+            var sessionBuySells = await _context.BuySells
+                .Where(b => b.SessionId == session.SessionId &&
+                           b.SellerUserId == null &&
+                           b.BuyerUserId != null)
+                .ToListAsync();
+
+            var lr13Players = await _context.Users
+                .Where(u => u.LockerRoom13)
+                .Select(user => new LockerRoom13Players
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    FirstName = user.FirstName ?? string.Empty,
+                    LastName = user.LastName ?? string.Empty,
+                    Active = user.Active,
+                    Preferred = user.Preferred,
+                    PreferredPlus = user.PreferredPlus,
+                    LockerRoom13 = user.LockerRoom13,
+                    PlayerStatus = GetPlayerStatus(user.Id, sessionRosters, sessionBuySells)
+                })
+                .OrderBy(p => p.LastName)
+                .ThenBy(p => p.FirstName)
+                .Distinct()
+                .ToListAsync();
+
+            result.Add(new LockerRoom13Response
             {
                 SessionId = session.SessionId,
                 SessionDate = session.SessionDate,
-                LockerRoom13Players = (
-                    from user in _context.Users
-                    where user.LockerRoom13
-                    join roster in _context.SessionRosters
-                        on new { UserId = user.Id, session.SessionId }
-                        equals new { roster.UserId, roster.SessionId }
-                        into userRosters
-                    from roster in userRosters.DefaultIfEmpty()
-                        // Left join with BuySells to check queue status
-                    join buySell in _context.BuySells
-                        on new { UserId = user.Id, session.SessionId }
-                        equals new { UserId = buySell.BuyerUserId, buySell.SessionId }
-                        into buySells
-                    from buySell in buySells.DefaultIfEmpty()
-                    select new LockerRoom13Players
-                    {
-                        Id = user.Id,
-                        UserName = user.UserName,
-                        Email = user.Email,
-                        FirstName = user.FirstName,
-                        LastName = user.LastName,
-                        Active = user.Active,
-                        Preferred = user.Preferred,
-                        PreferredPlus = user.PreferredPlus,
-                        LockerRoom13 = user.LockerRoom13,
-                        PlayerStatus =
-                            // If they're a buyer with no seller, they're InQueue
-                            (buySell != null && buySell.SellerUserId == null) ?
-                                PlayerStatus.InQueue :
-                            // Otherwise use roster status
-                            roster == null ? PlayerStatus.NotPlaying :
-                                roster.IsPlaying ?
-                                    (roster.IsRegular ? PlayerStatus.Regular : PlayerStatus.Substitute)
-                                    : PlayerStatus.NotPlaying
-                    })
-                    .OrderBy(p => p.LastName)
-                    .ThenBy(p => p.FirstName)
-                    .ToList()
-            };
+                LockerRoom13Players = lr13Players
+            });
+        }
 
-        return await query
-            .OrderBy(r => r.SessionDate)
-            .ToListAsync();
+        return result;
+    }
+
+    private static PlayerStatus GetPlayerStatus(string userId,
+        List<SessionRoster> rosters,
+        List<BuySell> buySells)
+    {
+        if (buySells.Any(b => b.BuyerUserId == userId))
+            return PlayerStatus.InQueue;
+
+        var roster = rosters.FirstOrDefault(r => r.UserId == userId);
+        if (roster == null)
+            return PlayerStatus.NotPlaying;
+
+        return roster.IsPlaying
+            ? (roster.IsRegular ? PlayerStatus.Regular : PlayerStatus.Substitute)
+            : PlayerStatus.NotPlaying;
     }
 
     [ExcludeFromCodeCoverage]
