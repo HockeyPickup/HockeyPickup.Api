@@ -95,10 +95,10 @@ public class UserRepository : IUserRepository
                     })
                     .ToList()
             })
-            .FirstOrDefaultAsync();
+        .FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync()
+public async Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync()
     {
         var currentDate = TimeZoneInfo.ConvertTimeFromUtc(
             DateTime.UtcNow,
@@ -148,6 +148,7 @@ public class UserRepository : IUserRepository
                                     (roster.IsRegular ? PlayerStatus.Regular : PlayerStatus.Substitute)
                                     : PlayerStatus.NotPlaying
                     })
+                    .Distinct()
                     .OrderBy(p => p.LastName)
                     .ThenBy(p => p.FirstName)
                     .ToList()
