@@ -75,6 +75,11 @@ public class BuySell
     public int TeamAssignment { get; set; }
     public bool SellerNoteFlagged { get; set; }
     public bool BuyerNoteFlagged { get; set; }
+    public decimal Price { get; set; }
+    public int PaymentMethod { get; set; }
+    public string? CreateByUserId { get; set; }
+    public string? UpdateByUserId { get; set; }
+    public string? TransactionStatus { get; set; }
 
     // Navigation properties
     [ForeignKey("SessionId")]

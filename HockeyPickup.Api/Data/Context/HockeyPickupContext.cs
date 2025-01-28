@@ -263,6 +263,11 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.TeamAssignment).HasDefaultValue(0);
             entity.Property(e => e.SellerNoteFlagged).HasDefaultValue(false);
             entity.Property(e => e.BuyerNoteFlagged).HasDefaultValue(false);
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.PaymentMethod).HasDefaultValue(0);
+            entity.Property(e => e.CreateByUserId).HasColumnType("nvarchar(128)").IsRequired();
+            entity.Property(e => e.UpdateByUserId).HasColumnType("nvarchar(128)").IsRequired();
+            entity.Property(e => e.TransactionStatus).HasMaxLength(50).IsRequired();
 
             entity.HasOne(e => e.Session)
                     .WithMany(s => s.BuySells)
