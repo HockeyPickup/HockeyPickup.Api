@@ -47,8 +47,11 @@ public partial class AspNetUser : IdentityUser<string>
     public string? LastName { get; set; }
     public int NotificationPreference { get; set; }
     public int PositionPreference { get; set; }
+    public string? PayPalEmail { get; set; } = null!;
     public bool Active { get; set; }
     public bool Preferred { get; set; }
+    public string? VenmoAccount { get; set; }
+    public string? MobileLast4 { get; set; }
     public decimal Rating { get; set; }
     public bool PreferredPlus { get; set; }
     public string? EmergencyName { get; set; }
