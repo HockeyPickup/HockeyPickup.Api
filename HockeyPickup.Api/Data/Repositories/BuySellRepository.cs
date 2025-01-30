@@ -78,7 +78,13 @@ public class BuySellRepository : IBuySellRepository
     {
         try
         {
-            return await _context.BuySells.FirstOrDefaultAsync(t => t.BuySellId == buySellId);
+            return await _context.BuySells
+                        .Include(b => b.Session)
+                        .Include(b => b.Buyer)
+                        .Include(b => b.Seller)
+                        .Include(b => b.CreateByUser)
+                        .Include(b => b.UpdateByUser)
+                        .FirstOrDefaultAsync(t => t.BuySellId == buySellId);
         }
         catch (Exception ex)
         {
@@ -91,7 +97,13 @@ public class BuySellRepository : IBuySellRepository
     {
         try
         {
-            return await _context.BuySells.Where(t => t.SessionId == sessionId).OrderByDescending(t => t.CreateDateTime).ToListAsync();
+            return await _context.BuySells
+                        .Include(b => b.Session)
+                        .Include(b => b.Buyer)
+                        .Include(b => b.Seller)
+                        .Include(b => b.CreateByUser)
+                        .Include(b => b.UpdateByUser)
+                        .Where(t => t.SessionId == sessionId).OrderByDescending(t => t.CreateDateTime).ToListAsync();
         }
         catch (Exception ex)
         {
@@ -104,7 +116,13 @@ public class BuySellRepository : IBuySellRepository
     {
         try
         {
-            return await _context.BuySells.Where(t => t.BuyerUserId == userId || t.SellerUserId == userId).OrderByDescending(t => t.CreateDateTime).ToListAsync();
+            return await _context.BuySells
+                        .Include(b => b.Session)
+                        .Include(b => b.Buyer)
+                        .Include(b => b.Seller)
+                        .Include(b => b.CreateByUser)
+                        .Include(b => b.UpdateByUser)
+                        .Where(t => t.BuyerUserId == userId || t.SellerUserId == userId).OrderByDescending(t => t.CreateDateTime).ToListAsync();
         }
         catch (Exception ex)
         {
@@ -117,7 +135,13 @@ public class BuySellRepository : IBuySellRepository
     {
         try
         {
-            return await _context.BuySells.Where(t => t.SessionId == sessionId && (t.BuyerUserId == userId || t.SellerUserId == userId)).OrderByDescending(t => t.CreateDateTime).ToListAsync();
+            return await _context.BuySells
+                        .Include(b => b.Session)
+                        .Include(b => b.Buyer)
+                        .Include(b => b.Seller)
+                        .Include(b => b.CreateByUser)
+                        .Include(b => b.UpdateByUser)
+                        .Where(t => t.SessionId == sessionId && (t.BuyerUserId == userId || t.SellerUserId == userId)).OrderByDescending(t => t.CreateDateTime).ToListAsync();
         }
         catch (Exception ex)
         {
@@ -130,7 +154,13 @@ public class BuySellRepository : IBuySellRepository
     {
         try
         {
-            return await _context.BuySells.Where(t => t.SessionId == sessionId && t.SellerUserId != null && t.BuyerUserId == null).OrderBy(t => t.CreateDateTime).FirstOrDefaultAsync();
+            return await _context.BuySells
+                        .Include(b => b.Session)
+                        .Include(b => b.Buyer)
+                        .Include(b => b.Seller)
+                        .Include(b => b.CreateByUser)
+                        .Include(b => b.UpdateByUser)
+                        .Where(t => t.SessionId == sessionId && t.SellerUserId != null && t.BuyerUserId == null).OrderBy(t => t.CreateDateTime).FirstOrDefaultAsync();
         }
         catch (Exception ex)
         {
@@ -143,7 +173,13 @@ public class BuySellRepository : IBuySellRepository
     {
         try
         {
-            return await _context.BuySells.Where(t => t.SessionId == sessionId && t.BuyerUserId != null && t.SellerUserId == null).OrderBy(t => t.CreateDateTime).FirstOrDefaultAsync();
+            return await _context.BuySells
+                        .Include(b => b.Session)
+                        .Include(b => b.Buyer)
+                        .Include(b => b.Seller)
+                        .Include(b => b.CreateByUser)
+                        .Include(b => b.UpdateByUser)
+                        .Where(t => t.SessionId == sessionId && t.BuyerUserId != null && t.SellerUserId == null).OrderBy(t => t.CreateDateTime).FirstOrDefaultAsync();
         }
         catch (Exception ex)
         {

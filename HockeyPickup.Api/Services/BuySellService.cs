@@ -454,6 +454,28 @@ public class BuySellService : IBuySellService
                 });
             }
 
+            // Check existing BuySells for active Buy
+            var userBuySells = await _buySellRepository.GetUserBuySellsAsync(sessionId, userId);
+            var hasActiveBuySellBuy = userBuySells.Any(t => t.BuyerUserId == userId && t.SellerUserId == null);
+            if (hasActiveBuySellBuy)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "You already have an active Buy for this session"
+                });
+            }
+
+            // Check existing BuySells for an active Sell
+            var hasActiveBuySellSell = userBuySells.Any(t => t.SellerUserId == userId && t.BuyerUserId == null);
+            if (hasActiveBuySellSell)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "You already have an active Sell for this session"
+                });
+            }
 
             // Check buy window based on user status
             var user = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
@@ -483,18 +505,6 @@ public class BuySellService : IBuySellService
                     IsAllowed = false,
                     Reason = $"{windowType} buy window is not open yet",
                     TimeUntilAllowed = timeUntilOpen
-                });
-            }
-
-            // Check existing BuySells
-            var userBuySells = await _buySellRepository.GetUserBuySellsAsync(sessionId, userId);
-            var hasActiveBuySell = userBuySells.Any(t => t.BuyerUserId == userId && t.SellerUserId == null);
-            if (hasActiveBuySell)
-            {
-                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
-                {
-                    IsAllowed = false,
-                    Reason = "You already have an active Buy for this session"
                 });
             }
 
@@ -537,10 +547,21 @@ public class BuySellService : IBuySellService
                 });
             }
 
-            // Check existing BuySells for an active open sale
+            // Check existing BuySells for active Buy
             var userBuySells = await _buySellRepository.GetUserBuySellsAsync(sessionId, userId);
-            var hasActiveBuySell = userBuySells.Any(t => t.SellerUserId == userId && t.BuyerUserId == null);
-            if (hasActiveBuySell)
+            var hasActiveBuySellBuy = userBuySells.Any(t => t.BuyerUserId == userId && t.SellerUserId == null);
+            if (hasActiveBuySellBuy)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "You already have an active Buy for this session"
+                });
+            }
+
+            // Check existing BuySells for an active Sell
+            var hasActiveBuySellSell = userBuySells.Any(t => t.SellerUserId == userId && t.BuyerUserId == null);
+            if (hasActiveBuySellSell)
             {
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
@@ -581,17 +602,22 @@ public class BuySellService : IBuySellService
         return new BuySellResponse
         {
             BuySellId = buySell.BuySellId,
-            TeamAssignment = buySell.TeamAssignment,
-            BuyerNote = buySell.BuyerNote,
+            BuyerUserId = buySell.BuyerUserId,
+            SellerUserId = buySell.SellerUserId,
             SellerNote = buySell.SellerNote,
-            Price = (decimal) buySell.Price!,
-            PaymentMethod = (PaymentMethodType) buySell.PaymentMethod!,
+            BuyerNote = buySell.BuyerNote,
             PaymentSent = buySell.PaymentSent,
             PaymentReceived = buySell.PaymentReceived,
             CreateDateTime = buySell.CreateDateTime,
+            TeamAssignment = buySell.TeamAssignment,
             UpdateDateTime = buySell.UpdateDateTime,
+            Price = buySell.Price ?? 0m,
             CreateByUserId = buySell.CreateByUserId,
             UpdateByUserId = buySell.UpdateByUserId,
+            PaymentMethod = buySell.PaymentMethod.HasValue ? buySell.PaymentMethod.Value : PaymentMethodType.Unspecified,
+            TransactionStatus = buySell.TransactionStatus,
+            SellerNoteFlagged = buySell.SellerNoteFlagged,
+            BuyerNoteFlagged = buySell.BuyerNoteFlagged,
             Buyer = buyer != null ? new UserDetailedResponse
             {
                 Id = buyer.Id,
