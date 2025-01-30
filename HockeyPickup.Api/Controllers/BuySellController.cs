@@ -63,7 +63,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{BuySellId}/confirm-payment-sent")]
+    [HttpPost("{buySellId}/confirm-payment-sent")]
     [Description("Confirm payment sent for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -77,7 +77,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{BuySellId}/confirm-payment-received")]
+    [HttpPost("{buySellId}/confirm-payment-received")]
     [Description("Confirm payment received for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -91,7 +91,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet("{BuySellId}")]
+    [HttpGet("{buySellId}")]
     [Description("Gets a specific BuySell by ID")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -117,7 +117,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{BuySellId}/cancel-buy")]
+    [HttpDelete("{buySellId}/cancel-buy")]
     [Description("Cancels a Buy for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -131,7 +131,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{BuySellId}/cancel-sell")]
+    [HttpDelete("{buySellId}/cancel-sell")]
     [Description("Cancels a Sell for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]

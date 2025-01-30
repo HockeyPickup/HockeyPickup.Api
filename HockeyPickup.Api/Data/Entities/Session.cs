@@ -79,6 +79,8 @@ public class BuySell
     public int PaymentMethod { get; set; }
     public string? CreateByUserId { get; set; }
     public string? UpdateByUserId { get; set; }
+
+    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
     public string? TransactionStatus { get; set; }
 
     // Navigation properties

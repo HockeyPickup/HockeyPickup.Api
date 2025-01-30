@@ -1,6 +1,8 @@
-﻿using HockeyPickup.Api.Data.Entities;
+﻿using Azure.Core;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
@@ -80,7 +82,7 @@ public class BuySellService : IBuySellService
             // Look for matching sell BuySells
             var matchingSell = await _buySellRepository.FindMatchingSellBuySellAsync(request.SessionId);
 
-            BuySell BuySell, result;
+            BuySell buySell, result;
             string message;
 
             if (matchingSell != null)
@@ -96,7 +98,7 @@ public class BuySellService : IBuySellService
                     return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
 
                 // Match with existing sell BuySell
-                BuySell = new BuySell
+                buySell = new BuySell
                 {
                     BuySellId = matchingSell.BuySellId,
                     BuyerUserId = userId,
@@ -107,12 +109,12 @@ public class BuySellService : IBuySellService
                 };
 
                 message = $"Matched with existing seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
-                result = await _buySellRepository.UpdateBuySellAsync(BuySell);
+                result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
             else
             {
                 // Create new buy BuySell
-                BuySell = new BuySell
+                buySell = new BuySell
                 {
                     SessionId = request.SessionId,
                     BuyerUserId = userId,
@@ -122,10 +124,11 @@ public class BuySellService : IBuySellService
                     UpdateDateTime = DateTime.UtcNow,
                     BuyerNote = request.Note,
                     Price = (decimal) session.Cost!,
+                    Buyer = buyer,
                 };
 
-                message = "Added to buying queue";
-                result = await _buySellRepository.CreateBuySellAsync(BuySell);
+                message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} added to BUYING queue";
+                result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
 
             //await NotifyBuySellUpdate(result);
@@ -134,8 +137,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing buy request for session {SessionId}", request.SessionId);
-            return ServiceResult<BuySellResponse>.CreateFailure($"An error occurred while processing buy request: {ex.Message}");
+            var msg = $"Error processing buy request for session {request.SessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
     }
 
@@ -172,13 +176,13 @@ public class BuySellService : IBuySellService
             // Look for matching buy BuySells
             var matchingBuy = await _buySellRepository.FindMatchingBuyBuySellAsync(request.SessionId);
 
-            BuySell BuySell, result;
+            BuySell buySell, result;
             string message;
 
             if (matchingBuy != null)
             {
                 // Match with existing buy BuySell
-                BuySell = new BuySell
+                buySell = new BuySell
                 {
                     BuySellId = matchingBuy.BuySellId,
                     SellerUserId = userId,
@@ -189,12 +193,12 @@ public class BuySellService : IBuySellService
                 };
 
                 message = $"Matched with existing buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
-                result = await _buySellRepository.UpdateBuySellAsync(BuySell);
+                result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
             else
             {
                 // Create new sell BuySell
-                BuySell = new BuySell
+                buySell = new BuySell
                 {
                     SessionId = request.SessionId,
                     SellerUserId = userId,
@@ -205,10 +209,11 @@ public class BuySellService : IBuySellService
                     SellerNote = request.Note,
                     Price = (decimal) session.Cost!,
                     TeamAssignment = sellerRoster.TeamAssignment,
+                    Seller = seller,
                 };
 
-                message = "Added to selling queue";
-                result = await _buySellRepository.CreateBuySellAsync(BuySell);
+                message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} added to SELLING queue";
+                result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
 
             //await NotifyBuySellUpdate(result);
@@ -217,8 +222,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing sell request for session {SessionId}", request.SessionId);
-            return ServiceResult<BuySellResponse>.CreateFailure($"An error occurred while processing sell request: {ex.Message}");
+            var msg = $"Error processing sell request for session {request.SessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
     }
 
@@ -226,28 +232,30 @@ public class BuySellService : IBuySellService
     {
         try
         {
-            var BuySell = await _buySellRepository.GetBuySellAsync(buySellId);
-            if (BuySell == null)
+            var buySell = await _buySellRepository.GetBuySellAsync(buySellId);
+            if (buySell == null)
                 return ServiceResult<BuySellResponse>.CreateFailure("BuySell not found");
 
             // Verify user is part of the BuySell
-            if (BuySell.BuyerUserId == userId)
+            if (buySell.BuyerUserId == userId)
                 return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to confirm payment sent for this BuySell");
 
-            BuySell.UpdateDateTime = DateTime.UtcNow;
-            BuySell.UpdateByUserId = userId;
-            BuySell.PaymentMethod = (int) paymentMethod;
-            BuySell.PaymentSent = true;
+            buySell.UpdateDateTime = DateTime.UtcNow;
+            buySell.UpdateByUserId = userId;
+            buySell.PaymentMethod = (int) paymentMethod;
+            buySell.PaymentSent = true;
 
-            var result = await _buySellRepository.UpdateBuySellAsync(BuySell);
+            var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} confirmed PAYMENT sent";
+            var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             //await NotifyBuySellUpdate(result);
 
-            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), "Payment confirmed sent");
+            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error confirming payment sent for BuySell {BuySellId}", buySellId);
-            return ServiceResult<BuySellResponse>.CreateFailure($"An error occurred while confirming payment sent: {ex.Message}");
+            var msg = $"Error confirming payment sent request for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
     }
 
@@ -255,27 +263,29 @@ public class BuySellService : IBuySellService
     {
         try
         {
-            var BuySell = await _buySellRepository.GetBuySellAsync(buySellId);
-            if (BuySell == null)
+            var buySell = await _buySellRepository.GetBuySellAsync(buySellId);
+            if (buySell == null)
                 return ServiceResult<BuySellResponse>.CreateFailure("BuySell not found");
 
             // Verify user is part of the BuySell
-            if (BuySell.SellerUserId == userId)
+            if (buySell.SellerUserId == userId)
                 return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to confirm payment received for this BuySell");
 
-            BuySell.UpdateDateTime = DateTime.UtcNow;
-            BuySell.UpdateByUserId = userId;
-            BuySell.PaymentReceived = true;
+            buySell.UpdateDateTime = DateTime.UtcNow;
+            buySell.UpdateByUserId = userId;
+            buySell.PaymentReceived = true;
 
-            var result = await _buySellRepository.UpdateBuySellAsync(BuySell);
+            var message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} confirmed PAYMENT received";
+            var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             //await NotifyBuySellUpdate(result);
 
-            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), "Payment confirmed received");
+            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error confirming payment received for BuySell {BuySellId}", buySellId);
-            return ServiceResult<BuySellResponse>.CreateFailure($"An error occurred while confirming payment received: {ex.Message}");
+            var msg = $"Error confirming payment received request for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
     }
 
@@ -291,8 +301,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting BuySell {BuySellId}", buySellId);
-            return ServiceResult<BuySellResponse>.CreateFailure($"An error occurred while retrieving BuySell: {ex.Message}");
+            var msg = $"Error getting BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
     }
 
@@ -307,8 +318,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting BuySells for session {SessionId}", sessionId);
-            return ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure($"An error occurred while retrieving session BuySells: {ex.Message}");
+            var msg = $"Error getting BuySells for Session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure(msg);
         }
     }
 
@@ -323,8 +335,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting BuySells for user {UserId}", userId);
-            return ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure($"An error occurred while retrieving user BuySells: {ex.Message}");
+            var msg = $"Error getting BuySells for User {userId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure(msg);
         }
     }
 
@@ -344,14 +357,16 @@ public class BuySellService : IBuySellService
             if (buySell.SellerUserId != null)
                 return ServiceResult<bool>.CreateFailure("Buyer cannot cancel spot that is already bought");
 
-            var result = await _buySellRepository.DeleteBuySellAsync(buySellId);
+            var message = $"Buyer: {buySell.Buyer.FirstName} {buySell.Buyer.LastName} cancelled BuySell";
+            var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
-            return ServiceResult<bool>.CreateSuccess(true, $"Buyer: {buySell.Buyer.FirstName} {buySell.Buyer.LastName} cancelled BuySell");
+            return ServiceResult<bool>.CreateSuccess(true, message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error cancelling BuySell {BuySellId}", buySellId);
-            return ServiceResult<bool>.CreateFailure($"An error occurred while cancelling BuySell: {ex.Message}");
+            var msg = $"Error cancelling Buy BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<bool>.CreateFailure(msg);
         }
     }
 
@@ -371,14 +386,16 @@ public class BuySellService : IBuySellService
             if (buySell.BuyerUserId != null)
                 return ServiceResult<bool>.CreateFailure("Seller cannot cancel spot that is already sold");
 
-            var result = await _buySellRepository.DeleteBuySellAsync(buySellId);
+            var message = $"Seller: {buySell.Seller.FirstName} {buySell.Seller.LastName} cancelled BuySell";
+            var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
-            return ServiceResult<bool>.CreateSuccess(true, $"Seller: {buySell.Seller.FirstName} {buySell.Seller.LastName} cancelled BuySell");
+            return ServiceResult<bool>.CreateSuccess(true, message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error cancelling BuySell {BuySellId}", buySellId);
-            return ServiceResult<bool>.CreateFailure($"An error occurred while cancelling BuySell: {ex.Message}");
+            var msg = $"Error cancelling Sell BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<bool>.CreateFailure(msg);
         }
     }
 
@@ -479,8 +496,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking buy eligibility for user {UserId} in session {SessionId}", userId, sessionId);
-            return ServiceResult<BuySellStatusResponse>.CreateFailure("An error occurred while checking buy eligibility");
+            var msg = $"Error checking buy eligibility for user {userId} in session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellStatusResponse>.CreateFailure(msg);
         }
     }
 
@@ -539,8 +557,9 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking sell eligibility for user {UserId} in session {SessionId}", userId, sessionId);
-            return ServiceResult<BuySellStatusResponse>.CreateFailure("An error occurred while checking sell eligibility");
+            var msg = $"Error checking sell eligibility for user {userId} in session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellStatusResponse>.CreateFailure(msg);
         }
     }
 
