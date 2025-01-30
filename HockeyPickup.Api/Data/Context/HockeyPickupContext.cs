@@ -256,24 +256,50 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.ToTable("BuySells", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.BuySellId).HasName("PK_dbo.BuySells");
 
-            entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
-            entity.Property(e => e.UpdateDateTime).HasColumnType("datetime");
-            entity.Property(e => e.BuyerNote).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.TeamAssignment).HasDefaultValue(0);
-            entity.Property(e => e.SellerNoteFlagged).HasDefaultValue(false);
-            entity.Property(e => e.BuyerNoteFlagged).HasDefaultValue(false);
-            entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
-            entity.Property(e => e.PaymentMethod).HasDefaultValue(0);
+            // Required DateTime fields
+            entity.Property(e => e.CreateDateTime).HasColumnType("datetime").IsRequired();
+            entity.Property(e => e.UpdateDateTime).HasColumnType("datetime").IsRequired();
+
+            // Nullable text fields
+            entity.Property(e => e.BuyerNote).HasColumnType("nvarchar(max)").IsRequired(false);
+            entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)").IsRequired(false);
+
+            // Required fields with defaults
+            entity.Property(e => e.TeamAssignment).HasDefaultValue(0).IsRequired();
+            entity.Property(e => e.SellerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever(); ;
+            entity.Property(e => e.BuyerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever(); ;
+            entity.Property(e => e.PaymentSent).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever(); ;
+            entity.Property(e => e.PaymentReceived).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever(); ;
+
+            // Nullable decimal
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)").IsRequired(false);
+
+            // Explicitly make PaymentMethod nullable
+            entity.Property(e => e.PaymentMethod).HasColumnType("int").IsRequired(false).HasConversion<int>();
+
+            // Required string fields
             entity.Property(e => e.CreateByUserId).HasColumnType("nvarchar(128)").IsRequired();
             entity.Property(e => e.UpdateByUserId).HasColumnType("nvarchar(128)").IsRequired();
-            entity.Property(e => e.TransactionStatus).HasMaxLength(50).IsRequired();
 
+            // Computed column
+            entity.Property(e => e.TransactionStatus)
+                .HasMaxLength(50)
+                .IsRequired()
+                .HasComputedColumnSql(@"case 
+            when [SellerUserId] IS NULL AND [BuyerUserId] IS NOT NULL then 'Looking to Buy' 
+            when [BuyerUserId] IS NULL AND [SellerUserId] IS NOT NULL then 'Available to Buy'  
+            when [BuyerUserId] IS NOT NULL AND [SellerUserId] IS NOT NULL then 
+                case when [PaymentSent]=(1) AND [PaymentReceived]=(1) then 'Complete' 
+                when [PaymentSent]=(1) then 'Payment Sent' 
+                else 'Payment Pending' end 
+            else 'Unknown' end", true);
+
+            // Navigation properties and relationships
             entity.HasOne(e => e.Session)
-                    .WithMany(s => s.BuySells)
-                    .HasForeignKey(e => e.SessionId)
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId")
+                .WithMany(s => s.BuySells)
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId")
                     .IsRequired(); // Make this relationship required
 
             // Configure one-way relationships for Buyer/Seller
@@ -292,7 +318,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .OnDelete(DeleteBehavior.Restrict);  // Prevent cascading deletes
         });
 
-            // Configure RegularSets
+        // Configure RegularSets
         modelBuilder.Entity<RegularSet>(entity =>
         {
             entity.ToTable("RegularSets", tb => tb.UseSqlOutputClause(false));

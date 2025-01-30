@@ -68,30 +68,38 @@ public class BuySell
     public string? SellerUserId { get; set; }
     public string? SellerNote { get; set; }
     public string? BuyerNote { get; set; }
-    public bool PaymentSent { get; set; }
-    public bool PaymentReceived { get; set; }
+    [Required]
+    public bool PaymentSent { get; set; } = false;  // Add default value
+    [Required] 
+    public bool PaymentReceived { get; set; } = false;  // Add default value
     public DateTime CreateDateTime { get; set; }
     public DateTime UpdateDateTime { get; set; }
     public int TeamAssignment { get; set; }
-    public bool SellerNoteFlagged { get; set; }
-    public bool BuyerNoteFlagged { get; set; }
-    public decimal Price { get; set; }
-    public int PaymentMethod { get; set; }
-    public string? CreateByUserId { get; set; }
-    public string? UpdateByUserId { get; set; }
+    public bool SellerNoteFlagged { get; set; } = false;  // Add default value
+    public bool BuyerNoteFlagged { get; set; } = false;  // Add default value
+    public decimal? Price { get; set; }
+    public PaymentMethodType? PaymentMethod { get; set; }
+    public string CreateByUserId { get; set; } = string.Empty;
+    public string UpdateByUserId { get; set; } = string.Empty;
 
     [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-    public string? TransactionStatus { get; set; }
+    public string TransactionStatus { get; set; } = string.Empty;
 
     // Navigation properties
-    [ForeignKey("SessionId")]
+    [ForeignKey(nameof(SessionId))]
     public virtual Session? Session { get; set; }
 
-    [ForeignKey("BuyerUserId")]
+    [ForeignKey(nameof(BuyerUserId))]
     public virtual AspNetUser? Buyer { get; set; }
 
-    [ForeignKey("SellerUserId")]
+    [ForeignKey(nameof(SellerUserId))]
     public virtual AspNetUser? Seller { get; set; }
+
+    [ForeignKey(nameof(CreateByUserId))]
+    public virtual AspNetUser? CreateByUser { get; set; }
+
+    [ForeignKey(nameof(UpdateByUserId))]
+    public virtual AspNetUser? UpdateByUser { get; set; }
 }
 
 public class ActivityLog

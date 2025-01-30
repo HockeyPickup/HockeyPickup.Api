@@ -7,6 +7,9 @@ namespace HockeyPickup.Api.Data.Entities;
 // PaymentMethod enum to define available payment types
 public enum PaymentMethodType
 {
+    [Description("Unspecified")]
+    Unspecified = 0,
+
     [Description("PayPal")]
     PayPal = 1,
 

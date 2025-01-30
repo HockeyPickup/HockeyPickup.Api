@@ -123,8 +123,13 @@ public class BuySellService : IBuySellService
                     CreateDateTime = DateTime.UtcNow,
                     UpdateDateTime = DateTime.UtcNow,
                     BuyerNote = request.Note,
-                    Price = (decimal) session.Cost!,
+                    Price = session.Cost,
                     Buyer = buyer,
+                    PaymentSent = false,
+                    PaymentReceived = false,
+                    SellerNoteFlagged = false,
+                    BuyerNoteFlagged = false,
+                    PaymentMethod = null
                 };
 
                 message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} added to BUYING queue";
@@ -207,9 +212,14 @@ public class BuySellService : IBuySellService
                     CreateDateTime = DateTime.UtcNow,
                     UpdateDateTime = DateTime.UtcNow,
                     SellerNote = request.Note,
-                    Price = (decimal) session.Cost!,
+                    Price = session.Cost,
                     TeamAssignment = sellerRoster.TeamAssignment,
                     Seller = seller,
+                    PaymentSent = false,
+                    PaymentReceived = false,
+                    SellerNoteFlagged = false,
+                    BuyerNoteFlagged = false,
+                    PaymentMethod = null
                 };
 
                 message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} added to SELLING queue";
@@ -242,7 +252,7 @@ public class BuySellService : IBuySellService
 
             buySell.UpdateDateTime = DateTime.UtcNow;
             buySell.UpdateByUserId = userId;
-            buySell.PaymentMethod = (int) paymentMethod;
+            buySell.PaymentMethod = paymentMethod;
             buySell.PaymentSent = true;
 
             var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} confirmed PAYMENT sent";
@@ -527,16 +537,6 @@ public class BuySellService : IBuySellService
                 });
             }
 
-            // Check if user is on roster
-            if (session.CurrentRosters?.Any(r => r.UserId == userId && !r.IsPlaying) == true)
-            {
-                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
-                {
-                    IsAllowed = false,
-                    Reason = "You must be on the roster to sell your spot"
-                });
-            }
-
             // Check existing BuySells for an active open sale
             var userBuySells = await _buySellRepository.GetUserBuySellsAsync(sessionId, userId);
             var hasActiveBuySell = userBuySells.Any(t => t.SellerUserId == userId && t.BuyerUserId == null);
@@ -546,6 +546,16 @@ public class BuySellService : IBuySellService
                 {
                     IsAllowed = false,
                     Reason = "You already have an active Sell for this session"
+                });
+            }
+
+            // Check if user is on roster
+            if (session.CurrentRosters?.Any(r => r.UserId == userId && !r.IsPlaying) == true)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "You must be on the roster to sell your spot"
                 });
             }
 
@@ -574,8 +584,8 @@ public class BuySellService : IBuySellService
             TeamAssignment = buySell.TeamAssignment,
             BuyerNote = buySell.BuyerNote,
             SellerNote = buySell.SellerNote,
-            Price = buySell.Price,
-            PaymentMethod = (PaymentMethodType) buySell.PaymentMethod,
+            Price = (decimal) buySell.Price!,
+            PaymentMethod = (PaymentMethodType) buySell.PaymentMethod!,
             PaymentSent = buySell.PaymentSent,
             PaymentReceived = buySell.PaymentReceived,
             CreateDateTime = buySell.CreateDateTime,
