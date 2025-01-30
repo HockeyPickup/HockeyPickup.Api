@@ -79,8 +79,8 @@ public class BuySell
     public bool BuyerNoteFlagged { get; set; } = false;  // Add default value
     public decimal? Price { get; set; }
     public PaymentMethodType? PaymentMethod { get; set; }
-    public string CreateByUserId { get; set; } = string.Empty;
-    public string UpdateByUserId { get; set; } = string.Empty;
+    public string? CreateByUserId { get; set; }
+    public string? UpdateByUserId { get; set; }
 
     [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
     public string TransactionStatus { get; set; } = string.Empty;
