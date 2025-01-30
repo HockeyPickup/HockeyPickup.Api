@@ -84,6 +84,20 @@ public class SessionController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpDelete("delete-roster-player/{sessionId}/{userId}")]
+    [Description("Removes a player from the Session Roster")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> DeleteRosterPlayer(int sessionId, string userId)
+    {
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("delete-session/{sessionId}")]
     [Description("Deletes an existing session")]
     [Produces(typeof(ApiDataResponse<bool>))]

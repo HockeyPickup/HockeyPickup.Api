@@ -14,6 +14,7 @@ public interface ISessionService
     Task<ServiceResult<SessionDetailedResponse>> UpdateSession(UpdateSessionRequest request);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment);
+    Task<ServiceResult<SessionDetailedResponse>> DeleteRosterPlayer(int sessionId, string userId);
     Task<ServiceResult<bool>> DeleteSessionAsync(int sessionId);
 }
 
@@ -233,7 +234,7 @@ public class SessionService : ISessionService
             var baseUrl = _configuration["BaseUrl"];
             var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{updatedSession.SessionId}";
 
-            // Send a message to Service Bus that a payment method was added
+            // Send a message to Service Bus that a players position was updated
             await _serviceBus.SendAsync(new ServiceBusCommsMessage
             {
                 Metadata = new Dictionary<string, string>
@@ -271,6 +272,44 @@ public class SessionService : ISessionService
         {
             _logger.LogError(ex, $"Error updating player team assignment for session: {sessionId}, user: {userId}");
             return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating player team assignment: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<SessionDetailedResponse>> DeleteRosterPlayer(int sessionId, string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User not found");
+            }
+
+            var session = await _sessionRepository.GetSessionAsync(sessionId);
+            if (session == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Session not found");
+            }
+
+            var currentRoster = session.CurrentRosters.Where(u => u.UserId == userId).FirstOrDefault();
+            if (currentRoster == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User is not part of this session's current roster");
+            }
+
+            await _sessionRepository.DeletePlayerFromRosterAsync(sessionId, userId);
+
+            var msg = $"{user.FirstName} {user.LastName} deleted from roster";
+
+            var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
+            await _subscriptionHandler.HandleUpdate(updatedSession);
+
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting player from roster for session: {sessionId}, user: {userId}");
+            return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred deleting player from roster: {ex.Message}");
         }
     }
 

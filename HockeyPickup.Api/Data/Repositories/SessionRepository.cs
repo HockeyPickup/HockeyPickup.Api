@@ -131,6 +131,24 @@ public class SessionRepository : ISessionRepository
         return session;
     }
 
+    public async Task<SessionDetailedResponse> DeletePlayerFromRosterAsync(int sessionId, string userId)
+    {
+        // Find and update the roster entry
+        var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+        if (rosterEntry == null)
+        {
+            throw new KeyNotFoundException($"Player not found in session roster");
+        }
+
+        _context.SessionRosters.Remove(rosterEntry);
+        await _context.SaveChangesAsync();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(sessionId);
+
+        return session;
+    }
+
     public async Task<IEnumerable<SessionBasicResponse>> GetBasicSessionsAsync()
     {
         return await _context.Sessions
