@@ -154,11 +154,13 @@ public class Program
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<ISessionRepository, SessionRepository>();
         builder.Services.AddScoped<IRegularRepository, RegularRepository>();
+        builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
 
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<ISessionService, SessionService>();
         builder.Services.AddScoped<IRegularService, RegularService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();
+        builder.Services.AddScoped<IBuySellService, BuySellService>();
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();

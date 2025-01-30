@@ -283,6 +283,14 @@ public class SessionRepository : ISessionRepository
             PaymentReceived = b.PaymentReceived,
             CreateDateTime = b.CreateDateTime,
             TeamAssignment = b.TeamAssignment,
+            UpdateDateTime = b.UpdateDateTime,
+            Price = b.Price,
+            CreateByUserId = b.CreateByUserId,
+            UpdateByUserId = b.UpdateByUserId,
+            PaymentMethod = (PaymentMethodType) b.PaymentMethod,
+            TransactionStatus = b.TransactionStatus,
+            SellerNoteFlagged = b.SellerNoteFlagged,
+            BuyerNoteFlagged = b.BuyerNoteFlagged,
             Buyer = MapToUserDetailedResponse(b.Buyer),
             Seller = MapToUserDetailedResponse(b.Seller)
         }).OrderBy(b => b.BuySellId).ToList();

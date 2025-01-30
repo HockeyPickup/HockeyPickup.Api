@@ -141,12 +141,13 @@ public class SessionDetailedResponse : SessionBasicResponse
 [GraphQLName("BuySell")]
 public class BuySellResponse
 {
-    [Description("Unique identifier for the buy/sell transaction")]
+    [Required]
+    [Description("Unique identifier for the BuySell")]
     [JsonPropertyName("BuySellId")]
-    [JsonProperty(nameof(BuySellId))]
+    [JsonProperty(nameof(BuySellId), Required = Required.Always)]
     [GraphQLName("BuySellId")]
-    [GraphQLDescription("Unique identifier for the buy/sell transaction")]
-    public int? BuySellId { get; set; }
+    [GraphQLDescription("Unique identifier for the BuySell")]
+    public required int BuySellId { get; set; }
 
     [Description("User ID of the buyer")]
     [MaxLength(128)]
@@ -206,6 +207,15 @@ public class BuySellResponse
     public required DateTime CreateDateTime { get; set; }
 
     [Required]
+    [Description("Date and time of last update")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("UpdateDateTime")]
+    [JsonProperty(nameof(UpdateDateTime), Required = Required.Always)]
+    [GraphQLName("UpdateDateTime")]
+    [GraphQLDescription("Date and time of last update")]
+    public required DateTime UpdateDateTime { get; set; }
+
+    [Required]
     [Description("Team assignment for the transaction")]
     [Range(0, 2)]
     [JsonPropertyName("TeamAssignment")]
@@ -213,6 +223,71 @@ public class BuySellResponse
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment for the transaction")]
     public required int TeamAssignment { get; set; }
+
+    [Required]
+    [Description("Price for the BuySell (from session)")]
+    [Range(0, 999.99)]
+    [DataType(DataType.Currency)]
+    [JsonPropertyName("Price")]
+    [JsonProperty(nameof(Price), Required = Required.Always)]
+    [GraphQLName("Price")]
+    [GraphQLDescription("Price for the BuySell (from session)")]
+    public required decimal Price { get; set; }
+
+    [Description("Payment method used to complete the BuySell")]
+    [JsonPropertyName("PaymentMethod")]
+    [JsonProperty(nameof(PaymentMethod))]
+    [GraphQLName("PaymentMethod")]
+    [GraphQLDescription("Payment method used to complete the BuySell")]
+    [EnumDataType(typeof(PaymentMethodType))]
+    public PaymentMethodType? PaymentMethod { get; set; }
+
+    [Description("User ID creating BuySell")]
+    [MaxLength(128)]
+    [JsonPropertyName("CreateByUserId")]
+    [JsonProperty(nameof(CreateByUserId))]
+    [GraphQLName("CreateByUserId")]
+    [GraphQLDescription("User ID creating BuySell")]
+    public string? CreateByUserId { get; set; }
+
+    [Description("User ID updating BuySell")]
+    [MaxLength(128)]
+    [JsonPropertyName("UpdateByUserId")]
+    [JsonProperty(nameof(UpdateByUserId))]
+    [GraphQLName("UpdateByUserId")]
+    [GraphQLDescription("User ID updating BuySell")]
+    public string? UpdateByUserId { get; set; }
+
+    [Description("Queue position of the Buyer")]
+    [JsonPropertyName("QueuePosition")]
+    [JsonProperty(nameof(QueuePosition))]
+    [GraphQLName("QueuePosition")]
+    [GraphQLDescription("Queue position of the Buyer")]
+    public int QueuePosition { get; set; }
+
+    [Description("Transaction status of BuySell")]
+    [MaxLength(128)]
+    [JsonPropertyName("TransactionStatus")]
+    [JsonProperty(nameof(TransactionStatus))]
+    [GraphQLName("TransactionStatus")]
+    [GraphQLDescription("Transaction status of BuySell")]
+    public string? TransactionStatus { get; set; }
+
+    [Required]
+    [Description("Indicates if the seller note has been flagged")]
+    [JsonPropertyName("SellerNoteFlagged")]
+    [JsonProperty(nameof(SellerNoteFlagged), Required = Required.Always)]
+    [GraphQLName("SellerNoteFlagged")]
+    [GraphQLDescription("Indicates if the seller note has been flagged")]
+    public bool SellerNoteFlagged { get; set; }
+
+    [Required]
+    [Description("Indicates if the buyer note has been flagged")]
+    [JsonPropertyName("BuyerNoteFlagged")]
+    [JsonProperty(nameof(BuyerNoteFlagged), Required = Required.Always)]
+    [GraphQLName("BuyerNoteFlagged")]
+    [GraphQLDescription("Indicates if the buyer note has been flagged")]
+    public bool BuyerNoteFlagged { get; set; }
 
     [Description("Buyer details")]
     [JsonPropertyName("Buyer")]
