@@ -204,10 +204,20 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         });
 
         // Configure many-to-many relationship
-        modelBuilder.Entity<AspNetUser>()
-            .HasMany(u => u.Roles)
-            .WithMany(r => r.Users)
-            .UsingEntity<IdentityUserRole<string>>();
+        modelBuilder.Entity<AspNetUser>(entity =>
+        {
+            entity.HasMany(u => u.Roles)
+                .WithMany(r => r.Users)
+                .UsingEntity<IdentityUserRole<string>>();
+
+            entity.Property(e => e.NotificationPreference)
+                .HasDefaultValue(NotificationPreference.OnlyMyBuySell)
+                .HasConversion<int>();
+
+            entity.Property(e => e.PositionPreference)
+                .HasDefaultValue(PositionPreference.TBD)
+                .HasConversion<int>();
+        });
 
         modelBuilder.Entity<Session>(entity =>
         {
@@ -423,6 +433,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .HasForeignKey(e => e.UserId)
                 .HasConstraintName("FK_dbo.SessionRosters_AspNetUsers");
         });
+
         modelBuilder.HasAnnotation("Relational:IsStoredInDatabase", true);
 
         modelBuilder.Entity<UserPaymentMethod>(entity =>

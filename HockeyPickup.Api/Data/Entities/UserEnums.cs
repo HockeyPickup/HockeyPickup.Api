@@ -91,7 +91,7 @@ public enum PaymentMethodType
     Venmo = 2,
 
     [GraphQLName("CashApp")]
-    [Display(Name = @"Cash App")]
+    [Display(Name = @"CashApp")]
     CashApp = 3,
 
     [GraphQLName("Zelle")]
