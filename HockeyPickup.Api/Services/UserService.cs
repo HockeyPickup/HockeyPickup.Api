@@ -126,8 +126,8 @@ public class UserService : IUserService
         if (request.LastName != null) user.LastName = request.LastName;
         if (request.EmergencyName != null) user.EmergencyName = request.EmergencyName;
         if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
-        if (request.NotificationPreference.HasValue) user.NotificationPreference = (int) request.NotificationPreference.Value;
-        if (request.PositionPreference.HasValue) user.PositionPreference = (int) request.PositionPreference.Value;
+        if (request.NotificationPreference.HasValue) user.NotificationPreference = request.NotificationPreference.Value;
+        if (request.PositionPreference.HasValue) user.PositionPreference = request.PositionPreference.Value;
         user.JerseyNumber = request.JerseyNumber;
     }
 
@@ -310,7 +310,7 @@ public class UserService : IUserService
                 LastName = request.LastName,
                 EmailConfirmed = false,
                 LockoutEnabled = false,
-                NotificationPreference = (int) NotificationPreference.OnlyMyBuySell,
+                NotificationPreference = NotificationPreference.OnlyMyBuySell,
                 PositionPreference = (int) PositionPreference.TBD,
                 NormalizedEmail = request.Email.ToUpperInvariant(),
                 NormalizedUserName = request.Email.ToUpperInvariant(),

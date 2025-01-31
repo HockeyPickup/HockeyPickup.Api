@@ -103,7 +103,7 @@ public class BuySellService : IBuySellService
                     BuySellId = matchingSell.BuySellId,
                     BuyerUserId = userId,
                     UpdateByUserId = userId,
-                    TeamAssignment = sellerRoster.TeamAssignment,
+                    TeamAssignment = (TeamAssignment) sellerRoster.TeamAssignment,
                     UpdateDateTime = DateTime.UtcNow,
                     BuyerNote = request.Note,
                 };
@@ -118,6 +118,7 @@ public class BuySellService : IBuySellService
                 {
                     SessionId = request.SessionId,
                     BuyerUserId = userId,
+                    TeamAssignment = TeamAssignment.TBD,
                     CreateByUserId = userId,
                     UpdateByUserId = userId,
                     CreateDateTime = DateTime.UtcNow,
@@ -192,7 +193,7 @@ public class BuySellService : IBuySellService
                     BuySellId = matchingBuy.BuySellId,
                     SellerUserId = userId,
                     UpdateByUserId = userId,
-                    TeamAssignment = sellerRoster.TeamAssignment,
+                    TeamAssignment = (TeamAssignment) sellerRoster.TeamAssignment,
                     UpdateDateTime = DateTime.UtcNow,
                     SellerNote = request.Note,
                 };
@@ -213,7 +214,7 @@ public class BuySellService : IBuySellService
                     UpdateDateTime = DateTime.UtcNow,
                     SellerNote = request.Note,
                     Price = session.Cost,
-                    TeamAssignment = sellerRoster.TeamAssignment,
+                    TeamAssignment = (TeamAssignment) sellerRoster.TeamAssignment,
                     Seller = seller,
                     PaymentSent = false,
                     PaymentReceived = false,
@@ -614,7 +615,7 @@ public class BuySellService : IBuySellService
             Price = buySell.Price ?? 0m,
             CreateByUserId = buySell.CreateByUserId,
             UpdateByUserId = buySell.UpdateByUserId,
-            PaymentMethod = buySell.PaymentMethod.HasValue ? buySell.PaymentMethod.Value : PaymentMethodType.Unspecified,
+            PaymentMethod = buySell.PaymentMethod.HasValue ? buySell.PaymentMethod.Value : PaymentMethodType.Unknown,
             TransactionStatus = buySell.TransactionStatus,
             SellerNoteFlagged = buySell.SellerNoteFlagged,
             BuyerNoteFlagged = buySell.BuyerNoteFlagged,

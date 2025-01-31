@@ -48,8 +48,8 @@ public class Regular
     [Column(Order = 1)]
     public string? UserId { get; set; }
 
-    public int TeamAssignment { get; set; }
-    public int PositionPreference { get; set; }
+    public TeamAssignment TeamAssignment { get; set; }
+    public PositionPreference PositionPreference { get; set; }
 
     // Navigation properties
     [ForeignKey("RegularSetId")]
@@ -74,7 +74,7 @@ public class BuySell
     public bool PaymentReceived { get; set; } = false;  // Add default value
     public DateTime CreateDateTime { get; set; }
     public DateTime UpdateDateTime { get; set; }
-    public int TeamAssignment { get; set; }
+    public TeamAssignment TeamAssignment { get; set; }
     public bool SellerNoteFlagged { get; set; } = false;  // Add default value
     public bool BuyerNoteFlagged { get; set; } = false;  // Add default value
     public decimal? Price { get; set; }
@@ -125,13 +125,13 @@ public class SessionRoster
     public int SessionRosterId { get; set; }
     public int SessionId { get; set; }
     public string UserId { get; set; } = null!;
-    public int TeamAssignment { get; set; }
+    public TeamAssignment TeamAssignment { get; set; }
     public bool IsPlaying { get; set; }
     public bool IsRegular { get; set; }
     public DateTime JoinedDateTime { get; set; }
     public DateTime? LeftDateTime { get; set; }
     public int? LastBuySellId { get; set; }
-    public int Position { get; set; }
+    public PositionPreference Position { get; set; }
 
     // Navigation properties
     [ForeignKey("SessionId")]
@@ -151,7 +151,11 @@ public class RosterPlayer
     public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public int SessionId { get; set; }
+
+    // Map TeamAssignment as integer
+    [Column(TypeName = "int")]
     public int TeamAssignment { get; set; }
+
     public bool IsPlaying { get; set; }
     public bool IsRegular { get; set; }
     public string PlayerStatus { get; set; } = null!;
@@ -161,7 +165,13 @@ public class RosterPlayer
     public string PhotoUrl { get; set; } = null!;
     public int? LastBuySellId { get; set; }
     public DateTime JoinedDateTime { get; set; }
+
+    // Map Position as integer
+    [Column(TypeName = "int")]
     public int Position { get; set; }
+
+    // CurrentPosition should be string since view returns text
+    [Column(TypeName = "nvarchar(50)")]
     public string CurrentPosition { get; set; } = null!;
 }
 
@@ -173,7 +183,7 @@ public class BuyingQueue
     public int SessionId { get; set; }
     public string? BuyerName { get; set; }
     public string? SellerName { get; set; }
-    public int TeamAssignment { get; set; }
+    public TeamAssignment TeamAssignment { get; set; }
     public string TransactionStatus { get; set; } = null!;
     public string QueueStatus { get; set; } = null!;
     public bool PaymentSent { get; set; }

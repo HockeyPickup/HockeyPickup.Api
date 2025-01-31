@@ -127,7 +127,7 @@ public class RegularRepository : IRegularRepository
         }
     }
 
-    public async Task<RegularSetDetailedResponse?> UpdatePlayerPositionAsync(int regularSetId, string userId, int position)
+    public async Task<RegularSetDetailedResponse?> UpdatePlayerPositionAsync(int regularSetId, string userId, PositionPreference position)
     {
         try
         {
@@ -150,7 +150,7 @@ public class RegularRepository : IRegularRepository
         }
     }
 
-    public async Task<RegularSetDetailedResponse?> UpdatePlayerTeamAsync(int regularSetId, string userId, int team)
+    public async Task<RegularSetDetailedResponse?> UpdatePlayerTeamAsync(int regularSetId, string userId, TeamAssignment team)
     {
         try
         {
@@ -208,7 +208,7 @@ public class RegularRepository : IRegularRepository
         }
     }
 
-    public async Task<RegularSetDetailedResponse?> AddPlayerAsync(int regularSetId, string userId, int teamAssignment, int positionPreference)
+    public async Task<RegularSetDetailedResponse?> AddPlayerAsync(int regularSetId, string userId, TeamAssignment teamAssignment, PositionPreference positionPreference)
     {
         try
         {

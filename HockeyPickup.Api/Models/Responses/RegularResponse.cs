@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 
 namespace HockeyPickup.Api.Models.Responses;
@@ -83,7 +85,8 @@ public class RegularDetailedResponse
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment for the regular player")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Position preference for the regular player")]
@@ -91,7 +94,8 @@ public class RegularDetailedResponse
     [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
     [GraphQLName("PositionPreference")]
     [GraphQLDescription("Position preference for the regular player")]
-    public required int PositionPreference { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference PositionPreference { get; set; }
 
     [Description("Detailed user information")]
     [JsonPropertyName("User")]

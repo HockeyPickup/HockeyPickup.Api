@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 
 namespace HockeyPickup.Api.Models.Responses;
@@ -222,7 +223,8 @@ public class BuySellResponse
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment for the transaction")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Price for the BuySell (from session)")]
@@ -240,6 +242,7 @@ public class BuySellResponse
     [GraphQLName("PaymentMethod")]
     [GraphQLDescription("Payment method used to complete the BuySell")]
     [EnumDataType(typeof(PaymentMethodType))]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PaymentMethodType>))]
     public PaymentMethodType? PaymentMethod { get; set; }
 
     [Description("User ID creating BuySell")]
@@ -427,7 +430,8 @@ public class RegularResponse
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment for the regular player")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Position preference for the regular player")]
@@ -436,7 +440,8 @@ public class RegularResponse
     [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
     [GraphQLName("PositionPreference")]
     [GraphQLDescription("Position preference for the regular player")]
-    public required int PositionPreference { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference PositionPreference { get; set; }
 
     [Description("User details")]
     [JsonPropertyName("User")]
@@ -489,7 +494,8 @@ public class BuyingQueueItem
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment (1 for Light, 2 for Dark)")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Current status of the transaction")]
@@ -611,7 +617,8 @@ public class RosterPlayer
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment (1 for Light, 2 for Dark)")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Position for the player")]
@@ -620,7 +627,8 @@ public class RosterPlayer
     [JsonProperty(nameof(Position), Required = Required.Always)]
     [GraphQLName("Position")]
     [GraphQLDescription("Position for the player")]
-    public required int Position{ get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference Position { get; set; }
 
     [Required]
     [Description("Position name for the player")]
@@ -654,6 +662,7 @@ public class RosterPlayer
     [JsonProperty(nameof(PlayerStatus), Required = Required.Always)]
     [GraphQLName("PlayerStatus")]
     [GraphQLDescription("Player's status in the roster")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PlayerStatus>))]
     public required PlayerStatus PlayerStatus { get; set; }
 
     [Required]

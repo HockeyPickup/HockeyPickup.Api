@@ -1,4 +1,5 @@
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -52,12 +53,14 @@ public class SaveUserRequest
     [JsonPropertyName("NotificationPreference")]
     [JsonProperty(nameof(NotificationPreference), Required = Required.Default)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<NotificationPreference>))]
     public NotificationPreference? NotificationPreference { get; set; }
 
     [Description("User's position preference setting")]
     [JsonPropertyName("PositionPreference")]
     [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
     public PositionPreference? PositionPreference { get; set; }
 }
 

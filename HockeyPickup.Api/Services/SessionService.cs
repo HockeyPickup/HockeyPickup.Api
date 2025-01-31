@@ -12,8 +12,8 @@ public interface ISessionService
 {
     Task<ServiceResult<SessionDetailedResponse>> CreateSession(CreateSessionRequest request);
     Task<ServiceResult<SessionDetailedResponse>> UpdateSession(UpdateSessionRequest request);
-    Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition);
-    Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment);
+    Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, PositionPreference newPosition);
+    Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, TeamAssignment newTeamAssignment);
     Task<ServiceResult<SessionDetailedResponse>> DeleteRosterPlayer(int sessionId, string userId);
     Task<ServiceResult<bool>> DeleteSessionAsync(int sessionId);
 }
@@ -151,7 +151,7 @@ public class SessionService : ISessionService
         }
     }
 
-    public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, int newPosition)
+    public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, PositionPreference newPosition)
     {
         try
         {
@@ -194,7 +194,7 @@ public class SessionService : ISessionService
         }
     }
 
-    public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, int newTeamAssignment)
+    public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, TeamAssignment newTeamAssignment)
     {
         try
         {
@@ -216,14 +216,14 @@ public class SessionService : ISessionService
                 return ServiceResult<SessionDetailedResponse>.CreateFailure("User is not part of this session's current roster");
             }
 
-            if (currentRoster.TeamAssignment == newTeamAssignment)
+            if (currentRoster.TeamAssignment == (TeamAssignment) newTeamAssignment)
             {
                 return ServiceResult<SessionDetailedResponse>.CreateFailure("New team assignment is the same as the current team assignment");
             }
 
             await _sessionRepository.UpdatePlayerTeamAsync(sessionId, userId, newTeamAssignment);
 
-            var msg = $"{user.FirstName} {user.LastName} changed team assignment from {currentRoster.TeamAssignment.ParseTeamName()} to {newTeamAssignment.ParseTeamName()}";
+            var msg = $"{user.FirstName} {user.LastName} changed team assignment from {currentRoster.TeamAssignment.GetDisplayName()} to {newTeamAssignment.GetDisplayName()}";
 
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
             await _subscriptionHandler.HandleUpdate(updatedSession);
@@ -256,8 +256,8 @@ public class SessionService : ISessionService
                 {
                     { "SessionDate", session.SessionDate.ToString() },
                     { "SessionUrl", sessionUrl },
-                    { "FormerTeamAssignment", currentRoster.TeamAssignment.ParseTeamName() },
-                    { "NewTeamAssignment", newTeamAssignment.ParseTeamName() },
+                    { "FormerTeamAssignment", currentRoster.TeamAssignment.GetDisplayName() },
+                    { "NewTeamAssignment", newTeamAssignment.GetDisplayName() },
                 },
                 NotificationEmails = userEmails!,
                 NotificationDeviceIds = null

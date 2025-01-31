@@ -3,7 +3,9 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Security.Claims;
 
 namespace HockeyPickup.Api.Helpers;
@@ -54,8 +56,14 @@ public static class IntExtensions
             0 => "TBD",
             1 => "Forward",
             2 => "Defense",
+            3 => "Goalie",
             _ => string.Empty,
         };
+    }
+
+    public static string ParsePositionName(this PositionPreference position)
+    {
+        return ParsePositionName((int) position);
     }
 
     public static string ParseTeamName(this int position)
@@ -67,6 +75,23 @@ public static class IntExtensions
             2 => "Dark",
             _ => string.Empty,
         };
+    }
+
+    public static string ParseTeamName(this PositionPreference position)
+    {
+        return ParseTeamName((int) position);
+    }
+}
+
+public static class EnumExtensions
+{
+    public static string GetDisplayName(this Enum enumValue)
+    {
+        var displayAttribute = enumValue.GetType()
+            .GetField(enumValue.ToString())
+            ?.GetCustomAttribute<DisplayAttribute>();
+
+        return displayAttribute?.Name ?? enumValue.ToString();
     }
 }
 

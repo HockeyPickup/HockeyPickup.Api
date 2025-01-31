@@ -1,3 +1,5 @@
+using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -24,5 +26,6 @@ public class UpdateRosterPositionRequest
     [Range(0, 2)]
     [JsonPropertyName("NewPosition")]
     [JsonProperty(nameof(NewPosition), Required = Required.Always)]
-    public required int NewPosition { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference NewPosition { get; set; }
 }

@@ -1,3 +1,5 @@
+using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -26,12 +28,14 @@ public class AddRegularRequest
     [Range(1, 2)]
     [JsonPropertyName("TeamAssignment")]
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
-    [Description("Position preference (0 for TBD, 1 for Forward, 2 for Defense)")]
-    [Range(0, 2)]
+    [Description("Position preference (0 for TBD, 1 for Forward, 2 for Defense, 3 for Goalie)")]
+    [Range(0, 3)]
     [JsonPropertyName("PositionPreference")]
     [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
-    public required int PositionPreference { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference PositionPreference { get; set; }
 }

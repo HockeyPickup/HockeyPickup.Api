@@ -1,30 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel;
 
 namespace HockeyPickup.Api.Data.Entities;
-
-// PaymentMethod enum to define available payment types
-public enum PaymentMethodType
-{
-    [Description("Unspecified")]
-    Unspecified = 0,
-
-    [Description("PayPal")]
-    PayPal = 1,
-
-    [Description("Venmo")]
-    Venmo = 2,
-
-    [Description("CashApp")]
-    CashApp = 3,
-
-    [Description("Zelle")]
-    Zelle = 4,
-
-    [Description("Bitcoin")]
-    Bitcoin = 5
-}
 
 // Entity for storing payment method details
 public class UserPaymentMethod

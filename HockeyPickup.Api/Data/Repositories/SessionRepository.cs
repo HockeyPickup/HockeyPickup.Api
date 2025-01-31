@@ -91,7 +91,7 @@ public class SessionRepository : ISessionRepository
         return updatedSession!;
     }
 
-    public async Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, int position)
+    public async Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, PositionPreference position)
     {
         // Find and update the roster entry
         var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
@@ -111,7 +111,7 @@ public class SessionRepository : ISessionRepository
         return session;
     }
 
-    public async Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, int team)
+    public async Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, TeamAssignment team)
     {
         // Find and update the roster entry
         var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
@@ -243,7 +243,7 @@ public class SessionRepository : ISessionRepository
             Email = r.Email,
             FirstName = r.FirstName,
             LastName = r.LastName,
-            TeamAssignment = r.TeamAssignment,
+            TeamAssignment = (TeamAssignment) r.TeamAssignment,
             IsPlaying = r.IsPlaying,
             IsRegular = r.IsRegular,
             PlayerStatus = ParsePlayerStatus(r.PlayerStatus),
@@ -251,7 +251,7 @@ public class SessionRepository : ISessionRepository
             Preferred = r.Preferred,
             PreferredPlus = r.PreferredPlus,
             LastBuySellId = r.LastBuySellId,
-            Position = r.Position,
+            Position = (PositionPreference) r.Position,
             CurrentPosition = r.CurrentPosition,
             JoinedDateTime = r.JoinedDateTime,
             PhotoUrl = r.PhotoUrl
@@ -263,6 +263,7 @@ public class SessionRepository : ISessionRepository
         "Regular" => PlayerStatus.Regular,
         "Substitute" => PlayerStatus.Substitute,
         "Not Playing" => PlayerStatus.NotPlaying,
+        "In Queue" => PlayerStatus.InQueue,
         _ => throw new ArgumentException($"Invalid player status: {status}")
     };
 
@@ -305,7 +306,7 @@ public class SessionRepository : ISessionRepository
             Price = b.Price ?? 0m,
             CreateByUserId = b.CreateByUserId,
             UpdateByUserId = b.UpdateByUserId,
-            PaymentMethod = b.PaymentMethod.HasValue ? b.PaymentMethod.Value : PaymentMethodType.Unspecified,
+            PaymentMethod = b.PaymentMethod.HasValue ? b.PaymentMethod.Value : PaymentMethodType.Unknown,
             TransactionStatus = b.TransactionStatus,
             SellerNoteFlagged = b.SellerNoteFlagged,
             BuyerNoteFlagged = b.BuyerNoteFlagged,

@@ -11,8 +11,8 @@ public interface IRegularService
 {
     Task<ServiceResult<RegularSetDetailedResponse>> DuplicateRegularSet(DuplicateRegularSetRequest request);
     Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularSet(UpdateRegularSetRequest request);
-    Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, int newPosition);
-    Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, int newTeamAssignment);
+    Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, PositionPreference newPosition);
+    Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, TeamAssignment newTeamAssignment);
     Task<ServiceResult> DeleteRegularSet(int regularSetId);
     Task<ServiceResult<RegularSetDetailedResponse>> AddRegular(AddRegularRequest request);
     Task<ServiceResult<RegularSetDetailedResponse>> DeleteRegular(DeleteRegularRequest request);
@@ -95,7 +95,7 @@ public class RegularService : IRegularService
         }
     }
 
-    public async Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, int newPosition)
+    public async Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularPosition(int regularSetId, string userId, PositionPreference newPosition)
     {
         try
         {
@@ -138,7 +138,7 @@ public class RegularService : IRegularService
         }
     }
 
-    public async Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, int newTeamAssignment)
+    public async Task<ServiceResult<RegularSetDetailedResponse>> UpdateRegularTeam(int regularSetId, string userId, TeamAssignment newTeamAssignment)
     {
         try
         {
@@ -172,7 +172,7 @@ public class RegularService : IRegularService
             }
 
             return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(updatedSet,
-                $"{user.FirstName} {user.LastName}'s team assignment updated to {newTeamAssignment.ParseTeamName()}");
+                $"{user.FirstName} {user.LastName}'s team assignment updated to {newTeamAssignment}");
         }
         catch (Exception ex)
         {
@@ -221,7 +221,7 @@ public class RegularService : IRegularService
                 return ServiceResult<RegularSetDetailedResponse>.CreateFailure("Failed to add player to Regular set");
 
             return ServiceResult<RegularSetDetailedResponse>.CreateSuccess(updatedSet,
-                $"{user.FirstName} {user.LastName} added to Regular set as {request.TeamAssignment.ParseTeamName()}");
+                $"{user.FirstName} {user.LastName} added to Regular set as {request.TeamAssignment.GetDisplayName()}");
         }
         catch (Exception ex)
         {

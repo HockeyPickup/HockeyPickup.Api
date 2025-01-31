@@ -24,6 +24,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using IAuthorizationHandler = HotChocolate.Authorization.IAuthorizationHandler;
 
 namespace HockeyPickup.Api;
@@ -39,6 +40,12 @@ public class Program
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.PropertyNamingPolicy = null; // This keeps PascalCase
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<TeamAssignment>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<PositionPreference>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<PlayerStatus>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<NotificationPreference>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<PaymentMethodType>());
         })
         .ConfigureValidation();
 

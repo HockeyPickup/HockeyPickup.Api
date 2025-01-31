@@ -1,3 +1,5 @@
+using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -24,5 +26,6 @@ public class UpdateRosterTeamRequest
     [Range(0, 2)]
     [JsonPropertyName("NewTeamAssignment")]
     [JsonProperty(nameof(NewTeamAssignment), Required = Required.Always)]
-    public required int NewTeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment NewTeamAssignment { get; set; }
 }
