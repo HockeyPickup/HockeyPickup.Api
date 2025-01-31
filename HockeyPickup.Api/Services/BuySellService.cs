@@ -1,8 +1,6 @@
-﻿using Azure.Core;
-using HockeyPickup.Api.Data.Entities;
+﻿using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
-using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +13,8 @@ public interface IBuySellService
     Task<ServiceResult<BuySellResponse>> ProcessSellRequestAsync(string userId, SellRequest request);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentSentAsync(string userId, int buySellId, PaymentMethodType paymentMethod);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentReceivedAsync(string userId, int buySellId);
+    Task<ServiceResult<BuySellResponse>> UnconfirmPaymentSentAsync(string userId, int buySellId);
+    Task<ServiceResult<BuySellResponse>> UnconfirmPaymentReceivedAsync(string userId, int buySellId);
     Task<ServiceResult<BuySellResponse>> GetBuySellAsync(int buySellId);
     Task<ServiceResult<IEnumerable<BuySellResponse>>> GetSessionBuySellsAsync(int sessionId);
     Task<ServiceResult<IEnumerable<BuySellResponse>>> GetUserBuySellsAsync(string userId);
@@ -295,6 +295,69 @@ public class BuySellService : IBuySellService
         catch (Exception ex)
         {
             var msg = $"Error confirming payment received request for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
+        }
+    }
+
+    public async Task<ServiceResult<BuySellResponse>> UnconfirmPaymentSentAsync(string userId, int buySellId)
+    {
+        try
+        {
+            var buySell = await _buySellRepository.GetBuySellAsync(buySellId);
+            if (buySell == null)
+                return ServiceResult<BuySellResponse>.CreateFailure("BuySell not found");
+
+            // Verify user is part of the BuySell
+            if (buySell.BuyerUserId != userId)
+                return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to unconfirm payment sent for this BuySell");
+
+            // Cannot unconfirm if payment is already received
+            if (buySell.PaymentReceived)
+                return ServiceResult<BuySellResponse>.CreateFailure("Cannot unconfirm payment sent after payment has been received");
+
+            buySell.UpdateDateTime = DateTime.UtcNow;
+            buySell.UpdateByUserId = userId;
+            buySell.PaymentSent = false;
+            buySell.PaymentMethod = null; // Clear the payment method when unconfirming
+
+            var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} unconfirmed PAYMENT sent";
+            var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
+        }
+        catch (Exception ex)
+        {
+            var msg = $"Error unconfirming payment sent for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException?.Message : ex.Message)}";
+            _logger.LogError(ex, msg);
+            return ServiceResult<BuySellResponse>.CreateFailure(msg);
+        }
+    }
+
+    public async Task<ServiceResult<BuySellResponse>> UnconfirmPaymentReceivedAsync(string userId, int buySellId)
+    {
+        try
+        {
+            var buySell = await _buySellRepository.GetBuySellAsync(buySellId);
+            if (buySell == null)
+                return ServiceResult<BuySellResponse>.CreateFailure("BuySell not found");
+
+            // Verify user is part of the BuySell
+            if (buySell.SellerUserId != userId)
+                return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to unconfirm payment received for this BuySell");
+
+            buySell.UpdateDateTime = DateTime.UtcNow;
+            buySell.UpdateByUserId = userId;
+            buySell.PaymentReceived = false;
+
+            var message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} unconfirmed PAYMENT received";
+            var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
+        }
+        catch (Exception ex)
+        {
+            var msg = $"Error unconfirming payment received for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException?.Message : ex.Message)}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }

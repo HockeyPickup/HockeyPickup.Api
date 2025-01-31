@@ -91,6 +91,34 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
+    [HttpPost("{buySellId}/unconfirm-payment-sent")]
+    [Description("Unconfirm payment sent for a BuySell")]
+    [Produces(typeof(ApiDataResponse<BuySellResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<BuySellResponse>>> UnconfirmPaymentSent(int buySellId)
+    {
+        var userId = _httpContextAccessor.GetUserId();
+        var result = await _BuySellService.UnconfirmPaymentSentAsync(userId, buySellId);
+        var response = ApiDataResponse<BuySellResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
+    [HttpPost("{buySellId}/unconfirm-payment-received")]
+    [Description("Unconfirm payment received for a BuySell")]
+    [Produces(typeof(ApiDataResponse<BuySellResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<BuySellResponse>>> UnconfirmPaymentReceived(int buySellId)
+    {
+        var userId = _httpContextAccessor.GetUserId();
+        var result = await _BuySellService.UnconfirmPaymentReceivedAsync(userId, buySellId);
+        var response = ApiDataResponse<BuySellResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
     [HttpGet("{buySellId}")]
     [Description("Gets a specific BuySell by ID")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
