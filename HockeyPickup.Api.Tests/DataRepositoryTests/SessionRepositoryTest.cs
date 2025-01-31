@@ -107,12 +107,34 @@ public class DetailedSessionTestContext : HockeyPickupContext
         });
 
         // Configure other required entities
+        // Replace the existing BuySell configuration in DetailedSessionTestContext
         modelBuilder.Entity<BuySell>(entity =>
         {
             entity.HasKey(e => e.BuySellId);
             entity.Property(e => e.CreateDateTime);
             entity.Property(e => e.UpdateDateTime);
             entity.Property(e => e.TeamAssignment);
+
+            // Handle TransactionStatus for SQLite tests
+            entity.Property(e => e.TransactionStatus)
+                .HasMaxLength(50)
+                .IsRequired()
+                .HasComputedColumnSql(
+                    "CASE " +
+                    "WHEN SellerUserId IS NULL AND BuyerUserId IS NOT NULL THEN 'Looking to Buy' " +
+                    "WHEN BuyerUserId IS NULL AND SellerUserId IS NOT NULL THEN 'Available to Buy' " +
+                    "WHEN BuyerUserId IS NOT NULL AND SellerUserId IS NOT NULL THEN " +
+                    "   CASE " +
+                    "       WHEN PaymentSent = 1 AND PaymentReceived = 1 THEN 'Complete' " +
+                    "       WHEN PaymentSent = 1 THEN 'Payment Sent' " +
+                    "       ELSE 'Payment Pending' " +
+                    "   END " +
+                    "ELSE 'Unknown' END",
+                    stored: true);  // Make it a persisted computed column
+
+            // Add missing required properties
+            entity.Property(e => e.PaymentSent).HasDefaultValue(false);
+            entity.Property(e => e.PaymentReceived).HasDefaultValue(false);
         });
 
         modelBuilder.Entity<ActivityLog>(entity =>
@@ -262,8 +284,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Email = "test@example.com",
             FirstName = "Test",
             LastName = "User",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         _context.Users.Add(user);
 
@@ -291,8 +313,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
         {
             RegularSetId = regularSet.RegularSetId,
             UserId = user.Id,
-            TeamAssignment = 1,
-            PositionPreference = 1
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 1
         };
         _context.Regulars.Add(regular);
 
@@ -398,7 +420,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             SellerUserId = null, // null seller
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = 1
+            TeamAssignment = (TeamAssignment) 1
         };
         _context.BuySells.Add(buySell);
 
@@ -434,8 +456,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         _context.Users.Add(user);
 
@@ -480,8 +502,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         _context.Users.Add(user);
 
@@ -499,8 +521,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
         {
             RegularSetId = regularSet.RegularSetId,
             UserId = user.Id,
-            TeamAssignment = 1,
-            PositionPreference = 1
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 1
         };
         _context.Regulars.Add(regular);
 
@@ -527,7 +549,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             SellerNoteFlagged = true,
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = 1
+            TeamAssignment = (TeamAssignment) 1
         };
         _context.BuySells.Add(buySell);
 
@@ -587,16 +609,16 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test1@example.com",
             Email = "test1@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         var user2 = new AspNetUser
         {
             Id = "user2",
             UserName = "test2@example.com",
             Email = "test2@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         _context.Users.AddRange(user1, user2);
 
@@ -614,8 +636,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
         {
             RegularSetId = regularSet.RegularSetId,
             UserId = user1.Id,
-            TeamAssignment = 1,
-            PositionPreference = 1,
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 1,
             User = user1  // Explicitly set the navigation property
         };
         _context.Regulars.Add(regular);
@@ -643,7 +665,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Seller = user2,    // Explicitly set navigation property
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = 1
+            TeamAssignment = (TeamAssignment) 1
         };
 
         // Create BuySell with valid IDs but null navigation properties
@@ -657,7 +679,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Seller = null,            // Explicitly null navigation property
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = 2
+            TeamAssignment = (TeamAssignment) 2
         };
         _context.BuySells.AddRange(buySell1, buySell2);
 
@@ -1240,7 +1262,7 @@ public class BuyingQueueTests
             SessionId = 5,
             BuyerName = "John Doe",
             SellerName = "Jane Smith",
-            TeamAssignment = 2,
+            TeamAssignment = (TeamAssignment) 2,
             TransactionStatus = "Pending",
             QueueStatus = "Active",
             PaymentSent = true,
@@ -1254,7 +1276,7 @@ public class BuyingQueueTests
         queue.SessionId.Should().Be(5);
         queue.BuyerName.Should().Be("John Doe");
         queue.SellerName.Should().Be("Jane Smith");
-        queue.TeamAssignment.Should().Be(2);
+        queue.TeamAssignment.Should().Be((TeamAssignment) 2);
         queue.TransactionStatus.Should().Be("Pending");
         queue.QueueStatus.Should().Be("Active");
         queue.PaymentSent.Should().BeTrue();
@@ -1273,7 +1295,7 @@ public class BuyingQueueTests
             SessionId = 5,
             BuyerName = null,
             SellerName = null,
-            TeamAssignment = 2,
+            TeamAssignment = (TeamAssignment) 2,
             TransactionStatus = null!,
             QueueStatus = null!,
             PaymentSent = false,
@@ -1299,7 +1321,7 @@ public class BuyingQueueTests
         {
             BuySellId = 1,
             SessionId = 2,
-            TeamAssignment = 1,
+            TeamAssignment = (TeamAssignment) 1,
             TransactionStatus = "Pending",
             QueueStatus = "Active",
             PaymentSent = false,
@@ -1311,7 +1333,7 @@ public class BuyingQueueTests
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SessionId))!.PropertyType.Should().Be(typeof(int));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerName))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerName))!.PropertyType.Should().Be(typeof(string));
-        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.TeamAssignment))!.PropertyType.Should().Be(typeof(int));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.TeamAssignment))!.PropertyType.Should().Be(typeof(TeamAssignment));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.TransactionStatus))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.QueueStatus))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.PaymentSent))!.PropertyType.Should().Be(typeof(bool));
@@ -1354,7 +1376,7 @@ public class BuyingQueueTests
         {
             BuySellId = 1,
             SessionId = 2,
-            TeamAssignment = 1,
+            TeamAssignment = (TeamAssignment) 1,
             TransactionStatus = "Pending",
             QueueStatus = "Active",
             PaymentSent = false,
@@ -1404,7 +1426,7 @@ public class BuyingQueueTests
             SessionId = 2,
             BuyerName = "John Doe",
             SellerName = "Jane Smith",
-            TeamAssignment = 1,
+            TeamAssignment = (TeamAssignment) 1,
             TransactionStatus = "Pending",
             QueueStatus = "Active",
             PaymentSent = true,
@@ -1418,7 +1440,7 @@ public class BuyingQueueTests
         queueItem.SessionId.Should().Be(2);
         queueItem.BuyerName.Should().Be("John Doe");
         queueItem.SellerName.Should().Be("Jane Smith");
-        queueItem.TeamAssignment.Should().Be(1);
+        queueItem.TeamAssignment.Should().Be((TeamAssignment) 1);
         queueItem.TransactionStatus.Should().Be("Pending");
         queueItem.QueueStatus.Should().Be("Active");
         queueItem.PaymentSent.Should().BeTrue();
@@ -1435,7 +1457,7 @@ public class BuyingQueueTests
         {
             BuySellId = 1,
             SessionId = 2,
-            TeamAssignment = 1,
+            TeamAssignment = (TeamAssignment) 1,
             TransactionStatus = "Pending",
             QueueStatus = "Active",
             PaymentSent = false,
@@ -1443,8 +1465,8 @@ public class BuyingQueueTests
         };
 
         // Act & Assert
-        queueItem.TeamAssignment.Should().BeOneOf(1, 2, 0);
-        queueItem.TeamAssignment.Should().BeGreaterThanOrEqualTo(TeamAssignment.TBD);
+        queueItem.TeamAssignment.Should().BeOneOf((TeamAssignment) 1, (TeamAssignment) 2, 0);
+        queueItem.TeamAssignment.Should().Be(TeamAssignment.Light);
     }
 
     [Fact]
@@ -1652,8 +1674,8 @@ public class RosterPlayerResponseTests
             Email = "user123@anywhere.com",
             FirstName = "John",
             LastName = "Doe",
-            TeamAssignment = 1,
-            Position = 2,
+            TeamAssignment = (TeamAssignment) 1,
+            Position = (PositionPreference) 2,
             CurrentPosition = "Forward",
             IsPlaying = true,
             IsRegular = true,
@@ -1671,8 +1693,8 @@ public class RosterPlayerResponseTests
         player.UserId.Should().Be("user123");
         player.FirstName.Should().Be("John");
         player.LastName.Should().Be("Doe");
-        player.TeamAssignment.Should().Be(1);
-        player.Position.Should().Be(2);
+        player.TeamAssignment.Should().Be((TeamAssignment) 1);
+        player.Position.Should().Be((PositionPreference) 2);
         player.CurrentPosition.Should().Be("Forward");
         player.IsPlaying.Should().BeTrue();
         player.IsRegular.Should().BeTrue();
@@ -1695,8 +1717,8 @@ public class RosterPlayerResponseTests
         type.GetProperty(nameof(Models.Responses.RosterPlayer.UserId))!.PropertyType.Should().Be(typeof(string));
         type.GetProperty(nameof(Models.Responses.RosterPlayer.FirstName))!.PropertyType.Should().Be(typeof(string));
         type.GetProperty(nameof(Models.Responses.RosterPlayer.LastName))!.PropertyType.Should().Be(typeof(string));
-        type.GetProperty(nameof(Models.Responses.RosterPlayer.TeamAssignment))!.PropertyType.Should().Be(typeof(int));
-        type.GetProperty(nameof(Models.Responses.RosterPlayer.Position))!.PropertyType.Should().Be(typeof(int));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.TeamAssignment))!.PropertyType.Should().Be(typeof(TeamAssignment));
+        type.GetProperty(nameof(Models.Responses.RosterPlayer.Position))!.PropertyType.Should().Be(typeof(PositionPreference));
         type.GetProperty(nameof(Models.Responses.RosterPlayer.CurrentPosition))!.PropertyType.Should().Be(typeof(string));
         type.GetProperty(nameof(Models.Responses.RosterPlayer.IsPlaying))!.PropertyType.Should().Be(typeof(bool));
         type.GetProperty(nameof(Models.Responses.RosterPlayer.IsRegular))!.PropertyType.Should().Be(typeof(bool));
@@ -1950,8 +1972,8 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                NotificationPreference = 1,
-                PositionPreference = 1
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
             };
             context.Users!.Add(user);
 
@@ -1969,7 +1991,7 @@ public partial class DetailedSessionRepositoryTests
             {
                 SessionId = 1,
                 UserId = "testUser",
-                Position = 1,
+                Position = (PositionPreference) 1,
                 JoinedDateTime = DateTime.UtcNow
             };
             context.SessionRosters!.Add(roster);
@@ -1983,12 +2005,12 @@ public partial class DetailedSessionRepositoryTests
             var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
-            var result = await repository.UpdatePlayerPositionAsync(1, "testUser", 2);
+            var result = await repository.UpdatePlayerPositionAsync(1, "testUser", (PositionPreference) 2);
 
             // Assert
             result.Should().NotBeNull();
             var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
-            updatedRoster.Position.Should().Be(2);
+            updatedRoster.Position.Should().Be((PositionPreference) 2);
         }
     }
 
@@ -2016,8 +2038,8 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                NotificationPreference = 1,
-                PositionPreference = 1
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2049,12 +2071,12 @@ public partial class DetailedSessionRepositoryTests
             var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
-            var result = await repository.UpdatePlayerPositionAsync(1, "testUser", newPosition);
+            var result = await repository.UpdatePlayerPositionAsync(1, "testUser", (PositionPreference) newPosition);
 
             // Assert
             result.Should().NotBeNull();
             var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
-            updatedRoster.Position.Should().Be(newPosition);
+            updatedRoster.Position.Should().Be((PositionPreference) newPosition);
         }
     }
 
@@ -2079,8 +2101,8 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                NotificationPreference = 1,
-                PositionPreference = 1
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2101,7 +2123,7 @@ public partial class DetailedSessionRepositoryTests
             var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act & Assert
-            await repository.Invoking(r => r.UpdatePlayerPositionAsync(1, "nonexistentUser", 2))
+            await repository.Invoking(r => r.UpdatePlayerPositionAsync(1, "nonexistentUser", (PositionPreference) 2))
                 .Should().ThrowAsync<KeyNotFoundException>()
                 .WithMessage("Player not found in session roster");
         }
@@ -2126,8 +2148,8 @@ public partial class DetailedSessionRepositoryTests
             Id = "testUser",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         context.Users!.Add(user);
         await context.SaveChangesAsync();
@@ -2135,7 +2157,7 @@ public partial class DetailedSessionRepositoryTests
         var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
         // Act & Assert
-        await repository.Invoking(r => r.UpdatePlayerPositionAsync(999, "testUser", 2))
+        await repository.Invoking(r => r.UpdatePlayerPositionAsync(999, "testUser", (PositionPreference) 2))
             .Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage("Player not found in session roster");
     }
@@ -2164,8 +2186,8 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                NotificationPreference = 1,
-                PositionPreference = 1
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2183,7 +2205,7 @@ public partial class DetailedSessionRepositoryTests
             {
                 SessionId = 1,
                 UserId = "testUser",
-                TeamAssignment = 1,
+                TeamAssignment = (TeamAssignment) 1,
                 JoinedDateTime = DateTime.UtcNow
             };
             context.SessionRosters!.Add(roster);
@@ -2197,12 +2219,12 @@ public partial class DetailedSessionRepositoryTests
             var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
-            var result = await repository.UpdatePlayerTeamAsync(1, "testUser", 2);
+            var result = await repository.UpdatePlayerTeamAsync(1, "testUser", (TeamAssignment) 2);
 
             // Assert
             result.Should().NotBeNull();
             var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
-            updatedRoster.TeamAssignment.Should().Be(2);
+            updatedRoster.TeamAssignment.Should().Be((TeamAssignment) 2);
         }
     }
 
@@ -2230,8 +2252,8 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                NotificationPreference = 1,
-                PositionPreference = 1
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2263,12 +2285,12 @@ public partial class DetailedSessionRepositoryTests
             var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act
-            var result = await repository.UpdatePlayerTeamAsync(1, "testUser", newTeam);
+            var result = await repository.UpdatePlayerTeamAsync(1, "testUser", (TeamAssignment) newTeam);
 
             // Assert
             result.Should().NotBeNull();
             var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
-            updatedRoster.TeamAssignment.Should().Be(newTeam);
+            updatedRoster.TeamAssignment.Should().Be((TeamAssignment) newTeam);
         }
     }
 
@@ -2293,8 +2315,8 @@ public partial class DetailedSessionRepositoryTests
                 Id = "testUser",
                 UserName = "test@example.com",
                 Email = "test@example.com",
-                NotificationPreference = 1,
-                PositionPreference = 1
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2315,7 +2337,7 @@ public partial class DetailedSessionRepositoryTests
             var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
             // Act & Assert
-            await repository.Invoking(r => r.UpdatePlayerTeamAsync(1, "nonexistentUser", 2))
+            await repository.Invoking(r => r.UpdatePlayerTeamAsync(1, "nonexistentUser", (TeamAssignment) 2))
                 .Should().ThrowAsync<KeyNotFoundException>()
                 .WithMessage("Player not found in session roster");
         }
@@ -2340,8 +2362,8 @@ public partial class DetailedSessionRepositoryTests
             Id = "testUser",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         context.Users!.Add(user);
         await context.SaveChangesAsync();
@@ -2349,7 +2371,7 @@ public partial class DetailedSessionRepositoryTests
         var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
 
         // Act & Assert
-        await repository.Invoking(r => r.UpdatePlayerTeamAsync(999, "testUser", 2))
+        await repository.Invoking(r => r.UpdatePlayerTeamAsync(999, "testUser", (TeamAssignment) 2))
             .Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage("Player not found in session roster");
     }
@@ -2648,8 +2670,8 @@ public class DeleteSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         arrangeContext.Users!.Add(user);
 
@@ -2663,14 +2685,19 @@ public class DeleteSessionRepositoryTests : IDisposable
         };
         arrangeContext.Sessions!.Add(session);
 
+        // Update the BuySell initialization in both failing tests:
         var buySell = new BuySell
         {
             BuySellId = 1,
             SessionId = session.SessionId,
             BuyerUserId = user.Id,
+            SellerUserId = null,
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = 1
+            TeamAssignment = (TeamAssignment)1,
+            PaymentSent = false,
+            PaymentReceived = false,
+            TransactionStatus = "Looking to Buy"  // Default value based on BuyerUserId being set and SellerUserId being null
         };
         arrangeContext.BuySells!.Add(buySell);
 
@@ -2689,8 +2716,8 @@ public class DeleteSessionRepositoryTests : IDisposable
             SessionRosterId = 1,
             SessionId = session.SessionId,
             UserId = user.Id,
-            TeamAssignment = 1,
-            Position = 1,
+            TeamAssignment = (TeamAssignment) 1,
+            Position = (PositionPreference) 1,
             JoinedDateTime = _testDate
         };
         arrangeContext.SessionRosters!.Add(roster);
@@ -2744,8 +2771,8 @@ public class DeleteSessionRepositoryTests : IDisposable
             Id = "user1",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         context.Users!.Add(user);
 
@@ -2759,14 +2786,19 @@ public class DeleteSessionRepositoryTests : IDisposable
         };
         context.Sessions!.Add(session);
 
+        // Update the BuySell initialization in both failing tests:
         var buySell = new BuySell
         {
             BuySellId = 1,
             SessionId = session.SessionId,
             BuyerUserId = user.Id,
+            SellerUserId = null,
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = 1
+            TeamAssignment = (TeamAssignment)1,
+            PaymentSent = false,
+            PaymentReceived = false,
+            TransactionStatus = "Looking to Buy"  // Default value based on BuyerUserId being set and SellerUserId being null
         };
         context.BuySells!.Add(buySell);
 

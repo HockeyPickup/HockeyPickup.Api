@@ -48,8 +48,8 @@ public class RegularRepositoryTests : IDisposable
                 Email = "test1@example.com",
                 FirstName = "John",
                 LastName = "Doe",
-                NotificationPreference = 1,
-                PositionPreference = 1,
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
                 Rating = 4.5m,
                 Preferred = true,
                 PreferredPlus = false,
@@ -66,8 +66,8 @@ public class RegularRepositoryTests : IDisposable
                 Email = "test2@example.com",
                 FirstName = "Jane",
                 LastName = "Smith",
-                NotificationPreference = 2,
-                PositionPreference = 2,
+                NotificationPreference = (NotificationPreference) 2,
+                PositionPreference = (PositionPreference) 2,
                 Rating = 3.5m,
                 Preferred = false,
                 PreferredPlus = true,
@@ -105,15 +105,15 @@ public class RegularRepositoryTests : IDisposable
             {
                 RegularSetId = 1,
                 UserId = "user1",
-                TeamAssignment = 1,
-                PositionPreference = 2
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 2
             },
             new()
             {
                 RegularSetId = 1,
                 UserId = "user2",
-                TeamAssignment = 2,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) 2,
+                PositionPreference = (PositionPreference) 1
             }
         };
         await _context.Regulars.AddRangeAsync(regulars);
@@ -265,8 +265,8 @@ public class RegularRepositoryTests : IDisposable
                 {
                     RegularSetId = 1,
                     UserId = "nonexistent",
-                    TeamAssignment = 1,
-                    PositionPreference = 1
+                    TeamAssignment = (TeamAssignment) 1,
+                    PositionPreference = (PositionPreference) 1
                 }
             }
         };
@@ -501,19 +501,19 @@ public class RegularRepositoryTests : IDisposable
         var newPosition = 1;
 
         // Act
-        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.Should().NotBeNull();
         result!.RegularSetId.Should().Be(regularSetId);
         result.Regulars.Should().Contain(r =>
             r.UserId == userId &&
-            r.PositionPreference == newPosition);
+            r.PositionPreference == (PositionPreference) newPosition);
 
         var updatedEntity = await _context.Regulars
             .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
         updatedEntity.Should().NotBeNull();
-        updatedEntity!.PositionPreference.Should().Be(newPosition);
+        updatedEntity!.PositionPreference.Should().Be((PositionPreference) newPosition);
     }
 
     [Fact]
@@ -526,19 +526,19 @@ public class RegularRepositoryTests : IDisposable
         var newTeam = 2;
 
         // Act
-        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, newTeam);
+        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.Should().NotBeNull();
         result!.RegularSetId.Should().Be(regularSetId);
         result.Regulars.Should().Contain(r =>
             r.UserId == userId &&
-            r.TeamAssignment == newTeam);
+            r.TeamAssignment == (TeamAssignment) newTeam);
 
         var updatedEntity = await _context.Regulars
             .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
         updatedEntity.Should().NotBeNull();
-        updatedEntity!.TeamAssignment.Should().Be(newTeam);
+        updatedEntity!.TeamAssignment.Should().Be((TeamAssignment) newTeam);
     }
 
     [Fact]
@@ -552,7 +552,7 @@ public class RegularRepositoryTests : IDisposable
         var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
 
         // Act
-        var result = await repository.UpdatePlayerPositionAsync(1, "user1", 1);
+        var result = await repository.UpdatePlayerPositionAsync(1, "user1", (PositionPreference) 1);
 
         // Assert
         result.Should().BeNull();
@@ -569,7 +569,7 @@ public class RegularRepositoryTests : IDisposable
         var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
 
         // Act
-        var result = await repository.UpdatePlayerTeamAsync(1, "user1", 1);
+        var result = await repository.UpdatePlayerTeamAsync(1, "user1", (TeamAssignment) 1);
 
         // Assert
         result.Should().BeNull();
@@ -585,7 +585,7 @@ public class RegularRepositoryTests : IDisposable
         var newPosition = 1;
 
         // Act
-        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.Should().BeNull();
@@ -601,7 +601,7 @@ public class RegularRepositoryTests : IDisposable
         var newPosition = 1;
 
         // Act
-        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, newPosition);
+        var result = await _repository.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.Should().BeNull();
@@ -617,7 +617,7 @@ public class RegularRepositoryTests : IDisposable
         var newTeam = 2;
 
         // Act
-        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, newTeam);
+        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.Should().BeNull();
@@ -633,7 +633,7 @@ public class RegularRepositoryTests : IDisposable
         var newTeam = 2;
 
         // Act
-        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, newTeam);
+        var result = await _repository.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.Should().BeNull();
@@ -729,15 +729,15 @@ public class RegularRepositoryTests : IDisposable
         var positionPreference = 2;
 
         // Act
-        var result = await _repository.AddPlayerAsync(regularSetId, userId, teamAssignment, positionPreference);
+        var result = await _repository.AddPlayerAsync(regularSetId, userId, (TeamAssignment) teamAssignment, (PositionPreference) positionPreference);
 
         // Assert
         result.Should().NotBeNull();
         result!.RegularSetId.Should().Be(regularSetId);
         result.Regulars.Should().Contain(r =>
             r.UserId == userId &&
-            r.TeamAssignment == teamAssignment &&
-            r.PositionPreference == positionPreference);
+            r.TeamAssignment == (TeamAssignment) teamAssignment &&
+            r.PositionPreference == (PositionPreference) positionPreference);
 
         var addedEntity = await _context.Regulars
             .FirstOrDefaultAsync(r => r.RegularSetId == regularSetId && r.UserId == userId);
@@ -792,7 +792,7 @@ public class RegularRepositoryTests : IDisposable
         var repository = new RegularRepository(mockContext.Object, _mockLogger.Object);
 
         // Act
-        var result = await repository.AddPlayerAsync(1, "user1", 1, 1);
+        var result = await repository.AddPlayerAsync(1, "user1", (TeamAssignment) 1, (PositionPreference) 1);
 
         // Assert
         result.Should().BeNull();

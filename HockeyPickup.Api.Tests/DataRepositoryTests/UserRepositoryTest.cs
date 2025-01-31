@@ -36,8 +36,8 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
-            entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
-            entity.Property(e => e.PositionPreference).HasDefaultValue(1);
+            entity.Property(e => e.NotificationPreference).HasDefaultValue(NotificationPreference.OnlyMyBuySell);
+            entity.Property(e => e.PositionPreference).HasDefaultValue(PositionPreference.TBD);
 
             // Ignore navigation properties
             entity.Ignore(e => e.Roles);
@@ -71,6 +71,8 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
             entity.Ignore(e => e.Buyer);
             entity.Ignore(e => e.Seller);
             entity.Ignore(e => e.Session);
+            entity.Ignore(e => e.CreateByUser);
+            entity.Ignore(e => e.UpdateByUser);
         });
 
         // Configure Regular entity
@@ -240,7 +242,7 @@ public partial class UserRepositoryTest
             Preferred = true,
             PreferredPlus = true,
             Active = true,
-            NotificationPreference = NotificationPreference.All,
+            NotificationPreference = NotificationPreference.OnlyMyBuySell,
             PositionPreference = PositionPreference.TBD,
             DateCreated = DateTime.Parse("02/25/1969"),
             PaymentMethods = []
@@ -479,7 +481,7 @@ public partial class UserRepositoryTest
                 IsRegular = true,
                 IsPlaying = true,
                 JoinedDateTime = DateTime.UtcNow,
-                Position = 1
+                Position = (PositionPreference) 1
             },
             new SessionRoster
             {
@@ -488,7 +490,7 @@ public partial class UserRepositoryTest
                 IsRegular = false,
                 IsPlaying = true,
                 JoinedDateTime = DateTime.UtcNow,
-                Position = 2
+                Position = (PositionPreference) 2
             }
         };
         await _context.SessionRosters.AddRangeAsync(rosters);

@@ -1,4 +1,5 @@
 using HockeyPickup.Api.Controllers;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
@@ -31,7 +32,7 @@ public class SessionControllerTests
             UpdateDateTime = DateTime.UtcNow,
             SessionDate = DateTime.UtcNow.Date,
             Note = string.Empty,
-            CurrentRosters = new List<RosterPlayer>()
+            CurrentRosters = new List<Models.Responses.RosterPlayer>()
         };
     }
 
@@ -43,7 +44,7 @@ public class SessionControllerTests
         {
             SessionId = 1,
             UserId = "testUser",
-            NewPosition = 1
+            NewPosition = (PositionPreference) 1
         };
         var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateSuccess(
             CreateTestSession(), "Success");
@@ -69,7 +70,7 @@ public class SessionControllerTests
         {
             SessionId = 1,
             UserId = "testUser",
-            NewPosition = 1
+            NewPosition = (PositionPreference) 1
         };
         var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateFailure("Error message");
 
@@ -95,7 +96,7 @@ public class SessionControllerTests
         {
             SessionId = 1,
             UserId = "testUser",
-            NewTeamAssignment = 1
+            NewTeamAssignment = (TeamAssignment) 1
         };
         var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateSuccess(
             CreateTestSession(), "Success");
@@ -121,7 +122,7 @@ public class SessionControllerTests
         {
             SessionId = 1,
             UserId = "testUser",
-            NewTeamAssignment = 1
+            NewTeamAssignment = (TeamAssignment) 1
         };
         var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateFailure("Error message");
 

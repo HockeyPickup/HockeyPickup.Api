@@ -225,8 +225,8 @@ public partial class UserServiceTest
                 u.LastName == request.LastName &&
                 u.EmailConfirmed == false &&
                 u.LockoutEnabled == false &&
-                u.NotificationPreference == (int) NotificationPreference.OnlyMyBuySell &&
-                u.PositionPreference == (int) PositionPreference.TBD),
+                u.NotificationPreference == NotificationPreference.OnlyMyBuySell &&
+                u.PositionPreference == PositionPreference.TBD),
             request.Password),
             Times.Once);
 

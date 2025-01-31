@@ -1,4 +1,5 @@
 using HockeyPickup.Api.Controllers;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
@@ -199,7 +200,7 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            NewPosition = 1
+            NewPosition = (PositionPreference) 1
         };
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
             CreateTestRegularSet(), "Success");
@@ -224,7 +225,7 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            NewPosition = 1
+            NewPosition = (PositionPreference) 1
         };
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
             "Test error");
@@ -249,7 +250,7 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            NewPosition = 3  // Invalid position
+            NewPosition = (PositionPreference) 4
         };
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
             "Invalid position value");
@@ -274,7 +275,7 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            NewTeamAssignment = 1
+            NewTeamAssignment = (TeamAssignment) 1
         };
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
             CreateTestRegularSet(), "Success");
@@ -299,7 +300,7 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            NewTeamAssignment = 1
+            NewTeamAssignment = (TeamAssignment) 1
         };
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
             "Test error");
@@ -324,7 +325,7 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            NewTeamAssignment = 3  // Invalid team assignment
+            NewTeamAssignment = (TeamAssignment) 3  // Invalid team assignment
         };
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(
             "Invalid team assignment value");
@@ -387,8 +388,8 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateSuccess(
@@ -415,8 +416,8 @@ public class RegularControllerTests
         {
             RegularSetId = 1,
             UserId = "test-user-id",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var serviceResponse = ServiceResult<RegularSetDetailedResponse>.CreateFailure(

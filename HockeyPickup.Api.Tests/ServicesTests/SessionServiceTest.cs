@@ -93,7 +93,7 @@ public partial class SessionServiceTests
                     LastName = "User",
                     Email = "user@anywhere.com",
                     SessionId = 1,
-                    TeamAssignment = team,
+                    TeamAssignment = (TeamAssignment) team,
                     IsPlaying = true,
                     IsRegular = false,
                     PlayerStatus = PlayerStatus.Substitute,
@@ -102,7 +102,7 @@ public partial class SessionServiceTests
                     PreferredPlus = false,
                     LastBuySellId = null,
                     JoinedDateTime = DateTime.UtcNow,
-                    Position = position,
+                    Position = (PositionPreference) position,
                     CurrentPosition = "Defense",
                     PhotoUrl = "https://example.com/photo.jpg"
                 }
@@ -127,18 +127,18 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(user)!);
         _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
             .Returns(Task.FromResult(session));
-        _mockSessionRepository.Setup(x => x.UpdatePlayerPositionAsync(sessionId, userId, newPosition))
+        _mockSessionRepository.Setup(x => x.UpdatePlayerPositionAsync(sessionId, userId, (PositionPreference) newPosition))
             .Returns(Task.FromResult(session));
         _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
             .Returns(Task.FromResult(session));
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, newPosition);
+        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, (PositionPreference) newPosition);
 
         // Assert
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Data);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(sessionId, userId, newPosition), Times.Once);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(sessionId, userId, (PositionPreference) newPosition), Times.Once);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
     }
 
@@ -150,12 +150,12 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult<AspNetUser?>(null));
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(1, "nonexistent", 1);
+        var result = await _sessionService.UpdateRosterPosition(1, "nonexistent", (PositionPreference) 1);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("User not found", result.Message);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PositionPreference>()), Times.Never);
     }
 
     [Fact]
@@ -171,12 +171,12 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult<SessionDetailedResponse>(null!));
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(1, "testUser", 1);
+        var result = await _sessionService.UpdateRosterPosition(1, "testUser", (PositionPreference) 1);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("Session not found", result.Message);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PositionPreference>()), Times.Never);
     }
 
     [Fact]
@@ -194,12 +194,12 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(session));
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(1, userId, currentPosition);
+        var result = await _sessionService.UpdateRosterPosition(1, userId, (PositionPreference) currentPosition);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("New position is the same as the current position", result.Message);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PositionPreference>()), Times.Never);
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public partial class SessionServiceTests
             .ThrowsAsync(exception);
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(1, "testUser", 1);
+        var result = await _sessionService.UpdateRosterPosition(1, "testUser", (PositionPreference) 1);
 
         // Assert
         Assert.False(result.IsSuccess);
@@ -230,7 +230,7 @@ public partial class SessionServiceTests
 
     [Theory]
     [InlineData(-1)]
-    [InlineData(3)]
+    [InlineData(4)]
     [InlineData(99)]
     public void ParsePositionName_InvalidPosition_ReturnsEmpty(int position)
     {
@@ -245,6 +245,7 @@ public partial class SessionServiceTests
     [InlineData(0, "TBD")]
     [InlineData(1, "Forward")]
     [InlineData(2, "Defense")]
+    [InlineData(3, "Goalie")]
     public void ParsePositionName_ValidPosition_ReturnsCorrectName(int position, string expected)
     {
         // Act
@@ -274,8 +275,8 @@ public partial class SessionServiceTests
             Id = "testUser",
             UserName = "test@example.com",
             Email = "test@example.com",
-            NotificationPreference = 1,
-            PositionPreference = 1
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1
         };
         context.Users!.Add(user);
 
@@ -294,8 +295,8 @@ public partial class SessionServiceTests
             SessionRosterId = 1,
             SessionId = 1,
             UserId = "testUser",
-            Position = 1,
-            TeamAssignment = 2,
+            Position = (PositionPreference) 1,
+            TeamAssignment = (TeamAssignment) 2,
             IsPlaying = true,
             IsRegular = false,
             JoinedDateTime = DateTime.UtcNow,
@@ -315,8 +316,8 @@ public partial class SessionServiceTests
         loadedRoster.User.Should().NotBeNull();
         loadedRoster.SessionId.Should().Be(1);
         loadedRoster.UserId.Should().Be("testUser");
-        loadedRoster.Position.Should().Be(1);
-        loadedRoster.TeamAssignment.Should().Be(2);
+        loadedRoster.Position.Should().Be((PositionPreference) 1);
+        loadedRoster.TeamAssignment.Should().Be((TeamAssignment) 2);
         loadedRoster.IsPlaying.Should().BeTrue();
         loadedRoster.IsRegular.Should().BeFalse();
         loadedRoster.JoinedDateTime.Should().NotBe(default);
@@ -378,7 +379,7 @@ public partial class SessionServiceTests
         _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
             .Returns(Task.FromResult(session));
 
-        _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
+        _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, (TeamAssignment) newTeam))
             .Returns(Task.FromResult(session));
 
         _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
@@ -411,7 +412,7 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(true));
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -621,13 +622,13 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(session));
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, newPosition);
+        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, (PositionPreference) newPosition);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("User is not part of this session's current roster", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(
-            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PositionPreference>()), Times.Never);
     }
 
     [Fact]
@@ -654,13 +655,13 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(session));
 
         // Act
-        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, newPosition);
+        var result = await _sessionService.UpdateRosterPosition(sessionId, userId, (PositionPreference) newPosition);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("User is not part of this session's current roster", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerPositionAsync(
-            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PositionPreference>()), Times.Never);
     }
 
     [Fact]
@@ -679,13 +680,13 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(session));
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("User is not part of this session's current roster", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(
-            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
     }
 
     [Fact]
@@ -712,13 +713,13 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(session));
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("User is not part of this session's current roster", result.Message);
         _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(
-            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
     }
 
     [Fact]
@@ -1124,7 +1125,7 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(user)!);
         _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
             .Returns(Task.FromResult(session));
-        _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, newTeam))
+        _mockSessionRepository.Setup(x => x.UpdatePlayerTeamAsync(sessionId, userId, (TeamAssignment) newTeam))
             .Returns(Task.FromResult(session));
         _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
             .Returns(Task.FromResult(session));
@@ -1150,7 +1151,7 @@ public partial class SessionServiceTests
             .Returns(Task.FromResult(true));
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -1321,7 +1322,7 @@ public partial class SessionServiceTests
             .ReturnsAsync((AspNetUser?) null);
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.False(result.IsSuccess);
@@ -1329,7 +1330,7 @@ public partial class SessionServiceTests
 
         // Verify repository methods were not called
         _mockSessionRepository.Verify(x => x.GetSessionAsync(It.IsAny<int>()), Times.Never);
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
     }
@@ -1349,14 +1350,14 @@ public partial class SessionServiceTests
             .ReturnsAsync((SessionDetailedResponse?) null!);
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("Session not found", result.Message);
 
         // Verify subsequent methods were not called
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
     }
@@ -1377,14 +1378,14 @@ public partial class SessionServiceTests
             .ReturnsAsync(session);
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, currentTeam); // Try to update to same team
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) currentTeam); // Try to update to same team
 
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal("New team assignment is the same as the current team assignment", result.Message);
 
         // Verify subsequent methods were not called
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
     }
@@ -1402,7 +1403,7 @@ public partial class SessionServiceTests
             .ThrowsAsync(expectedException);
 
         // Act
-        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, newTeam);
+        var result = await _sessionService.UpdateRosterTeam(sessionId, userId, (TeamAssignment) newTeam);
 
         // Assert
         Assert.False(result.IsSuccess);
@@ -1418,7 +1419,7 @@ public partial class SessionServiceTests
             Times.Once);
 
         // Verify no other methods were called
-        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerTeamAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
     }
