@@ -186,13 +186,15 @@ public class UserService : IUserService
                 },
                 CommunicationMethod = new Dictionary<string, string>
                 {
-                    { "Email", user.Email }
+                    { "Email", user.Email },
+                    { "NotificationPreference", user.NotificationPreference.ToString() }
                 },
                 RelatedEntities = new Dictionary<string, string>
                 {
                     { "UserId", user.Id },
                     { "FirstName", user.FirstName },
-                    { "LastName", user.LastName }
+                    { "LastName", user.LastName },
+                    { "NotificationPreference", user.NotificationPreference.ToString() }
                 },
                 MessageData = new Dictionary<string, string>
                 {
@@ -340,7 +342,8 @@ public class UserService : IUserService
                     },
                     CommunicationMethod = new Dictionary<string, string>
                     {
-                        { "Email", user.Email }
+                        { "Email", user.Email },
+                        { "NotificationPreference", user.NotificationPreference.ToString() }
                     },
                     RelatedEntities = new Dictionary<string, string>
                     {
@@ -421,7 +424,8 @@ public class UserService : IUserService
                 },
                 CommunicationMethod = new Dictionary<string, string>
                 {
-                    { "Email", user.Email }
+                    { "Email", user.Email },
+                    { "NotificationPreference", user.NotificationPreference.ToString() }
                 },
                 RelatedEntities = new Dictionary<string, string>
                 {
@@ -610,7 +614,8 @@ public class UserService : IUserService
                 },
                 CommunicationMethod = new Dictionary<string, string>
                 {
-                    { "Email", user.Email }
+                    { "Email", user.Email },
+                    { "NotificationPreference", user.NotificationPreference.ToString() }
                 },
                 RelatedEntities = new Dictionary<string, string>
                 {
@@ -735,7 +740,8 @@ public class UserService : IUserService
                 },
                 CommunicationMethod = new Dictionary<string, string>
                 {
-                    { "Email", user.Email }
+                    { "Email", user.Email },
+                    { "NotificationPreference", user.NotificationPreference.ToString() }
                 },
                 RelatedEntities = new Dictionary<string, string>
                 {

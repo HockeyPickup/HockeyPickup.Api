@@ -244,7 +244,8 @@ public class SessionService : ISessionService
                 },
                 CommunicationMethod = new Dictionary<string, string>
                 {
-                    { "Email", user.Email }
+                    { "Email", user.Email },
+                    { "NotificationPreference", user.NotificationPreference.ToString() }
                 },
                 RelatedEntities = new Dictionary<string, string>
                 {
