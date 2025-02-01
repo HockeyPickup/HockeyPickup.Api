@@ -285,7 +285,7 @@ namespace HockeyPickup.Api.Migrations.V2
                     b.Property<int>("SessionId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TeamAssignment")
+                    b.Property<int>("TeamAssignment")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
@@ -339,10 +339,6 @@ namespace HockeyPickup.Api.Migrations.V2
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("BuyerUserId")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
                     b.Property<bool>("PaymentReceived")
                         .HasColumnType("bit");
 
@@ -361,10 +357,6 @@ namespace HockeyPickup.Api.Migrations.V2
                     b.Property<string>("SellerNote")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SellerUserId")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
 
                     b.Property<int>("SessionId")
                         .HasColumnType("int");

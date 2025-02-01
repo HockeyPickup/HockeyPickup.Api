@@ -671,7 +671,7 @@ public class BuySellService : IBuySellService
             PaymentSent = buySell.PaymentSent,
             PaymentReceived = buySell.PaymentReceived,
             CreateDateTime = buySell.CreateDateTime,
-            TeamAssignment = buySell.TeamAssignment.HasValue ? buySell.TeamAssignment.Value : TeamAssignment.TBD,
+            TeamAssignment = buySell.TeamAssignment,
             UpdateDateTime = buySell.UpdateDateTime,
             Price = buySell.Price ?? 0m,
             CreateByUserId = buySell.CreateByUserId,
