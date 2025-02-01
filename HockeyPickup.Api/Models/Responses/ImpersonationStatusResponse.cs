@@ -14,14 +14,14 @@ public record ImpersonationStatusResponse
     [JsonProperty(nameof(IsImpersonating), Required = Required.Always)]
     public required bool IsImpersonating { get; init; }
 
-    [Description("Original admin user ID if impersonating")]
+    [Description("Original admin user Id if impersonating")]
     [MaxLength(128)]
     [DataType(DataType.Text)]
     [JsonPropertyName("OriginalUserId")]
     [JsonProperty(nameof(OriginalUserId))]
     public string? OriginalUserId { get; init; }
 
-    [Description("Currently impersonated user ID")]
+    [Description("Currently impersonated user Id")]
     [MaxLength(128)]
     [DataType(DataType.Text)]
     [JsonPropertyName("ImpersonatedUserId")]

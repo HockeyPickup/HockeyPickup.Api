@@ -27,7 +27,7 @@ public static class HttpContextExtensions
 
         if (string.IsNullOrEmpty(userId))
         {
-            throw new UnauthorizedAccessException("User ID not found in context");
+            throw new UnauthorizedAccessException("User Id not found in context");
         }
 
         return userId;

@@ -441,7 +441,7 @@ public class ServiceBusHealthCheck : IHealthCheck
                 MessageId = Guid.NewGuid().ToString()
             };
 
-            _logger.LogDebug($"Sending health check message with ID: {message.MessageId}");
+            _logger.LogDebug($"Sending health check message with Id: {message.MessageId}");
 
             // Use a short timeout
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

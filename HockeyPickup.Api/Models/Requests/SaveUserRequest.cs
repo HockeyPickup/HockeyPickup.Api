@@ -102,7 +102,7 @@ public class SaveUserRequestEx : SaveUserRequest
 public class AdminUserUpdateRequest : SaveUserRequestEx
 {
     [Required]
-    [Description("ID of the user to update")]
+    [Description("Id of the user to update")]
     [MaxLength(128)]
     [DataType(DataType.Text)]
     [JsonPropertyName("UserId")]

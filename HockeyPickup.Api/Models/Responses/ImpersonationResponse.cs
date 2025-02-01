@@ -16,7 +16,7 @@ public record ImpersonationResponse
     public required string Token { get; init; }
 
     [Required]
-    [Description("User ID of the impersonated user")]
+    [Description("User Id of the impersonated user")]
     [MaxLength(128)]
     [DataType(DataType.Text)]
     [JsonPropertyName("ImpersonatedUserId")]
@@ -24,7 +24,7 @@ public record ImpersonationResponse
     public required string ImpersonatedUserId { get; init; }
 
     [Required]
-    [Description("User ID of the original admin user")]
+    [Description("User Id of the original admin user")]
     [MaxLength(128)]
     [DataType(DataType.Text)]
     [JsonPropertyName("OriginalUserId")]

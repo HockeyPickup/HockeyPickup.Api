@@ -79,7 +79,7 @@ public class UsersController : ControllerBase
 
     [Authorize]
     [HttpGet("{userId}")]
-    [Description("Returns a specific user by their ID")]
+    [Description("Returns a specific user by their Id")]
     [Produces(typeof(UserDetailedResponse))]
     [ProducesResponseType(typeof(UserDetailedResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -89,7 +89,7 @@ public class UsersController : ControllerBase
         try
         {
             if (string.IsNullOrEmpty(userId))
-                return BadRequest(new { message = "User ID cannot be empty" });
+                return BadRequest(new { message = "User Id cannot be empty" });
 
             var user = await _userRepository.GetUserAsync(userId);
             if (user == null)
@@ -99,7 +99,7 @@ public class UsersController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving user with ID: {UserId}", userId);
+            _logger.LogError(ex, "Error retrieving user with Id: {UserId}", userId);
             return StatusCode(500, new { message = "An error occurred while retrieving user" });
         }
     }

@@ -456,7 +456,7 @@ public class UserService : IUserService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting user by ID {UserId}", userId);
+            _logger.LogError(ex, "Error getting user by Id {UserId}", userId);
             return null;
         }
     }

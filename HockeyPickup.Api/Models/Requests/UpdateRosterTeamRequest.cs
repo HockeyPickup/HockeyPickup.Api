@@ -10,13 +10,13 @@ namespace HockeyPickup.Api.Models.Requests;
 public class UpdateRosterTeamRequest
 {
     [Required]
-    [Description("Session ID")]
+    [Description("Session Id")]
     [JsonPropertyName("SessionId")]
     [JsonProperty(nameof(SessionId), Required = Required.Always)]
     public required int SessionId { get; set; }
 
     [Required]
-    [Description("User ID")]
+    [Description("User Id")]
     [JsonPropertyName("UserId")]
     [JsonProperty(nameof(UserId), Required = Required.Always)]
     public required string UserId { get; set; } = string.Empty;

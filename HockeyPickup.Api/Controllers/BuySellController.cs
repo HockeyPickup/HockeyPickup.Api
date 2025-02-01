@@ -120,7 +120,7 @@ public class BuySellController : ControllerBase
 
     [Authorize]
     [HttpGet("{buySellId}")]
-    [Description("Gets a specific BuySell by ID")]
+    [Description("Gets a specific BuySell by Id")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status404NotFound)]

@@ -70,7 +70,7 @@ public class SessionRepository : ISessionRepository
 
         if (existingSession == null)
         {
-            throw new KeyNotFoundException($"Session not found with ID: {session.SessionId}");
+            throw new KeyNotFoundException($"Session not found with Id: {session.SessionId}");
         }
 
         // Update only the fields that can be modified
@@ -400,7 +400,7 @@ public class SessionRepository : ISessionRepository
 
                 if (!sessionExists)
                 {
-                    throw new KeyNotFoundException($"Session not found with ID: {sessionId}");
+                    throw new KeyNotFoundException($"Session not found with Id: {sessionId}");
                 }
 
                 // Delete in order of dependency (child tables first)
