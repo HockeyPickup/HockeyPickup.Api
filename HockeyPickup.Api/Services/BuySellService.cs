@@ -529,6 +529,16 @@ public class BuySellService : IBuySellService
                 });
             }
 
+            // If Admin you can buy regardless of other conditions
+            if (await _userManager.IsInRoleAsync(buyer, "Admin"))
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = true,
+                    Reason = "Admins can buy spots regardless of other conditions"
+                });
+            }
+
             // Check buy window based on user status
             var user = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
             DateTime buyWindow;
