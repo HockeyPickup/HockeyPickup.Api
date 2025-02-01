@@ -470,6 +470,22 @@ public class BuyingQueueItem
     [GraphQLDescription("Session identifier")]
     public required int SessionId { get; set; }
 
+    [Description("User Id of the buyer")]
+    [MaxLength(128)]
+    [JsonPropertyName("BuyerUserId")]
+    [JsonProperty(nameof(BuyerUserId))]
+    [GraphQLName("BuyerUserId")]
+    [GraphQLDescription("User Id of the buyer")]
+    public string? BuyerUserId { get; set; }
+
+    [Description("User Id of the seller")]
+    [MaxLength(128)]
+    [JsonPropertyName("SellerUserId")]
+    [JsonProperty(nameof(SellerUserId))]
+    [GraphQLName("SellerUserId")]
+    [GraphQLDescription("User Id of the seller")]
+    public string? SellerUserId { get; set; }
+
     [Description("Name of the buyer")]
     [MaxLength(512)]
     [DataType(DataType.Text)]

@@ -63,7 +63,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{buySellId}/confirm-payment-sent")]
+    [HttpPut("{buySellId}/confirm-payment-sent")]
     [Description("Confirm payment sent for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -77,7 +77,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{buySellId}/confirm-payment-received")]
+    [HttpPut("{buySellId}/confirm-payment-received")]
     [Description("Confirm payment received for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -91,7 +91,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{buySellId}/unconfirm-payment-sent")]
+    [HttpPut("{buySellId}/unconfirm-payment-sent")]
     [Description("Unconfirm payment sent for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]
@@ -105,7 +105,7 @@ public class BuySellController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("{buySellId}/unconfirm-payment-received")]
+    [HttpPut("{buySellId}/unconfirm-payment-received")]
     [Description("Unconfirm payment received for a BuySell")]
     [Produces(typeof(ApiDataResponse<BuySellResponse>))]
     [ProducesResponseType(typeof(ApiDataResponse<BuySellResponse>), StatusCodes.Status200OK)]

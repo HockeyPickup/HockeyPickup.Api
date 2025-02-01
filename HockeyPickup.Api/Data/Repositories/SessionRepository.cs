@@ -267,7 +267,7 @@ public class SessionRepository : ISessionRepository
         _ => throw new ArgumentException($"Invalid player status: {status}")
     };
 
-    private static List<BuyingQueueItem> MapBuyingQueue(ICollection<Entities.BuyingQueue> queue)
+    private static List<BuyingQueueItem> MapBuyingQueue(ICollection<BuyingQueue> queue)
     {
         if (queue == null) return new List<BuyingQueueItem>();
 
@@ -275,7 +275,9 @@ public class SessionRepository : ISessionRepository
         {
             BuySellId = q.BuySellId,
             SessionId = q.SessionId,
+            BuyerUserId = q.BuyerUserId,
             BuyerName = q.BuyerName,
+            SellerUserId = q.SellerUserId,
             SellerName = q.SellerName,
             TeamAssignment = q.TeamAssignment,
             TransactionStatus = q.TransactionStatus,

@@ -181,7 +181,9 @@ public class BuyingQueue
     [Key]
     public int BuySellId { get; set; }
     public int SessionId { get; set; }
+    public string? BuyerUserId { get; set; }
     public string? BuyerName { get; set; }
+    public string? SellerUserId { get; set; }
     public string? SellerName { get; set; }
     public TeamAssignment TeamAssignment { get; set; }
     public string TransactionStatus { get; set; } = null!;
