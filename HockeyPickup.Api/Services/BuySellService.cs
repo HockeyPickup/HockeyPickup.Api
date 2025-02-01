@@ -98,17 +98,13 @@ public class BuySellService : IBuySellService
                     return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
 
                 // Match with existing sell BuySell
-                buySell = new BuySell
-                {
-                    BuySellId = matchingSell.BuySellId,
-                    BuyerUserId = userId,
-                    UpdateByUserId = userId,
-                    TeamAssignment = (TeamAssignment) sellerRoster.TeamAssignment,
-                    UpdateDateTime = DateTime.UtcNow,
-                    BuyerNote = request.Note,
-                };
+                buySell = matchingSell;
+                buySell.BuyerUserId = userId;
+                buySell.UpdateByUserId = userId;
+                buySell.UpdateDateTime = DateTime.UtcNow;
+                buySell.BuyerNote = request.Note;
 
-                message = $"Matched with existing seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
+                message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
             else
@@ -133,7 +129,7 @@ public class BuySellService : IBuySellService
                     PaymentMethod = null
                 };
 
-                message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} added to BUYING queue";
+                message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
 
@@ -188,17 +184,13 @@ public class BuySellService : IBuySellService
             if (matchingBuy != null)
             {
                 // Match with existing buy BuySell
-                buySell = new BuySell
-                {
-                    BuySellId = matchingBuy.BuySellId,
-                    SellerUserId = userId,
-                    UpdateByUserId = userId,
-                    TeamAssignment = (TeamAssignment) sellerRoster.TeamAssignment,
-                    UpdateDateTime = DateTime.UtcNow,
-                    SellerNote = request.Note,
-                };
+                buySell = matchingBuy;
+                buySell.SellerUserId = userId;
+                buySell.UpdateByUserId = userId;
+                buySell.UpdateDateTime = DateTime.UtcNow;
+                buySell.SellerNote = request.Note;
 
-                message = $"Matched with existing buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
+                message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
             else
@@ -214,7 +206,7 @@ public class BuySellService : IBuySellService
                     UpdateDateTime = DateTime.UtcNow,
                     SellerNote = request.Note,
                     Price = session.Cost,
-                    TeamAssignment = (TeamAssignment) sellerRoster.TeamAssignment,
+                    TeamAssignment = sellerRoster.TeamAssignment,
                     Seller = seller,
                     PaymentSent = false,
                     PaymentReceived = false,
@@ -223,7 +215,7 @@ public class BuySellService : IBuySellService
                     PaymentMethod = null
                 };
 
-                message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} added to SELLING queue";
+                message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
 
@@ -248,7 +240,7 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellResponse>.CreateFailure("BuySell not found");
 
             // Verify user is part of the BuySell
-            if (buySell.BuyerUserId == userId)
+            if (buySell.BuyerUserId != userId)
                 return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to confirm payment sent for this BuySell");
 
             buySell.UpdateDateTime = DateTime.UtcNow;
@@ -279,7 +271,7 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellResponse>.CreateFailure("BuySell not found");
 
             // Verify user is part of the BuySell
-            if (buySell.SellerUserId == userId)
+            if (buySell.SellerUserId != userId)
                 return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to confirm payment received for this BuySell");
 
             buySell.UpdateDateTime = DateTime.UtcNow;
@@ -311,10 +303,6 @@ public class BuySellService : IBuySellService
             // Verify user is part of the BuySell
             if (buySell.BuyerUserId != userId)
                 return ServiceResult<BuySellResponse>.CreateFailure("Not authorized to unconfirm payment sent for this BuySell");
-
-            // Cannot unconfirm if payment is already received
-            if (buySell.PaymentReceived)
-                return ServiceResult<BuySellResponse>.CreateFailure("Cannot unconfirm payment sent after payment has been received");
 
             buySell.UpdateDateTime = DateTime.UtcNow;
             buySell.UpdateByUserId = userId;
@@ -425,11 +413,11 @@ public class BuySellService : IBuySellService
 
             // Verify user is the buyer
             if (buySell.BuyerUserId != userId)
-                return ServiceResult<bool>.CreateFailure("Buyer not authorized to cancel this BuySell");
+                return ServiceResult<bool>.CreateFailure("Not authorized to cancel this BuySell");
 
             // Only allow cancellation if buyer has not bought
             if (buySell.SellerUserId != null)
-                return ServiceResult<bool>.CreateFailure("Buyer cannot cancel spot that is already bought");
+                return ServiceResult<bool>.CreateFailure("Cannot cancel spot that is already bought");
 
             var message = $"Buyer: {buySell.Buyer.FirstName} {buySell.Buyer.LastName} cancelled BuySell";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
@@ -454,11 +442,11 @@ public class BuySellService : IBuySellService
 
             // Verify user is the seller
             if (buySell.SellerUserId != userId)
-                return ServiceResult<bool>.CreateFailure("Seller not authorized to cancel this BuySell");
+                return ServiceResult<bool>.CreateFailure("Not authorized to cancel this BuySell");
 
             // Only allow cancellation if seller has not sold
             if (buySell.BuyerUserId != null)
-                return ServiceResult<bool>.CreateFailure("Seller cannot cancel spot that is already sold");
+                return ServiceResult<bool>.CreateFailure("Cannot cancel spot that is already sold");
 
             var message = $"Seller: {buySell.Seller.FirstName} {buySell.Seller.LastName} cancelled BuySell";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
@@ -537,7 +525,7 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "You already have an active Sell for this session"
+                    Reason = "You have an active Sell for this session"
                 });
             }
 
@@ -619,7 +607,7 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "You already have an active Buy for this session"
+                    Reason = "You have an active Buy for this session"
                 });
             }
 
