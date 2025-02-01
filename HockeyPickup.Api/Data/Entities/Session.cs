@@ -74,7 +74,7 @@ public class BuySell
     public bool PaymentReceived { get; set; } = false;  // Add default value
     public DateTime CreateDateTime { get; set; }
     public DateTime UpdateDateTime { get; set; }
-    public TeamAssignment TeamAssignment { get; set; }
+    public TeamAssignment? TeamAssignment { get; set; }
     public bool SellerNoteFlagged { get; set; } = false;  // Add default value
     public bool BuyerNoteFlagged { get; set; } = false;  // Add default value
     public decimal? Price { get; set; }

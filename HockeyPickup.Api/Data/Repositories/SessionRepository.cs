@@ -303,7 +303,7 @@ public class SessionRepository : ISessionRepository
             PaymentSent = b.PaymentSent,
             PaymentReceived = b.PaymentReceived,
             CreateDateTime = b.CreateDateTime,
-            TeamAssignment = b.TeamAssignment,
+            TeamAssignment = b.TeamAssignment.HasValue ? b.TeamAssignment.Value : TeamAssignment.TBD,
             UpdateDateTime = b.UpdateDateTime,
             Price = b.Price ?? 0m,
             CreateByUserId = b.CreateByUserId,

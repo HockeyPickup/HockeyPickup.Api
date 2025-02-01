@@ -275,7 +275,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)").IsRequired(false);
 
             // Required fields with defaults
-            entity.Property(e => e.TeamAssignment).HasConversion<int>().HasDefaultValue(TeamAssignment.TBD).IsRequired();
+            entity.Property(e => e.TeamAssignment).HasConversion<int>().HasDefaultValue(TeamAssignment.TBD).IsRequired(false);
             entity.Property(e => e.SellerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
             entity.Property(e => e.BuyerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
             entity.Property(e => e.PaymentSent).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
@@ -285,7 +285,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.Price).HasColumnType("decimal(18,2)").IsRequired(false);
 
             // Explicitly make PaymentMethod nullable
-            entity.Property(e => e.PaymentMethod).HasColumnType("int").IsRequired(false).HasConversion<int>();
+            entity.Property(e => e.PaymentMethod).HasConversion<int>().IsRequired(false);
 
             // Required string fields
             entity.Property(e => e.CreateByUserId).HasColumnType("nvarchar(128)").IsRequired();
