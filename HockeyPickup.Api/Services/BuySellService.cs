@@ -561,7 +561,7 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = true,
-                    Reason = "Admins can buy spots regardless of other conditions"
+                    Reason = "Admins can buy spots regardless of time window"
                 });
             }
 
