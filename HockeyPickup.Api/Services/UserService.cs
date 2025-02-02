@@ -177,34 +177,11 @@ public class UserService : IUserService
             var resetUrl = $"{frontendUrl.TrimEnd('/')}/reset-password?token={encodedToken}&email={WebUtility.UrlEncode(user.Email)}";
 
             // Send forgot password email via service bus
-            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            await SendUserServiceBusCommsMessageAsync("ForgotPassword", new Dictionary<string, string>
             {
-                Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "ForgotPassword" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
-                CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email },
-                    { "NotificationPreference", user.NotificationPreference.ToString() }
-                },
-                RelatedEntities = new Dictionary<string, string>
-                {
-                    { "UserId", user.Id },
-                    { "FirstName", user.FirstName },
-                    { "LastName", user.LastName },
-                    { "NotificationPreference", user.NotificationPreference.ToString() }
-                },
-                MessageData = new Dictionary<string, string>
-                {
-                    { "ResetUrl", resetUrl }
-                }
-            },
-            subject: "ForgotPassword",
-            correlationId: Guid.NewGuid().ToString(),
-            queueName: _configuration["ServiceBusCommsQueueName"]);
-
+                { "ResetUrl", resetUrl }
+            }, user.Id, user.Email, user.NotificationPreference, user.FirstName, user.LastName);
+            
             return ServiceResult.CreateSuccess();
         }
         catch (Exception ex)
@@ -333,32 +310,10 @@ public class UserService : IUserService
             try
             {
                 // Send confirmation email via service bus
-                await _serviceBus.SendAsync(new ServiceBusCommsMessage
+                await SendUserServiceBusCommsMessageAsync("RegisterConfirmation", new Dictionary<string, string>
                 {
-                    Metadata = new Dictionary<string, string>
-                    {
-                        { "Type", "RegisterConfirmation" },
-                        { "CommunicationEventId", Guid.NewGuid().ToString() }
-                    },
-                    CommunicationMethod = new Dictionary<string, string>
-                    {
-                        { "Email", user.Email },
-                        { "NotificationPreference", user.NotificationPreference.ToString() }
-                    },
-                    RelatedEntities = new Dictionary<string, string>
-                    {
-                        { "UserId", user.Id },
-                        { "FirstName", user.FirstName },
-                        { "LastName", user.LastName }
-                    },
-                    MessageData = new Dictionary<string, string>
-                    {
-                        { "ConfirmationUrl", confirmationUrl }
-                    }
-                },
-                subject: "RegisterConfirmation",
-                correlationId: Guid.NewGuid().ToString(),
-                queueName: _configuration["ServiceBusCommsQueueName"]);
+                    { "ConfirmationUrl", confirmationUrl }
+                }, user.Id, user.Email, user.NotificationPreference, user.FirstName, user.LastName);
 
                 return ServiceResult<AspNetUser>.CreateSuccess(user, "Registration successful");
             }
@@ -415,29 +370,7 @@ public class UserService : IUserService
             };
 
             // Post a ServiceBus message
-            await _serviceBus.SendAsync(new ServiceBusCommsMessage
-            {
-                Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "SignedIn" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
-                CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email },
-                    { "NotificationPreference", user.NotificationPreference.ToString() }
-                },
-                RelatedEntities = new Dictionary<string, string>
-                {
-                    { "UserId", user.Id },
-                    { "FirstName", user.FirstName },
-                    { "LastName", user.LastName }
-                },
-                MessageData = [],
-            },
-            subject: "SignedIn",
-            correlationId: Guid.NewGuid().ToString(),
-            queueName: _configuration["ServiceBusCommsQueueName"]);
+            await SendUserServiceBusCommsMessageAsync("SignedIn", null, user.Id, user.Email, user.NotificationPreference, user.FirstName, user.LastName);
 
             return ServiceResult<(User user, string[] roles)>.CreateSuccess((user, roles.ToArray()));
         }
@@ -605,29 +538,7 @@ public class UserService : IUserService
             }
 
             // Send a message to Service Bus that the photo was uploaded
-            await _serviceBus.SendAsync(new ServiceBusCommsMessage
-            {
-                Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "PhotoUploaded" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
-                CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email },
-                    { "NotificationPreference", user.NotificationPreference.ToString() }
-                },
-                RelatedEntities = new Dictionary<string, string>
-                {
-                    { "UserId", user.Id },
-                    { "FirstName", user.FirstName },
-                    { "LastName", user.LastName }
-                },
-                MessageData = null
-            },
-            subject: "PhotoUploaded",
-            correlationId: Guid.NewGuid().ToString(),
-            queueName: _configuration["ServiceBusCommsQueueName"]);
+            await SendUserServiceBusCommsMessageAsync("PhotoUploaded", null, user.Id, user.Email, user.NotificationPreference, user.FirstName, user.LastName);
 
             return ServiceResult<PhotoResponse>.CreateSuccess(new PhotoResponse
             {
@@ -731,32 +642,10 @@ public class UserService : IUserService
             var response = await _userRepository.AddUserPaymentMethodAsync(userId, paymentMethod);
 
             // Send a message to Service Bus that a payment method was added
-            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            await SendUserServiceBusCommsMessageAsync("AddedPaymentMethod", new Dictionary<string, string>
             {
-                Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "AddedPaymentMethod" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
-                CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email },
-                    { "NotificationPreference", user.NotificationPreference.ToString() }
-                },
-                RelatedEntities = new Dictionary<string, string>
-                {
-                    { "UserId", user.Id },
-                    { "FirstName", user.FirstName },
-                    { "LastName", user.LastName }
-                },
-                MessageData = new Dictionary<string, string>
-                {
-                    { "PaymentMethodType", request.MethodType.ToString() },
-                }
-            },
-            subject: "AddedPaymentMethod",
-            correlationId: Guid.NewGuid().ToString(),
-            queueName: _configuration["ServiceBusCommsQueueName"]);
+                { "PaymentMethodType", request.MethodType.ToString() }
+            }, user.Id, user.Email, user.NotificationPreference, user.FirstName, user.LastName);
 
             return ServiceResult<UserPaymentMethodResponse>.CreateSuccess(response);
         }
@@ -820,5 +709,37 @@ public class UserService : IUserService
             _logger.LogError(ex, "Error deleting payment method {PaymentMethodId} for user {UserId}", paymentMethodId, userId);
             return ServiceResult<UserPaymentMethodResponse>.CreateFailure($"An error occurred while deleting payment method. Error: {ex.Message}");
         }
+    }
+
+    private async Task SendUserServiceBusCommsMessageAsync(string type, Dictionary<string, string>? messageDataAdditions, string userId, string userEmail, NotificationPreference userNotificationPreference, string userFirstName, string userLastName)
+    {
+        var commsMessage = new ServiceBusCommsMessage
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                { "Type", type },
+                { "CommunicationEventId", Guid.NewGuid().ToString() }
+            },
+            CommunicationMethod = new Dictionary<string, string>
+            {
+                { "Email", userEmail },
+                { "NotificationPreference", userNotificationPreference.ToString() }
+            },
+            RelatedEntities = new Dictionary<string, string>
+            {
+                { "UserId", userId },
+                { "FirstName", userFirstName },
+                { "LastName", userLastName }
+            },
+            MessageData = [],
+        };
+
+        // Append the extra message data fields
+        foreach (var mda in messageDataAdditions)
+        {
+            commsMessage.MessageData.Add(mda.Key, mda.Value);
+        }
+
+        await _serviceBus.SendAsync(commsMessage, subject: type, correlationId: Guid.NewGuid().ToString(), queueName: _configuration["ServiceBusCommsQueueName"]);
     }
 }

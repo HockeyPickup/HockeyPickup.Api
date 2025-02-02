@@ -61,53 +61,18 @@ public class SessionService : ISessionService
 
             var updatedSession = await _sessionRepository.AddActivityAsync(createdSession.SessionId, msg);
 
-            try
+            // Get the creating user's info
+            var userId = _httpContextAccessor.GetUserId();
+            var user = await _userManager.FindByIdAsync(userId);
+
+            // Send a message to Service Bus that a session was created
+            await SendSessionServiceBusCommsMessageAsync("CreateSession", new Dictionary<string, string>
             {
-                // Get a list of all active users with notification preference
-                var users = await _userRepository.GetDetailedUsersAsync();
-                var activeUserEmails = users.Where(u => u.Active && u.NotificationPreference != (int) NotificationPreference.None).Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).ToArray();
+                { "Note", session.Note },
+                { "CreatedByName", $"{user.FirstName} {user.LastName}" }
+            }, session.SessionId, session.SessionDate, user, true);
 
-                // Get the creating user's info
-                var userId = _httpContextAccessor.GetUserId();
-                var user = await _userManager.FindByIdAsync(userId);
-
-                var baseUrl = _configuration["BaseUrl"];
-                var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{createdSession.SessionId}";
-
-                // Send session create email via service bus
-                await _serviceBus.SendAsync(new ServiceBusCommsMessage
-                {
-                    Metadata = new Dictionary<string, string>
-                    {
-                        { "Type", "CreateSession" },
-                        { "CommunicationEventId", Guid.NewGuid().ToString() }
-                    },
-                    CommunicationMethod = new Dictionary<string, string>
-                    {
-                        { "Email", "" }
-                    },
-                    RelatedEntities = null!,
-                    MessageData = new Dictionary<string, string>
-                    {
-                        { "SessionDate", session.SessionDate.ToString() },
-                        { "SessionUrl", sessionUrl },
-                        { "Note", session.Note },
-                        { "CreatedByName", $"{user.FirstName} {user.LastName}" }
-                    },
-                    NotificationEmails = activeUserEmails!,
-                    NotificationDeviceIds = null
-                },
-                subject: "CreateSession",
-                correlationId: Guid.NewGuid().ToString(),
-                queueName: _configuration["ServiceBusCommsQueueName"]);
-
-                return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send create session message");
-                return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg + ". Create Session email could not be sent");
-            }
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
         catch (Exception ex)
         {
@@ -228,44 +193,12 @@ public class SessionService : ISessionService
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
             await _subscriptionHandler.HandleUpdate(updatedSession);
 
-            var users = await _userRepository.GetDetailedUsersAsync();
-            var userEmails = users.Where(u => u.Active && u.NotificationPreference == NotificationPreference.All).Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).ToArray();
-
-            var baseUrl = _configuration["BaseUrl"];
-            var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{updatedSession.SessionId}";
-
             // Send a message to Service Bus that a players position was updated
-            await _serviceBus.SendAsync(new ServiceBusCommsMessage
+            await SendSessionServiceBusCommsMessageAsync("TeamAssignmentChange", new Dictionary<string, string>
             {
-                Metadata = new Dictionary<string, string>
-                {
-                    { "Type", "TeamAssignmentChange" },
-                    { "CommunicationEventId", Guid.NewGuid().ToString() }
-                },
-                CommunicationMethod = new Dictionary<string, string>
-                {
-                    { "Email", user.Email },
-                    { "NotificationPreference", user.NotificationPreference.ToString() }
-                },
-                RelatedEntities = new Dictionary<string, string>
-                {
-                    { "UserId", user.Id },
-                    { "FirstName", user.FirstName },
-                    { "LastName", user.LastName }
-                },
-                MessageData = new Dictionary<string, string>
-                {
-                    { "SessionDate", session.SessionDate.ToString() },
-                    { "SessionUrl", sessionUrl },
-                    { "FormerTeamAssignment", currentRoster.TeamAssignment.GetDisplayName() },
-                    { "NewTeamAssignment", newTeamAssignment.GetDisplayName() },
-                },
-                NotificationEmails = userEmails!,
-                NotificationDeviceIds = null
-            },
-            subject: "TeamAssignmentChange",
-            correlationId: Guid.NewGuid().ToString(),
-            queueName: _configuration["ServiceBusCommsQueueName"]);
+                { "FormerTeamAssignment", currentRoster.TeamAssignment.GetDisplayName() },
+                { "NewTeamAssignment", newTeamAssignment.GetDisplayName() }
+            }, sessionId, session.SessionDate, user);
 
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
@@ -305,6 +238,9 @@ public class SessionService : ISessionService
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
             await _subscriptionHandler.HandleUpdate(updatedSession);
 
+            // Send a message to Service Bus that a player was deleted from roster
+            await SendSessionServiceBusCommsMessageAsync("DeletedFromRoster", null, sessionId, session.SessionDate, user);
+
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
         catch (Exception ex)
@@ -340,5 +276,49 @@ public class SessionService : ISessionService
             _logger.LogError(ex, $"Error deleting session: {sessionId}");
             return ServiceResult<bool>.CreateFailure($"An error occurred deleting the session: {ex.Message}");
         }
+    }
+
+    private async Task SendSessionServiceBusCommsMessageAsync(string type, Dictionary<string, string>? messageDataAdditions, int sessionId, DateTime sessionDate, AspNetUser user, bool sendToEveryone = false)
+    {
+        var baseUrl = _configuration["BaseUrl"];
+        var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{sessionId}";
+
+        var users = await _userRepository.GetDetailedUsersAsync();
+        var userEmails = users.Where(u => u.Active && (u.NotificationPreference == NotificationPreference.All || (sendToEveryone && u.NotificationPreference == NotificationPreference.OnlyMyBuySell))).Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).ToArray();
+
+        var commsMessage = new ServiceBusCommsMessage
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                { "Type", type },
+                { "CommunicationEventId", Guid.NewGuid().ToString() }
+            },
+            CommunicationMethod = new Dictionary<string, string>
+            {
+                { "Email", user.Email },
+                { "NotificationPreference", user.NotificationPreference.ToString() }
+            },
+            RelatedEntities = new Dictionary<string, string>
+            {
+                { "UserId", user.Id },
+                { "FirstName", user.FirstName },
+                { "LastName", user.LastName }
+            },
+            MessageData = new Dictionary<string, string>
+            {
+                { "SessionDate", sessionDate.ToString() },
+                { "SessionUrl", sessionUrl },
+            },
+            NotificationEmails = userEmails!,
+            NotificationDeviceIds = null
+        };
+
+        // Append the extra message data fields
+        foreach (var mda in messageDataAdditions)
+        {
+            commsMessage.MessageData.Add(mda.Key, mda.Value);
+        }
+
+        await _serviceBus.SendAsync(commsMessage, subject: type, correlationId: Guid.NewGuid().ToString(), queueName: _configuration["ServiceBusCommsQueueName"]);
     }
 }
