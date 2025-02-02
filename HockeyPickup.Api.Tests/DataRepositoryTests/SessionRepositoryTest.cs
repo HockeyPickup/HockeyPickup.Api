@@ -665,7 +665,9 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Seller = user2,    // Explicitly set navigation property
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = (TeamAssignment) 1
+            TeamAssignment = (TeamAssignment) 1,
+            CreateByUser = user1,
+            UpdateByUser = user2
         };
 
         // Create BuySell with valid IDs but null navigation properties
@@ -679,7 +681,9 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             Seller = null,            // Explicitly null navigation property
             CreateDateTime = _testDate,
             UpdateDateTime = _testDate,
-            TeamAssignment = (TeamAssignment) 2
+            TeamAssignment = (TeamAssignment) 2,
+            CreateByUser = null,
+            UpdateByUser = null
         };
         _context.BuySells.AddRange(buySell1, buySell2);
 
@@ -1268,7 +1272,9 @@ public class BuyingQueueTests
             PaymentSent = true,
             PaymentReceived = true,
             BuyerNote = "Ready to buy",
-            SellerNote = "Spot available"
+            SellerNote = "Spot available",
+            BuyerUserId = "user123",
+            SellerUserId = "user456"
         };
 
         // Assert
@@ -1283,6 +1289,8 @@ public class BuyingQueueTests
         queue.PaymentReceived.Should().BeTrue();
         queue.BuyerNote.Should().Be("Ready to buy");
         queue.SellerNote.Should().Be("Spot available");
+        queue.BuyerUserId.Should().Be("user123");
+        queue.SellerUserId.Should().Be("user456");
     }
 
     [Fact]
