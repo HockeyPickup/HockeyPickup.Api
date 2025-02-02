@@ -83,8 +83,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             // Custom columns
             entity.Property(e => e.FirstName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.LastName).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.NotificationPreference).HasDefaultValue(1);
-            entity.Property(e => e.PositionPreference).HasDefaultValue(1);
+            entity.Property(e => e.NotificationPreference).HasConversion<int>().HasDefaultValue(NotificationPreference.OnlyMyBuySell).IsRequired().HasSentinel(NotificationPreference.None);
+            entity.Property(e => e.PositionPreference).HasConversion<int>().HasDefaultValue(PositionPreference.TBD).IsRequired();
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
             entity.Property(e => e.Rating).HasColumnType("decimal(18,2)").HasDefaultValue(0);
@@ -204,10 +204,20 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         });
 
         // Configure many-to-many relationship
-        modelBuilder.Entity<AspNetUser>()
-            .HasMany(u => u.Roles)
-            .WithMany(r => r.Users)
-            .UsingEntity<IdentityUserRole<string>>();
+        modelBuilder.Entity<AspNetUser>(entity =>
+        {
+            entity.HasMany(u => u.Roles)
+                .WithMany(r => r.Users)
+                .UsingEntity<IdentityUserRole<string>>();
+
+            entity.Property(e => e.NotificationPreference)
+                .HasDefaultValue(NotificationPreference.OnlyMyBuySell)
+                .HasConversion<int>();
+
+            entity.Property(e => e.PositionPreference)
+                .HasDefaultValue(PositionPreference.TBD)
+                .HasConversion<int>();
+        });
 
         modelBuilder.Entity<Session>(entity =>
         {
@@ -256,19 +266,50 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.ToTable("BuySells", tb => tb.UseSqlOutputClause(false));
             entity.HasKey(e => e.BuySellId).HasName("PK_dbo.BuySells");
 
-            entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
-            entity.Property(e => e.UpdateDateTime).HasColumnType("datetime");
-            entity.Property(e => e.BuyerNote).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.TeamAssignment).HasDefaultValue(0);
-            entity.Property(e => e.SellerNoteFlagged).HasDefaultValue(false);
-            entity.Property(e => e.BuyerNoteFlagged).HasDefaultValue(false);
+            // Required DateTime fields
+            entity.Property(e => e.CreateDateTime).HasColumnType("datetime").IsRequired();
+            entity.Property(e => e.UpdateDateTime).HasColumnType("datetime").IsRequired();
 
+            // Nullable text fields
+            entity.Property(e => e.BuyerNote).HasColumnType("nvarchar(max)").IsRequired(false);
+            entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)").IsRequired(false);
+
+            // Required fields with defaults
+            entity.Property(e => e.TeamAssignment).HasConversion<int>().HasDefaultValue(TeamAssignment.TBD).IsRequired();
+            entity.Property(e => e.SellerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
+            entity.Property(e => e.BuyerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
+            entity.Property(e => e.PaymentSent).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
+            entity.Property(e => e.PaymentReceived).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
+
+            // Nullable decimal
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)").IsRequired(false);
+
+            // Explicitly make PaymentMethod nullable
+            entity.Property(e => e.PaymentMethod).HasColumnType("int").IsRequired(false).HasConversion<int>();
+
+            // Required string fields
+            entity.Property(e => e.CreateByUserId).HasColumnType("nvarchar(128)").IsRequired();
+            entity.Property(e => e.UpdateByUserId).HasColumnType("nvarchar(128)").IsRequired();
+
+            // Computed column
+            entity.Property(e => e.TransactionStatus)
+                .HasMaxLength(50)
+                .IsRequired()
+                .HasComputedColumnSql(@"case 
+            when [SellerUserId] IS NULL AND [BuyerUserId] IS NOT NULL then 'Looking to Buy' 
+            when [BuyerUserId] IS NULL AND [SellerUserId] IS NOT NULL then 'Available to Buy'  
+            when [BuyerUserId] IS NOT NULL AND [SellerUserId] IS NOT NULL then 
+                case when [PaymentSent]=(1) AND [PaymentReceived]=(1) then 'Complete' 
+                when [PaymentSent]=(1) then 'Payment Sent' 
+                else 'Payment Pending' end 
+            else 'Unknown' end", true);
+
+            // Navigation properties and relationships
             entity.HasOne(e => e.Session)
-                    .WithMany(s => s.BuySells)
-                    .HasForeignKey(e => e.SessionId)
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId")
+                .WithMany(s => s.BuySells)
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_dbo.BuySells_dbo.Sessions_SessionId")
                     .IsRequired(); // Make this relationship required
 
             // Configure one-way relationships for Buyer/Seller
@@ -287,7 +328,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .OnDelete(DeleteBehavior.Restrict);  // Prevent cascading deletes
         });
 
-            // Configure RegularSets
+        // Configure RegularSets
         modelBuilder.Entity<RegularSet>(entity =>
         {
             entity.ToTable("RegularSets", tb => tb.UseSqlOutputClause(false));
@@ -364,6 +405,13 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(q => q.SellerName).HasMaxLength(512);
             entity.Property(q => q.BuyerNote).HasColumnType("nvarchar(max)");
             entity.Property(q => q.SellerNote).HasColumnType("nvarchar(max)");
+
+            // Configure relationships with AspNetUser
+            entity.HasOne(e => e.Buyer).WithMany().HasForeignKey(e => e.BuyerUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Seller).WithMany().HasForeignKey(e => e.SellerUserId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.Navigation(e => e.Buyer).AutoInclude();
+            entity.Navigation(e => e.Seller).AutoInclude();
         });
 
         // Add this inside OnModelCreating method, alongside other entity configurations
@@ -374,7 +422,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
             entity.Property(e => e.IsPlaying).HasDefaultValue(true);
             entity.Property(e => e.IsRegular).HasDefaultValue(false);
-            entity.Property(e => e.Position).HasDefaultValue(2);
+            entity.Property(e => e.Position).HasConversion<int>().HasDefaultValue(PositionPreference.TBD);
             entity.Property(e => e.JoinedDateTime).HasColumnType("datetime");
             entity.Property(e => e.LeftDateTime).HasColumnType("datetime");
             entity.Property(e => e.UserId).HasMaxLength(128).IsRequired();
@@ -392,6 +440,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .HasForeignKey(e => e.UserId)
                 .HasConstraintName("FK_dbo.SessionRosters_AspNetUsers");
         });
+
         modelBuilder.HasAnnotation("Relational:IsStoredInDatabase", true);
 
         modelBuilder.Entity<UserPaymentMethod>(entity =>

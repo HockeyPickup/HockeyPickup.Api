@@ -47,8 +47,8 @@ public partial class UserServiceTest
         user.LastName.Should().Be(request.LastName);
         user.EmergencyName.Should().Be(request.EmergencyName);
         user.EmergencyPhone.Should().Be(request.EmergencyPhone);
-        user.NotificationPreference.Should().Be((int) request.NotificationPreference!.Value);
-        user.PositionPreference.Should().Be((int) request.PositionPreference!.Value);
+        user.NotificationPreference.Should().Be(request.NotificationPreference!.Value);
+        user.PositionPreference.Should().Be(request.PositionPreference!.Value);
     }
 
     [Fact]

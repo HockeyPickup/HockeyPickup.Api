@@ -362,8 +362,8 @@ public class RegularServiceTests
             new() {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = 2,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) 2,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
@@ -379,16 +379,16 @@ public class RegularServiceTests
             new() {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = newPosition,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) newPosition,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
-        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition))
             .ReturnsAsync(updatedSet);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -411,8 +411,8 @@ public class RegularServiceTests
             new() {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                TeamAssignment = 1,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
@@ -428,16 +428,16 @@ public class RegularServiceTests
             new() {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                TeamAssignment = newTeam,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) newTeam,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
-        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam))
             .ReturnsAsync(updatedSet);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -460,8 +460,8 @@ public class RegularServiceTests
             new() {
                 UserId = "different-user",
                 RegularSetId = regularSetId,
-                PositionPreference = 1,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) 1,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
@@ -472,13 +472,13 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("User is not part of this Regular set");
         _mockRegularRepository.Verify(x => x.UpdatePlayerPositionAsync(
-            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PositionPreference>()), Times.Never);
     }
 
     [Fact]
@@ -496,8 +496,8 @@ public class RegularServiceTests
             new() {
                 UserId = "different-user",
                 RegularSetId = regularSetId,
-                TeamAssignment = 1,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
@@ -508,13 +508,13 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("User is not part of this Regular set");
         _mockRegularRepository.Verify(x => x.UpdatePlayerTeamAsync(
-            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>()), Times.Never);
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<TeamAssignment>()), Times.Never);
     }
 
     [Fact]
@@ -533,8 +533,8 @@ public class RegularServiceTests
         {
             UserId = userId,
             RegularSetId = regularSetId,
-            PositionPreference = currentPosition,
-            TeamAssignment = 1
+            PositionPreference = (PositionPreference) currentPosition,
+            TeamAssignment = (TeamAssignment) 1
         }
     };
 
@@ -544,7 +544,7 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, currentPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) currentPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -567,8 +567,8 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = 1,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) 1,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
@@ -576,11 +576,11 @@ public class RegularServiceTests
             .ReturnsAsync(user);
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
             .ReturnsAsync(regularSet);
-        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition))
             .ReturnsAsync((RegularSetDetailedResponse) null);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -603,8 +603,8 @@ public class RegularServiceTests
         {
             UserId = userId,
             RegularSetId = regularSetId,
-            PositionPreference = 1,
-            TeamAssignment = 1
+            PositionPreference = (PositionPreference) 1,
+            TeamAssignment = (TeamAssignment) 1
         }
     };
 
@@ -612,11 +612,11 @@ public class RegularServiceTests
             .ReturnsAsync(user);
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
             .ReturnsAsync(regularSet);
-        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition))
             .ThrowsAsync(new Exception("Test exception"));
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -647,8 +647,8 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                TeamAssignment = currentTeam,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) currentTeam,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
@@ -658,7 +658,7 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, currentTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) currentTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -681,8 +681,8 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                TeamAssignment = 1,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
@@ -690,11 +690,11 @@ public class RegularServiceTests
             .ReturnsAsync(user);
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
             .ReturnsAsync(regularSet);
-        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam))
             .ReturnsAsync((RegularSetDetailedResponse) null);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -717,8 +717,8 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                TeamAssignment = 1,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
@@ -726,11 +726,11 @@ public class RegularServiceTests
             .ReturnsAsync(user);
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
             .ReturnsAsync(regularSet);
-        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam))
             .ThrowsAsync(new Exception("Test exception"));
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -757,7 +757,7 @@ public class RegularServiceTests
             .ReturnsAsync((AspNetUser) null!);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -780,7 +780,7 @@ public class RegularServiceTests
             .ReturnsAsync((RegularSetDetailedResponse) null!);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -804,8 +804,8 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = 1,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) 1,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
@@ -813,11 +813,11 @@ public class RegularServiceTests
             .ReturnsAsync(user);
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
             .ReturnsAsync(regularSet);
-        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition))
             .ThrowsAsync(new Exception("Test exception"));
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -844,7 +844,7 @@ public class RegularServiceTests
             .ReturnsAsync((AspNetUser) null!);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -867,7 +867,7 @@ public class RegularServiceTests
             .ReturnsAsync((RegularSetDetailedResponse) null!);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -890,8 +890,8 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                TeamAssignment = 1,
-                PositionPreference = 1
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 1
             }
         };
 
@@ -899,11 +899,11 @@ public class RegularServiceTests
             .ReturnsAsync(user);
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(regularSetId))
             .ReturnsAsync(regularSet);
-        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam))
             .ThrowsAsync(new Exception("Test exception"));
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -935,7 +935,7 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -960,7 +960,7 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -985,7 +985,7 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -1010,7 +1010,7 @@ public class RegularServiceTests
             .ReturnsAsync(regularSet);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -1035,8 +1035,8 @@ public class RegularServiceTests
                 UserId = userId,
                 RegularSetId = regularSetId, 
                 // Make sure this doesn't match newPosition
-                PositionPreference = initialPosition,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) initialPosition,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
@@ -1052,21 +1052,21 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = newPosition,
-                TeamAssignment = 1
+                PositionPreference = (PositionPreference) newPosition,
+                TeamAssignment = (TeamAssignment) 1
             }
         };
 
-        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, newPosition))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerPositionAsync(regularSetId, userId, (PositionPreference) newPosition))
             .ReturnsAsync(updatedSet);
 
         // Act
-        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, newPosition);
+        var result = await _regularService.UpdateRegularPosition(regularSetId, userId, (PositionPreference) newPosition);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
-        result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.PositionPreference == newPosition);
+        result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.PositionPreference == (PositionPreference) newPosition);
     }
 
     [Fact]
@@ -1086,9 +1086,9 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = 1,
+                PositionPreference = (PositionPreference) 1,
                 // Make sure this doesn't match newTeam
-                TeamAssignment = initialTeam
+                TeamAssignment = (TeamAssignment) initialTeam
             }
         };
 
@@ -1104,21 +1104,21 @@ public class RegularServiceTests
             {
                 UserId = userId,
                 RegularSetId = regularSetId,
-                PositionPreference = 1,
-                TeamAssignment = newTeam
+                PositionPreference = (PositionPreference) 1,
+                TeamAssignment = (TeamAssignment) newTeam
             }
         };
 
-        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, newTeam))
+        _mockRegularRepository.Setup(x => x.UpdatePlayerTeamAsync(regularSetId, userId, (TeamAssignment) newTeam))
             .ReturnsAsync(updatedSet);
 
         // Act
-        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, newTeam);
+        var result = await _regularService.UpdateRegularTeam(regularSetId, userId, (TeamAssignment) newTeam);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().NotBeNull();
-        result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.TeamAssignment == newTeam);
+        result.Data.Regulars.Should().Contain(r => r.UserId == userId && r.TeamAssignment == (TeamAssignment) newTeam);
     }
 
     [Fact]
@@ -1184,8 +1184,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var user = new AspNetUser { Id = "test-user", FirstName = "Test", LastName = "User" };
@@ -1226,8 +1226,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         _userManager.Setup(x => x.FindByIdAsync(request.UserId))
@@ -1258,8 +1258,8 @@ public class RegularServiceTests
         new() {
             UserId = request.UserId,
             RegularSetId = request.RegularSetId,
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         }
     };
 
@@ -1318,8 +1318,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var user = new AspNetUser { Id = "test-user" };
@@ -1341,8 +1341,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var user = new AspNetUser { Id = "test-user" };
@@ -1376,8 +1376,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var user = new AspNetUser { Id = "test-user" };
@@ -1388,7 +1388,7 @@ public class RegularServiceTests
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
             .ReturnsAsync(regularSet);
         _mockRegularRepository.Setup(x => x.AddPlayerAsync(It.IsAny<int>(), It.IsAny<string>(),
-            It.IsAny<int>(), It.IsAny<int>()))
+            It.IsAny<TeamAssignment>(), It.IsAny<PositionPreference>()))
             .ReturnsAsync((RegularSetDetailedResponse) null!);
 
         var result = await _regularService.AddRegular(request);
@@ -1404,8 +1404,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         _userManager.Setup(x => x.FindByIdAsync(request.UserId))
@@ -1474,8 +1474,8 @@ public class RegularServiceTests
             {
                 UserId = request.UserId,
                 RegularSetId = request.RegularSetId,
-                TeamAssignment = 1,
-                PositionPreference = 2
+                TeamAssignment = (TeamAssignment) 1,
+                PositionPreference = (PositionPreference) 2
             }
         };
 
@@ -1528,8 +1528,8 @@ public class RegularServiceTests
         {
             RegularSetId = 1,
             UserId = "test-user",
-            TeamAssignment = 1,
-            PositionPreference = 2
+            TeamAssignment = (TeamAssignment) 1,
+            PositionPreference = (PositionPreference) 2
         };
 
         var user = new AspNetUser { Id = "test-user" };
@@ -1541,7 +1541,7 @@ public class RegularServiceTests
         _mockRegularRepository.Setup(x => x.GetRegularSetAsync(request.RegularSetId))
             .ReturnsAsync(regularSet);
         _mockRegularRepository.Setup(x => x.AddPlayerAsync(It.IsAny<int>(), It.IsAny<string>(),
-            It.IsAny<int>(), It.IsAny<int>()))
+            It.IsAny<TeamAssignment>(), It.IsAny<PositionPreference>()))
             .ReturnsAsync(regularSet);
 
         var result = await _regularService.AddRegular(request);

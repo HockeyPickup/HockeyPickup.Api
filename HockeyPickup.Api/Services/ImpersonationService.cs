@@ -122,7 +122,7 @@ public class ImpersonationService : IImpersonationService
         try
         {
             var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            _logger.LogDebug($"Current User ID: {currentUserId}");
+            _logger.LogDebug($"Current User Id: {currentUserId}");
 
             if (string.IsNullOrEmpty(currentUserId))
                 return Task.FromResult(ServiceResult<ImpersonationStatusResponse>.CreateFailure("User not found"));
@@ -146,9 +146,9 @@ public class ImpersonationService : IImpersonationService
                 }));
             }
 
-            // Get the original admin ID from the claim
+            // Get the original admin Id from the claim
             var originalAdminId = originalAdminClaim.Value.Split(':')[1];
-            _logger.LogDebug($"Parsed Admin ID: {originalAdminId}");
+            _logger.LogDebug($"Parsed Admin Id: {originalAdminId}");
 
             // Parse start time if available
             // In GetStatusAsync method:

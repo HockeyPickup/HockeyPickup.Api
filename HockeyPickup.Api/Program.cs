@@ -24,6 +24,7 @@ using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using IAuthorizationHandler = HotChocolate.Authorization.IAuthorizationHandler;
 
 namespace HockeyPickup.Api;
@@ -39,6 +40,12 @@ public class Program
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.PropertyNamingPolicy = null; // This keeps PascalCase
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<TeamAssignment>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<PositionPreference>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<PlayerStatus>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<NotificationPreference>());
+            options.JsonSerializerOptions.Converters.Add(new EnumDisplayNameConverter<PaymentMethodType>());
         })
         .ConfigureValidation();
 
@@ -154,11 +161,13 @@ public class Program
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<ISessionRepository, SessionRepository>();
         builder.Services.AddScoped<IRegularRepository, RegularRepository>();
+        builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
 
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<ISessionService, SessionService>();
         builder.Services.AddScoped<IRegularService, RegularService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();
+        builder.Services.AddScoped<IBuySellService, BuySellService>();
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();
@@ -432,7 +441,7 @@ public class ServiceBusHealthCheck : IHealthCheck
                 MessageId = Guid.NewGuid().ToString()
             };
 
-            _logger.LogDebug($"Sending health check message with ID: {message.MessageId}");
+            _logger.LogDebug($"Sending health check message with Id: {message.MessageId}");
 
             // Use a short timeout
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));

@@ -41,7 +41,6 @@ public static class ServiceBusConstants
     public static readonly TimeSpan CircuitBreakerDuration = TimeSpan.FromSeconds(30);
 
     // Message settings
-    public static readonly TimeSpan MessageTimeToLive = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
 
     // Background Service settings
@@ -141,7 +140,6 @@ public class ResilientServiceBus : IServiceBus
             {
                 Subject = subject,
                 CorrelationId = correlationId,
-                TimeToLive = ServiceBusConstants.MessageTimeToLive
             };
 
             // If no cancellation token provided, create one with default timeout

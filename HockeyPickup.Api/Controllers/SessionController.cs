@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
@@ -64,7 +65,7 @@ public class SessionController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> UpdateRosterPosition([FromBody] UpdateRosterPositionRequest updateRosterPositionRequest)
     {
-        var result = await _sessionService.UpdateRosterPosition(updateRosterPositionRequest.SessionId, updateRosterPositionRequest.UserId, updateRosterPositionRequest.NewPosition);
+        var result = await _sessionService.UpdateRosterPosition(updateRosterPositionRequest.SessionId, updateRosterPositionRequest.UserId, (PositionPreference) updateRosterPositionRequest.NewPosition);
         var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
@@ -78,7 +79,21 @@ public class SessionController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> UpdateRosterTeam([FromBody] UpdateRosterTeamRequest updateRosterTeamRequest)
     {
-        var result = await _sessionService.UpdateRosterTeam(updateRosterTeamRequest.SessionId, updateRosterTeamRequest.UserId, updateRosterTeamRequest.NewTeamAssignment);
+        var result = await _sessionService.UpdateRosterTeam(updateRosterTeamRequest.SessionId, updateRosterTeamRequest.UserId, (TeamAssignment) updateRosterTeamRequest.NewTeamAssignment);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("delete-roster-player/{sessionId}/{userId}")]
+    [Description("Removes a player from the Session Roster")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> DeleteRosterPlayer(int sessionId, string userId)
+    {
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
         var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }

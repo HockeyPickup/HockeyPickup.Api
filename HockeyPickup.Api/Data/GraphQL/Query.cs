@@ -42,10 +42,10 @@ public class Query
     }
 
     [Authorize]
-    [GraphQLDescription("Retrieves a specific session by ID with all details.")]
+    [GraphQLDescription("Retrieves a specific session by Id with all details.")]
     [GraphQLType(typeof(SessionDetailedResponse))]
     [GraphQLName("Session")]
-    public async Task<SessionDetailedResponse> GetSession([GraphQLName("SessionId")][GraphQLDescription("The ID of the session to retrieve")] int SessionId, [Service] ISessionRepository sessionRepository)
+    public async Task<SessionDetailedResponse> GetSession([GraphQLName("SessionId")][GraphQLDescription("The Id of the session to retrieve")] int SessionId, [Service] ISessionRepository sessionRepository)
     {
         return await sessionRepository.GetSessionAsync(SessionId);
     }
@@ -60,10 +60,10 @@ public class Query
     }
 
     [Authorize]
-    [GraphQLDescription("Retrieves a specific regular set by ID with all regular players")]
+    [GraphQLDescription("Retrieves a specific regular set by Id with all regular players")]
     [GraphQLType(typeof(RegularSetDetailedResponse))]
     [GraphQLName("RegularSet")]
-    public async Task<RegularSetDetailedResponse> GetRegularSet([GraphQLName("RegularSetId")] [GraphQLDescription("The ID of the regular set to retrieve")] int regularSetId, [Service] IRegularRepository regularRepository)
+    public async Task<RegularSetDetailedResponse> GetRegularSet([GraphQLName("RegularSetId")] [GraphQLDescription("The Id of the regular set to retrieve")] int regularSetId, [Service] IRegularRepository regularRepository)
     {
         return await regularRepository.GetRegularSetAsync(regularSetId);
     }
@@ -72,7 +72,7 @@ public class Query
     [GraphQLDescription("Retrieves user statistics")]
     [GraphQLType(typeof(UserStatsResponse))]
     [GraphQLName("UserStats")]
-    public async Task<UserStatsResponse> GetUserStats([GraphQLName("UserId")][GraphQLDescription("The ID of the user")] string userId, [Service] IUserRepository userRepository)
+    public async Task<UserStatsResponse> GetUserStats([GraphQLName("UserId")][GraphQLDescription("The Id of the user")] string userId, [Service] IUserRepository userRepository)
     {
         return await userRepository.GetUserStatsAsync(userId);
     }
@@ -81,7 +81,7 @@ public class Query
     [GraphQLDescription("Retrieves user payment methods")]
     [GraphQLType(typeof(UserPaymentMethodResponse))]
     [GraphQLName("UserPaymentMethod")]
-    public async Task<IEnumerable<UserPaymentMethodResponse>> GetPaymentMethods([GraphQLName("UserId")][GraphQLDescription("The ID of the user")] string userId, [Service] IUserRepository userRepository)
+    public async Task<IEnumerable<UserPaymentMethodResponse>> GetPaymentMethods([GraphQLName("UserId")][GraphQLDescription("The Id of the user")] string userId, [Service] IUserRepository userRepository)
     {
         return await userRepository.GetUserPaymentMethodsAsync(userId);
     }

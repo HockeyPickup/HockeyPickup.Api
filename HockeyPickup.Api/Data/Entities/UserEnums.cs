@@ -5,37 +5,100 @@ namespace HockeyPickup.Api.Data.Entities;
 
 public enum NotificationPreference
 {
+    [GraphQLName("None")]
     [Display(Name = @"None")]
-    None,
+    None = 0,
+
+    [GraphQLName("All")]
     [Display(Name = @"All")]
-    All,
-    [Display(Name = @"Only My Buy/Sells")]
-    OnlyMyBuySell
+    All = 1,
+
+    [GraphQLName("OnlyMyBuySell")]
+    [Display(Name = @"Only My Buy/Sell")]
+    OnlyMyBuySell = 2,
 }
 
 public enum PositionPreference
 {
+    [GraphQLName("TBD")]
     [Display(Name = @"TBD")]
-    TBD,
+    TBD = 0,
+
+    [GraphQLName("Forward")]
     [Display(Name = @"Forward")]
-    Forward,
+    Forward = 1,
+
+    [GraphQLName("Defense")]
     [Display(Name = @"Defense")]
-    Defense,
+    Defense = 2,
+
+    [GraphQLName("Goalie")]
     [Display(Name = @"Goalie")]
-    Goalie
+    Goalie = 3
 }
 
 public enum PlayerStatus
 {
-    [Description("Regular player in the roster")]
-    Regular = 0,
-
-    [Description("Substitute player in the roster")]
-    Substitute = 1,
-
+    [GraphQLName("NotPlaying")]
+    [Display(Name = @"Not Playing")]
     [Description("Player no longer in the roster")]
-    NotPlaying = 2,
+    NotPlaying = 0,
 
-    [Description("Player int the queue")]
+    [GraphQLName("Regular")]
+    [Display(Name = @"Regular")]
+    [Description("Regular player in the roster")]
+    Regular = 1,
+
+    [GraphQLName("Substitute")]
+    [Display(Name = @"Substitute")]
+    [Description("Substitute player in the roster")]
+    Substitute = 2,
+
+    [GraphQLName("InQueue")]
+    [Display(Name = @"In Queue")]
+    [Description("Player in the queue")]
     InQueue = 3
+}
+
+public enum TeamAssignment
+{
+    [GraphQLName("TBD")]
+    [Display(Name = @"TBD")]
+    TBD = 0,
+
+    [GraphQLName("Light")]
+    [Display(Name = @"Light")]
+    Light = 1,
+
+    [GraphQLName("Dark")]
+    [Display(Name = @"Dark")]
+    Dark = 2
+}
+
+// PaymentMethod enum to define available payment types
+public enum PaymentMethodType
+{
+    [GraphQLName("Unknown")]
+    [Display(Name = @"Unknown")]
+    Unknown = 0,
+
+    [GraphQLName("PayPal")]
+    [Display(Name = @"PayPal")]
+    PayPal = 1,
+
+    [GraphQLName("Venmo")]
+    [Display(Name = @"Venmo")]
+    Venmo = 2,
+
+    [GraphQLName("CashApp")]
+    [Display(Name = @"CashApp")]
+    CashApp = 3,
+
+    [GraphQLName("Zelle")]
+    [Display(Name = @"Zelle")]
+    Zelle = 4,
+
+    [GraphQLName("Bitcoin")]
+    [Display(Name = @"Bitcoin")]
+    Bitcoin = 5
 }

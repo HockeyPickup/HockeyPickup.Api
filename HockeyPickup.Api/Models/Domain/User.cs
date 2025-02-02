@@ -1,4 +1,5 @@
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Responses;
 using Newtonsoft.Json;
 using System.ComponentModel;
@@ -112,14 +113,16 @@ public class User
     [Range(0, int.MaxValue)]
     [JsonPropertyName("NotificationPreference")]
     [JsonProperty(nameof(NotificationPreference), Required = Required.Always)]
-    public int NotificationPreference { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<NotificationPreference>))]
+    public NotificationPreference NotificationPreference { get; set; }
 
     [Required]
     [Description("User's position preferences")]
     [Range(0, int.MaxValue)]
     [JsonPropertyName("PositionPreference")]
     [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
-    public int PositionPreference { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public PositionPreference PositionPreference { get; set; }
 
     [Required]
     [Description("Indicates if user account is active")]

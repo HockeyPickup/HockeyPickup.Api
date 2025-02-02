@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 
 namespace HockeyPickup.Api.Models.Responses;
@@ -141,27 +142,28 @@ public class SessionDetailedResponse : SessionBasicResponse
 [GraphQLName("BuySell")]
 public class BuySellResponse
 {
-    [Description("Unique identifier for the buy/sell transaction")]
+    [Required]
+    [Description("Unique identifier for the BuySell")]
     [JsonPropertyName("BuySellId")]
-    [JsonProperty(nameof(BuySellId))]
+    [JsonProperty(nameof(BuySellId), Required = Required.Always)]
     [GraphQLName("BuySellId")]
-    [GraphQLDescription("Unique identifier for the buy/sell transaction")]
-    public int? BuySellId { get; set; }
+    [GraphQLDescription("Unique identifier for the BuySell")]
+    public required int BuySellId { get; set; }
 
-    [Description("User ID of the buyer")]
+    [Description("User Id of the buyer")]
     [MaxLength(128)]
     [JsonPropertyName("BuyerUserId")]
     [JsonProperty(nameof(BuyerUserId))]
     [GraphQLName("BuyerUserId")]
-    [GraphQLDescription("User ID of the buyer")]
+    [GraphQLDescription("User Id of the buyer")]
     public string? BuyerUserId { get; set; }
 
-    [Description("User ID of the seller")]
+    [Description("User Id of the seller")]
     [MaxLength(128)]
     [JsonPropertyName("SellerUserId")]
     [JsonProperty(nameof(SellerUserId))]
     [GraphQLName("SellerUserId")]
-    [GraphQLDescription("User ID of the seller")]
+    [GraphQLDescription("User Id of the seller")]
     public string? SellerUserId { get; set; }
 
     [Description("Note from the seller")]
@@ -206,13 +208,89 @@ public class BuySellResponse
     public required DateTime CreateDateTime { get; set; }
 
     [Required]
+    [Description("Date and time of last update")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("UpdateDateTime")]
+    [JsonProperty(nameof(UpdateDateTime), Required = Required.Always)]
+    [GraphQLName("UpdateDateTime")]
+    [GraphQLDescription("Date and time of last update")]
+    public required DateTime UpdateDateTime { get; set; }
+
+    [Required]
     [Description("Team assignment for the transaction")]
     [Range(0, 2)]
     [JsonPropertyName("TeamAssignment")]
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment for the transaction")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
+
+    [Required]
+    [Description("Price for the BuySell (from session)")]
+    [Range(0, 999.99)]
+    [DataType(DataType.Currency)]
+    [JsonPropertyName("Price")]
+    [JsonProperty(nameof(Price), Required = Required.Always)]
+    [GraphQLName("Price")]
+    [GraphQLDescription("Price for the BuySell (from session)")]
+    public required decimal Price { get; set; }
+
+    [Description("Payment method used to complete the BuySell")]
+    [JsonPropertyName("PaymentMethod")]
+    [JsonProperty(nameof(PaymentMethod))]
+    [GraphQLName("PaymentMethod")]
+    [GraphQLDescription("Payment method used to complete the BuySell")]
+    [EnumDataType(typeof(PaymentMethodType))]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PaymentMethodType>))]
+    public PaymentMethodType? PaymentMethod { get; set; }
+
+    [Description("User Id creating BuySell")]
+    [MaxLength(128)]
+    [JsonPropertyName("CreateByUserId")]
+    [JsonProperty(nameof(CreateByUserId))]
+    [GraphQLName("CreateByUserId")]
+    [GraphQLDescription("User Id creating BuySell")]
+    public string? CreateByUserId { get; set; }
+
+    [Description("User Id updating BuySell")]
+    [MaxLength(128)]
+    [JsonPropertyName("UpdateByUserId")]
+    [JsonProperty(nameof(UpdateByUserId))]
+    [GraphQLName("UpdateByUserId")]
+    [GraphQLDescription("User Id updating BuySell")]
+    public string? UpdateByUserId { get; set; }
+
+    [Description("Queue position of the Buyer")]
+    [JsonPropertyName("QueuePosition")]
+    [JsonProperty(nameof(QueuePosition))]
+    [GraphQLName("QueuePosition")]
+    [GraphQLDescription("Queue position of the Buyer")]
+    public int QueuePosition { get; set; }
+
+    [Description("Transaction status of BuySell")]
+    [MaxLength(128)]
+    [JsonPropertyName("TransactionStatus")]
+    [JsonProperty(nameof(TransactionStatus))]
+    [GraphQLName("TransactionStatus")]
+    [GraphQLDescription("Transaction status of BuySell")]
+    public string? TransactionStatus { get; set; }
+
+    [Required]
+    [Description("Indicates if the seller note has been flagged")]
+    [JsonPropertyName("SellerNoteFlagged")]
+    [JsonProperty(nameof(SellerNoteFlagged), Required = Required.Always)]
+    [GraphQLName("SellerNoteFlagged")]
+    [GraphQLDescription("Indicates if the seller note has been flagged")]
+    public bool SellerNoteFlagged { get; set; }
+
+    [Required]
+    [Description("Indicates if the buyer note has been flagged")]
+    [JsonPropertyName("BuyerNoteFlagged")]
+    [JsonProperty(nameof(BuyerNoteFlagged), Required = Required.Always)]
+    [GraphQLName("BuyerNoteFlagged")]
+    [GraphQLDescription("Indicates if the buyer note has been flagged")]
+    public bool BuyerNoteFlagged { get; set; }
 
     [Description("Buyer details")]
     [JsonPropertyName("Buyer")]
@@ -240,12 +318,12 @@ public class ActivityLogResponse
     [GraphQLDescription("Unique identifier for the activity log")]
     public required int ActivityLogId { get; set; }
 
-    [Description("User ID associated with the activity")]
+    [Description("User Id associated with the activity")]
     [MaxLength(128)]
     [JsonPropertyName("UserId")]
     [JsonProperty(nameof(UserId))]
     [GraphQLName("UserId")]
-    [GraphQLDescription("User ID associated with the activity")]
+    [GraphQLDescription("User Id associated with the activity")]
     public string? UserId { get; set; }
 
     [Required]
@@ -337,12 +415,12 @@ public class RegularResponse
     [GraphQLDescription("Regular set identifier")]
     public required int RegularSetId { get; set; }
 
-    [Description("User ID of the regular player")]
+    [Description("User Id of the regular player")]
     [MaxLength(128)]
     [JsonPropertyName("UserId")]
     [JsonProperty(nameof(UserId))]
     [GraphQLName("UserId")]
-    [GraphQLDescription("User ID of the regular player")]
+    [GraphQLDescription("User Id of the regular player")]
     public string? UserId { get; set; }
 
     [Required]
@@ -352,7 +430,8 @@ public class RegularResponse
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment for the regular player")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Position preference for the regular player")]
@@ -361,7 +440,8 @@ public class RegularResponse
     [JsonProperty(nameof(PositionPreference), Required = Required.Always)]
     [GraphQLName("PositionPreference")]
     [GraphQLDescription("Position preference for the regular player")]
-    public required int PositionPreference { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference PositionPreference { get; set; }
 
     [Description("User details")]
     [JsonPropertyName("User")]
@@ -390,6 +470,22 @@ public class BuyingQueueItem
     [GraphQLDescription("Session identifier")]
     public required int SessionId { get; set; }
 
+    [Description("User Id of the buyer")]
+    [MaxLength(128)]
+    [JsonPropertyName("BuyerUserId")]
+    [JsonProperty(nameof(BuyerUserId))]
+    [GraphQLName("BuyerUserId")]
+    [GraphQLDescription("User Id of the buyer")]
+    public string? BuyerUserId { get; set; }
+
+    [Description("User Id of the seller")]
+    [MaxLength(128)]
+    [JsonPropertyName("SellerUserId")]
+    [JsonProperty(nameof(SellerUserId))]
+    [GraphQLName("SellerUserId")]
+    [GraphQLDescription("User Id of the seller")]
+    public string? SellerUserId { get; set; }
+
     [Description("Name of the buyer")]
     [MaxLength(512)]
     [DataType(DataType.Text)]
@@ -414,7 +510,8 @@ public class BuyingQueueItem
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment (1 for Light, 2 for Dark)")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Current status of the transaction")]
@@ -469,6 +566,20 @@ public class BuyingQueueItem
     [GraphQLName("SellerNote")]
     [GraphQLDescription("Note from the seller")]
     public string? SellerNote { get; set; }
+
+    [Description("Buyer details")]
+    [JsonPropertyName("Buyer")]
+    [JsonProperty(nameof(Buyer))]
+    [GraphQLName("Buyer")]
+    [GraphQLDescription("Buyer details")]
+    public UserDetailedResponse? Buyer { get; set; }
+
+    [Description("Seller details")]
+    [JsonPropertyName("Seller")]
+    [JsonProperty(nameof(Seller))]
+    [GraphQLName("Seller")]
+    [GraphQLDescription("Seller details")]
+    public UserDetailedResponse? Seller { get; set; }
 }
 
 [GraphQLName("RosterPlayer")]
@@ -536,7 +647,8 @@ public class RosterPlayer
     [JsonProperty(nameof(TeamAssignment), Required = Required.Always)]
     [GraphQLName("TeamAssignment")]
     [GraphQLDescription("Team assignment (1 for Light, 2 for Dark)")]
-    public required int TeamAssignment { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<TeamAssignment>))]
+    public required TeamAssignment TeamAssignment { get; set; }
 
     [Required]
     [Description("Position for the player")]
@@ -545,7 +657,8 @@ public class RosterPlayer
     [JsonProperty(nameof(Position), Required = Required.Always)]
     [GraphQLName("Position")]
     [GraphQLDescription("Position for the player")]
-    public required int Position{ get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
+    public required PositionPreference Position { get; set; }
 
     [Required]
     [Description("Position name for the player")]
@@ -579,6 +692,7 @@ public class RosterPlayer
     [JsonProperty(nameof(PlayerStatus), Required = Required.Always)]
     [GraphQLName("PlayerStatus")]
     [GraphQLDescription("Player's status in the roster")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PlayerStatus>))]
     public required PlayerStatus PlayerStatus { get; set; }
 
     [Required]
@@ -615,11 +729,11 @@ public class RosterPlayer
     [GraphQLDescription("Indicates if the player has preferred plus status")]
     public required bool PreferredPlus { get; set; }
 
-    [Description("Last buy/sell transaction ID affecting this roster position")]
+    [Description("Last buy/sell transaction Id affecting this roster position")]
     [JsonPropertyName("LastBuySellId")]
     [JsonProperty(nameof(LastBuySellId), Required = Required.Default)]
     [GraphQLName("LastBuySellId")]
-    [GraphQLDescription("Last buy/sell transaction ID affecting this roster position")]
+    [GraphQLDescription("Last buy/sell transaction Id affecting this roster position")]
     public int? LastBuySellId { get; set; }
 
     [Required]

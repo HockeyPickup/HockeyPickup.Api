@@ -54,8 +54,8 @@ public class RegularGraphQLTests
                     {
                         RegularSetId = 1,
                         UserId = "user1",
-                        TeamAssignment = 1,
-                        PositionPreference = 2,
+                        TeamAssignment = (TeamAssignment) 1,
+                        PositionPreference = (PositionPreference) 2,
                         User = CreateTestUser("user1", "john.doe")
                     }
                 }
@@ -126,8 +126,8 @@ public class RegularGraphQLTests
                 {
                     RegularSetId = 1,
                     UserId = "user1",
-                    TeamAssignment = 1,
-                    PositionPreference = 2,
+                    TeamAssignment = (TeamAssignment) 1,
+                    PositionPreference = (PositionPreference) 2,
                     User = CreateTestUser("user1", "john.doe")
                 }
             }

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 
 namespace HockeyPickup.Api.Models.Requests;
 
@@ -13,6 +14,7 @@ public class UserPaymentMethodRequest
     [EnumDataType(typeof(PaymentMethodType))]
     [JsonPropertyName("MethodType")]
     [JsonProperty(nameof(MethodType), Required = Required.Always)]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PaymentMethodType>))]
     public required PaymentMethodType MethodType { get; set; }
 
     [Required]

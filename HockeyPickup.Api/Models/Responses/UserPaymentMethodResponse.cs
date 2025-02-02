@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using HockeyPickup.Api.Helpers;
 
 namespace HockeyPickup.Api.Models.Responses;
 
@@ -23,6 +24,7 @@ public class UserPaymentMethodResponse
     [JsonProperty(nameof(MethodType), Required = Required.Always)]
     [GraphQLName("MethodType")]
     [GraphQLDescription("Type of payment method")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PaymentMethodType>))]
     public required PaymentMethodType MethodType { get; set; }
 
     [Required]

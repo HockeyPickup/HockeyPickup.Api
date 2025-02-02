@@ -8,7 +8,7 @@ namespace HockeyPickup.Api.Models.Requests;
 public record ImpersonationRequest
 {
     [Required]
-    [Description("User ID of the target user to impersonate")]
+    [Description("User Id of the target user to impersonate")]
     [MaxLength(128)]
     [DataType(DataType.Text)]
     [JsonPropertyName("TargetUserId")]

@@ -70,7 +70,7 @@ public class SessionRepository : ISessionRepository
 
         if (existingSession == null)
         {
-            throw new KeyNotFoundException($"Session not found with ID: {session.SessionId}");
+            throw new KeyNotFoundException($"Session not found with Id: {session.SessionId}");
         }
 
         // Update only the fields that can be modified
@@ -91,7 +91,7 @@ public class SessionRepository : ISessionRepository
         return updatedSession!;
     }
 
-    public async Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, int position)
+    public async Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, PositionPreference position)
     {
         // Find and update the roster entry
         var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
@@ -111,7 +111,7 @@ public class SessionRepository : ISessionRepository
         return session;
     }
 
-    public async Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, int team)
+    public async Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, TeamAssignment team)
     {
         // Find and update the roster entry
         var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
@@ -124,6 +124,24 @@ public class SessionRepository : ISessionRepository
 
         await _context.SaveChangesAsync();
         _context.DetachChangeTracker();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(sessionId);
+
+        return session;
+    }
+
+    public async Task<SessionDetailedResponse> DeletePlayerFromRosterAsync(int sessionId, string userId)
+    {
+        // Find and update the roster entry
+        var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+        if (rosterEntry == null)
+        {
+            throw new KeyNotFoundException($"Player not found in session roster");
+        }
+
+        _context.SessionRosters.Remove(rosterEntry);
+        await _context.SaveChangesAsync();
 
         // Fetch and return updated session details
         var session = await GetSessionAsync(sessionId);
@@ -175,8 +193,10 @@ public class SessionRepository : ISessionRepository
             .Where(s => s.SessionId == sessionId)
             .Include(s => s.BuySells)
                 .ThenInclude(b => b.Buyer)
+                .ThenInclude(u => u.PaymentMethods)
             .Include(s => s.BuySells)
                 .ThenInclude(b => b.Seller)
+                .ThenInclude(u => u.PaymentMethods)
             .Include(s => s.ActivityLogs)
                 .ThenInclude(a => a.User)
             .Include(s => s.RegularSet)
@@ -184,8 +204,14 @@ public class SessionRepository : ISessionRepository
                     .ThenInclude(reg => reg.User)
             // Views are already denormalized, so include directly
             .Include(s => s.CurrentRosters.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
-            .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
-            .AsSplitQuery() // Added this as without it, it's very slow
+            .Include(s => s.BuyingQueues
+                .OrderBy(q => q.BuySellId))
+                .ThenInclude(q => q.Buyer)
+                .ThenInclude(b => b.PaymentMethods)
+            .Include(s => s.BuyingQueues)
+                .ThenInclude(q => q.Seller)
+                .ThenInclude(s => s.PaymentMethods)
+             .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
         return session != null ? MapToDetailedResponse(session, _cost) : null;
@@ -225,7 +251,7 @@ public class SessionRepository : ISessionRepository
             Email = r.Email,
             FirstName = r.FirstName,
             LastName = r.LastName,
-            TeamAssignment = r.TeamAssignment,
+            TeamAssignment = (TeamAssignment) r.TeamAssignment,
             IsPlaying = r.IsPlaying,
             IsRegular = r.IsRegular,
             PlayerStatus = ParsePlayerStatus(r.PlayerStatus),
@@ -233,7 +259,7 @@ public class SessionRepository : ISessionRepository
             Preferred = r.Preferred,
             PreferredPlus = r.PreferredPlus,
             LastBuySellId = r.LastBuySellId,
-            Position = r.Position,
+            Position = (PositionPreference) r.Position,
             CurrentPosition = r.CurrentPosition,
             JoinedDateTime = r.JoinedDateTime,
             PhotoUrl = r.PhotoUrl
@@ -245,10 +271,11 @@ public class SessionRepository : ISessionRepository
         "Regular" => PlayerStatus.Regular,
         "Substitute" => PlayerStatus.Substitute,
         "Not Playing" => PlayerStatus.NotPlaying,
+        "In Queue" => PlayerStatus.InQueue,
         _ => throw new ArgumentException($"Invalid player status: {status}")
     };
 
-    private static List<BuyingQueueItem> MapBuyingQueue(ICollection<Entities.BuyingQueue> queue)
+    private static List<BuyingQueueItem> MapBuyingQueue(ICollection<BuyingQueue> queue)
     {
         if (queue == null) return new List<BuyingQueueItem>();
 
@@ -256,7 +283,9 @@ public class SessionRepository : ISessionRepository
         {
             BuySellId = q.BuySellId,
             SessionId = q.SessionId,
+            BuyerUserId = q.BuyerUserId,
             BuyerName = q.BuyerName,
+            SellerUserId = q.SellerUserId,
             SellerName = q.SellerName,
             TeamAssignment = q.TeamAssignment,
             TransactionStatus = q.TransactionStatus,
@@ -264,7 +293,9 @@ public class SessionRepository : ISessionRepository
             PaymentSent = q.PaymentSent,
             PaymentReceived = q.PaymentReceived,
             BuyerNote = q.BuyerNote,
-            SellerNote = q.SellerNote
+            SellerNote = q.SellerNote,
+            Buyer = MapToUserDetailedResponse(q.Buyer),
+            Seller = MapToUserDetailedResponse(q.Seller)
         }).ToList();
     }
 
@@ -283,6 +314,14 @@ public class SessionRepository : ISessionRepository
             PaymentReceived = b.PaymentReceived,
             CreateDateTime = b.CreateDateTime,
             TeamAssignment = b.TeamAssignment,
+            UpdateDateTime = b.UpdateDateTime,
+            Price = b.Price ?? 0m,
+            CreateByUserId = b.CreateByUserId,
+            UpdateByUserId = b.UpdateByUserId,
+            PaymentMethod = b.PaymentMethod.HasValue ? b.PaymentMethod.Value : PaymentMethodType.Unknown,
+            TransactionStatus = b.TransactionStatus,
+            SellerNoteFlagged = b.SellerNoteFlagged,
+            BuyerNoteFlagged = b.BuyerNoteFlagged,
             Buyer = MapToUserDetailedResponse(b.Buyer),
             Seller = MapToUserDetailedResponse(b.Seller)
         }).OrderBy(b => b.BuySellId).ToList();
@@ -350,11 +389,19 @@ public class SessionRepository : ISessionRepository
             EmergencyName = user.EmergencyName,
             EmergencyPhone = user.EmergencyPhone,
             JerseyNumber = user.JerseyNumber,
-            NotificationPreference = (NotificationPreference) user.NotificationPreference,
-            PositionPreference = (PositionPreference) user.PositionPreference,
+            NotificationPreference = user.NotificationPreference,
+            PositionPreference = user.PositionPreference,
             PhotoUrl = user.PhotoUrl,
             DateCreated = user.DateCreated,
             Roles = user.Roles.ToRoleNames(),
+            PaymentMethods = user.PaymentMethods.Select(pm => new UserPaymentMethodResponse
+            {
+                UserPaymentMethodId = pm.UserPaymentMethodId,
+                MethodType = pm.MethodType,
+                Identifier = pm.Identifier,
+                PreferenceOrder = pm.PreferenceOrder,
+                IsActive = pm.IsActive,
+            }).ToList()
         };
     }
 
@@ -373,7 +420,7 @@ public class SessionRepository : ISessionRepository
 
                 if (!sessionExists)
                 {
-                    throw new KeyNotFoundException($"Session not found with ID: {sessionId}");
+                    throw new KeyNotFoundException($"Session not found with Id: {sessionId}");
                 }
 
                 // Delete in order of dependency (child tables first)

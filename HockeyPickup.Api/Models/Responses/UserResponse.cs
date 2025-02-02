@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using Newtonsoft.Json;
 
 namespace HockeyPickup.Api.Models.Responses;
@@ -85,6 +86,7 @@ public class UserDetailedResponse
     [JsonProperty(nameof(NotificationPreference), Required = Required.Default)]
     [GraphQLName("NotificationPreference")]
     [GraphQLDescription("User's notification preferences")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<NotificationPreference>))]
     public NotificationPreference? NotificationPreference { get; set; }
 
     [Description("User's position preferences")]
@@ -92,6 +94,7 @@ public class UserDetailedResponse
     [JsonProperty(nameof(PositionPreference), Required = Required.Default)]
     [GraphQLName("PositionPreference")]
     [GraphQLDescription("User's position preferences")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
     public PositionPreference? PositionPreference { get; set; }
 
     [Description("Emergency contact name")]
@@ -262,6 +265,7 @@ public class LockerRoom13Players
     [JsonProperty(nameof(PlayerStatus), Required = Required.Always)]
     [GraphQLName("PlayerStatus")]
     [GraphQLDescription("Player's status in the roster")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PlayerStatus>))]
     public required PlayerStatus PlayerStatus { get; set; }
 
 }

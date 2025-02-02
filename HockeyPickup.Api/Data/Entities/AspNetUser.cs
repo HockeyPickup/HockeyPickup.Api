@@ -20,8 +20,8 @@ public partial class AspNetUser : IdentityUser<string>
         TwoFactorEnabled = false;
         LockoutEnabled = false;
         AccessFailedCount = 0;
-        NotificationPreference = 1;
-        PositionPreference = 0;
+        NotificationPreference = NotificationPreference.OnlyMyBuySell;
+        PositionPreference = PositionPreference.TBD;
         Active = false;
         Rating = 0;
         PreferredPlus = false;
@@ -45,10 +45,13 @@ public partial class AspNetUser : IdentityUser<string>
     // Existing columns - no need to override base properties that match
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public int NotificationPreference { get; set; }
-    public int PositionPreference { get; set; }
+    public NotificationPreference NotificationPreference { get; set; }
+    public PositionPreference PositionPreference { get; set; }
+    public string? PayPalEmail { get; set; } = null!;
     public bool Active { get; set; }
     public bool Preferred { get; set; }
+    public string? VenmoAccount { get; set; }
+    public string? MobileLast4 { get; set; }
     public decimal Rating { get; set; }
     public bool PreferredPlus { get; set; }
     public string? EmergencyName { get; set; }
