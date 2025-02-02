@@ -188,6 +188,7 @@ public class BuySellService : IBuySellService
                 buySell.SellerUserId = userId;
                 buySell.UpdateByUserId = userId;
                 buySell.UpdateDateTime = DateTime.UtcNow;
+                buySell.TeamAssignment = sellerRoster.TeamAssignment;
                 buySell.SellerNote = request.Note;
 
                 message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
