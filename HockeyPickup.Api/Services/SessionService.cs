@@ -314,9 +314,12 @@ public class SessionService : ISessionService
         };
 
         // Append the extra message data fields
-        foreach (var mda in messageDataAdditions)
+        if (messageDataAdditions != null)
         {
-            commsMessage.MessageData.Add(mda.Key, mda.Value);
+            foreach (var mda in messageDataAdditions)
+            {
+                commsMessage.MessageData.Add(mda.Key, mda.Value);
+            }
         }
 
         await _serviceBus.SendAsync(commsMessage, subject: type, correlationId: Guid.NewGuid().ToString(), queueName: _configuration["ServiceBusCommsQueueName"]);

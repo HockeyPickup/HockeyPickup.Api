@@ -300,7 +300,7 @@ public partial class UsersControllerTest
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
         );
         response.Should().NotBeNull();
-        response!.Message.Should().Be("User ID cannot be empty");
+        response!.Message.Should().Be("User Id cannot be empty");
     }
 
     [Fact]

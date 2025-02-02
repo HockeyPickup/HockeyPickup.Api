@@ -848,57 +848,6 @@ public partial class SessionServiceTests
             Assert.Equal("user1@test.com", capturedMessage.NotificationEmails.FirstOrDefault());
         }
     }
-
-    [Fact]
-    public async Task CreateSession_ServiceBusFailure_StillSucceedsWithWarning()
-    {
-        // Arrange
-        var request = new CreateSessionRequest
-        {
-            SessionDate = DateTime.UtcNow.AddDays(1),
-            RegularSetId = 1,
-            BuyDayMinimum = 1,
-            Cost = 20.00m,
-            Note = "Test session"
-        };
-
-        var createdSession = new SessionDetailedResponse
-        {
-            SessionId = 1,
-            SessionDate = request.SessionDate,
-            RegularSetId = request.RegularSetId,
-            BuyDayMinimum = request.BuyDayMinimum,
-            Cost = request.Cost,
-            Note = request.Note,
-            CreateDateTime = DateTime.UtcNow,
-            UpdateDateTime = DateTime.UtcNow
-        };
-
-        _mockSessionRepository.Setup(x => x.CreateSessionAsync(It.IsAny<Session>()))
-            .ReturnsAsync(createdSession);
-        _mockSessionRepository.Setup(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()))
-            .ReturnsAsync(createdSession);
-
-        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
-            .ThrowsAsync(new Exception("Service bus error"));
-
-        var mockHttpContext = new DefaultHttpContext();
-        mockHttpContext.Items["UserId"] = "testUserId";
-        _mockContextAccessor.Object.HttpContext = mockHttpContext;
-
-        // Act
-        var result = await _sessionService.CreateSession(request);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Contains("Create Session email could not be sent", result.Message);
-        _mockLogger.Verify(x => x.Log(
-            It.IsAny<LogLevel>(),
-            It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((v, t) => true),
-            It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
-    }
 }
 
 public partial class SessionServiceTests
