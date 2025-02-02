@@ -108,7 +108,7 @@ public class BuySellService : IBuySellService
                 message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
 
                 // Send a message to Service Bus that a player bought their spot from a seller
-                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromBuyer", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, buySell.Seller);
+                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromBuyer", null, session.SessionId, session.SessionDate, buyer, seller);
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
@@ -137,7 +137,7 @@ public class BuySellService : IBuySellService
                 message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
 
                 // Send a message to Service Bus that a player added themselves to buyer queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, null);
+                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", null, session.SessionId, session.SessionDate, buyer, null);
 
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
@@ -201,7 +201,7 @@ public class BuySellService : IBuySellService
                 message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
 
                 // Send a message to Service Bus that a player sold their spot to a buyer
-                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, buySell.Seller);
+                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", null, session.SessionId, session.SessionDate, buySell.Buyer, seller);
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
@@ -230,7 +230,7 @@ public class BuySellService : IBuySellService
                 message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
 
                 // Send a message to Service Bus that a player added themselves to selling queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", null, buySell.Session.SessionId, buySell.Session.SessionDate, null, buySell.Seller);
+                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", null, session.SessionId, session.SessionDate, null, seller);
 
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
@@ -264,7 +264,6 @@ public class BuySellService : IBuySellService
 
             var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} confirmed PAYMENT sent";
             var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
-            //await NotifyBuySellUpdate(result);
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
@@ -294,7 +293,6 @@ public class BuySellService : IBuySellService
 
             var message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} confirmed PAYMENT received";
             var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
-            //await NotifyBuySellUpdate(result);
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
@@ -425,6 +423,10 @@ public class BuySellService : IBuySellService
             if (buySell == null)
                 return ServiceResult<bool>.CreateFailure("BuySell not found");
 
+            var session = await _sessionRepository.GetSessionAsync(buySell.SessionId);
+            if (session == null)
+                return ServiceResult<bool>.CreateFailure("Session not found");
+
             // Verify user is the buyer
             if (buySell.BuyerUserId != userId)
                 return ServiceResult<bool>.CreateFailure("Not authorized to cancel this BuySell");
@@ -437,7 +439,7 @@ public class BuySellService : IBuySellService
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from buying
-            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Seller, buySell.Buyer);
+            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", null, session.SessionId, session.SessionDate, buySell.Buyer, null);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
@@ -457,6 +459,10 @@ public class BuySellService : IBuySellService
             if (buySell == null)
                 return ServiceResult<bool>.CreateFailure("BuySell not found");
 
+            var session = await _sessionRepository.GetSessionAsync(buySell.SessionId);
+            if (session == null)
+                return ServiceResult<bool>.CreateFailure("Session not found");
+
             // Verify user is the seller
             if (buySell.SellerUserId != userId)
                 return ServiceResult<bool>.CreateFailure("Not authorized to cancel this BuySell");
@@ -469,7 +475,7 @@ public class BuySellService : IBuySellService
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from selling
-            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, buySell.Seller);
+            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", null, session.SessionId, session.SessionDate, null, buySell.Seller);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
@@ -652,8 +658,8 @@ public class BuySellService : IBuySellService
                 });
             }
 
-            // Check if user is on roster
-            if (session.CurrentRosters?.Any(r => r.UserId == userId && !r.IsPlaying) == true)
+            // Check if user is NOT on roster with an active spot
+            if (!session.CurrentRosters?.Any(r => r.UserId == userId && r.IsPlaying) == true)
             {
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
@@ -748,17 +754,17 @@ public class BuySellService : IBuySellService
             CommunicationMethod = new Dictionary<string, string>
             {
                 { "BuyerEmail", buyer != null ? buyer.Email : "" },
-                { "SellerEmail", seller != null ? seller.Email : "" },
                 { "BuyerNotificationPreference", buyer != null ? buyer.NotificationPreference.ToString() : "" },
+                { "SellerEmail", seller != null ? seller.Email : "" },
                 { "SellerNotificationPreference", seller != null ? seller.NotificationPreference.ToString() : "" },
             },
             RelatedEntities = new Dictionary<string, string>
             {
                 { "BuyerUserId", buyer != null ? buyer.Id : "" },
-                { "SellerUserId", seller != null ? seller.Id : "" },
                 { "BuyerFirstName", buyer != null ? buyer.FirstName : "" },
-                { "SellerFirstName", seller != null ? seller.FirstName : "" },
                 { "BuyerLastName", buyer != null ? buyer.LastName : "" },
+                { "SellerUserId", seller != null ? seller.Id : "" },
+                { "SellerFirstName", seller != null ? seller.FirstName : "" },
                 { "SellerLastName", seller != null ? seller.LastName : "" }
             },
             MessageData = new Dictionary<string, string>
