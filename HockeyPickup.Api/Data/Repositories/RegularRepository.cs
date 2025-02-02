@@ -300,11 +300,19 @@ public static class UserMappingExtensions
             EmergencyName = user.EmergencyName,
             EmergencyPhone = user.EmergencyPhone,
             JerseyNumber = user.JerseyNumber,
-            NotificationPreference = (NotificationPreference) user.NotificationPreference,
-            PositionPreference = (PositionPreference) user.PositionPreference,
+            NotificationPreference = user.NotificationPreference,
+            PositionPreference = user.PositionPreference,
             PhotoUrl = user.PhotoUrl,
             DateCreated = user.DateCreated,
-            Roles = []
+            Roles = [],
+            PaymentMethods = user.PaymentMethods.Select(pm => new UserPaymentMethodResponse
+            {
+                UserPaymentMethodId = pm.UserPaymentMethodId,
+                MethodType = pm.MethodType,
+                Identifier = pm.Identifier,
+                PreferenceOrder = pm.PreferenceOrder,
+                IsActive = pm.IsActive,
+            }).ToList()
         };
     }
 }

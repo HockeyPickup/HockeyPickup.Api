@@ -566,6 +566,20 @@ public class BuyingQueueItem
     [GraphQLName("SellerNote")]
     [GraphQLDescription("Note from the seller")]
     public string? SellerNote { get; set; }
+
+    [Description("Buyer details")]
+    [JsonPropertyName("Buyer")]
+    [JsonProperty(nameof(Buyer))]
+    [GraphQLName("Buyer")]
+    [GraphQLDescription("Buyer details")]
+    public UserDetailedResponse? Buyer { get; set; }
+
+    [Description("Seller details")]
+    [JsonPropertyName("Seller")]
+    [JsonProperty(nameof(Seller))]
+    [GraphQLName("Seller")]
+    [GraphQLDescription("Seller details")]
+    public UserDetailedResponse? Seller { get; set; }
 }
 
 [GraphQLName("RosterPlayer")]

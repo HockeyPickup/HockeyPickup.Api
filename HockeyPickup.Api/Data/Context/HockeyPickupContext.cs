@@ -405,6 +405,13 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(q => q.SellerName).HasMaxLength(512);
             entity.Property(q => q.BuyerNote).HasColumnType("nvarchar(max)");
             entity.Property(q => q.SellerNote).HasColumnType("nvarchar(max)");
+
+            // Configure relationships with AspNetUser
+            entity.HasOne(e => e.Buyer).WithMany().HasForeignKey(e => e.BuyerUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Seller).WithMany().HasForeignKey(e => e.SellerUserId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.Navigation(e => e.Buyer).AutoInclude();
+            entity.Navigation(e => e.Seller).AutoInclude();
         });
 
         // Add this inside OnModelCreating method, alongside other entity configurations

@@ -192,5 +192,10 @@ public class BuyingQueue
     public bool PaymentReceived { get; set; }
     public string? BuyerNote { get; set; }
     public string? SellerNote { get; set; }
+    [ForeignKey(nameof(BuyerUserId))]
+    public virtual AspNetUser? Buyer { get; set; }
+
+    [ForeignKey(nameof(SellerUserId))]
+    public virtual AspNetUser? Seller { get; set; }
 }
 

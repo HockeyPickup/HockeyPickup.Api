@@ -193,8 +193,10 @@ public class SessionRepository : ISessionRepository
             .Where(s => s.SessionId == sessionId)
             .Include(s => s.BuySells)
                 .ThenInclude(b => b.Buyer)
+                .ThenInclude(u => u.PaymentMethods)
             .Include(s => s.BuySells)
                 .ThenInclude(b => b.Seller)
+                .ThenInclude(u => u.PaymentMethods)
             .Include(s => s.ActivityLogs)
                 .ThenInclude(a => a.User)
             .Include(s => s.RegularSet)
@@ -202,8 +204,14 @@ public class SessionRepository : ISessionRepository
                     .ThenInclude(reg => reg.User)
             // Views are already denormalized, so include directly
             .Include(s => s.CurrentRosters.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
-            .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
-            .AsSplitQuery() // Added this as without it, it's very slow
+            .Include(s => s.BuyingQueues
+                .OrderBy(q => q.BuySellId))
+                .ThenInclude(q => q.Buyer)
+                .ThenInclude(b => b.PaymentMethods)
+            .Include(s => s.BuyingQueues)
+                .ThenInclude(q => q.Seller)
+                .ThenInclude(s => s.PaymentMethods)
+             .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
         return session != null ? MapToDetailedResponse(session, _cost) : null;
@@ -285,7 +293,9 @@ public class SessionRepository : ISessionRepository
             PaymentSent = q.PaymentSent,
             PaymentReceived = q.PaymentReceived,
             BuyerNote = q.BuyerNote,
-            SellerNote = q.SellerNote
+            SellerNote = q.SellerNote,
+            Buyer = MapToUserDetailedResponse(q.Buyer),
+            Seller = MapToUserDetailedResponse(q.Seller)
         }).ToList();
     }
 
@@ -379,11 +389,19 @@ public class SessionRepository : ISessionRepository
             EmergencyName = user.EmergencyName,
             EmergencyPhone = user.EmergencyPhone,
             JerseyNumber = user.JerseyNumber,
-            NotificationPreference = (NotificationPreference) user.NotificationPreference,
-            PositionPreference = (PositionPreference) user.PositionPreference,
+            NotificationPreference = user.NotificationPreference,
+            PositionPreference = user.PositionPreference,
             PhotoUrl = user.PhotoUrl,
             DateCreated = user.DateCreated,
             Roles = user.Roles.ToRoleNames(),
+            PaymentMethods = user.PaymentMethods.Select(pm => new UserPaymentMethodResponse
+            {
+                UserPaymentMethodId = pm.UserPaymentMethodId,
+                MethodType = pm.MethodType,
+                Identifier = pm.Identifier,
+                PreferenceOrder = pm.PreferenceOrder,
+                IsActive = pm.IsActive,
+            }).ToList()
         };
     }
 
