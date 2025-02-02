@@ -83,7 +83,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             // Custom columns
             entity.Property(e => e.FirstName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.LastName).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.NotificationPreference).HasConversion<int>().HasDefaultValue(NotificationPreference.OnlyMyBuySell).IsRequired();
+            entity.Property(e => e.NotificationPreference).HasConversion<int>().HasDefaultValue(NotificationPreference.OnlyMyBuySell).IsRequired().HasSentinel(NotificationPreference.None);
             entity.Property(e => e.PositionPreference).HasConversion<int>().HasDefaultValue(PositionPreference.TBD).IsRequired();
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
