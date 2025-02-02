@@ -1,6 +1,7 @@
 ﻿using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
+using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
@@ -105,6 +106,10 @@ public class BuySellService : IBuySellService
                 buySell.BuyerNote = request.Note;
 
                 message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
+
+                // Send a message to Service Bus that a player bought their spot from a seller
+                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromBuyer", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, buySell.Seller);
+
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
             else
@@ -130,10 +135,12 @@ public class BuySellService : IBuySellService
                 };
 
                 message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
+
+                // Send a message to Service Bus that a player added themselves to buyer queue
+                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, null);
+
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
-
-            //await NotifyBuySellUpdate(result);
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
@@ -192,6 +199,10 @@ public class BuySellService : IBuySellService
                 buySell.SellerNote = request.Note;
 
                 message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
+
+                // Send a message to Service Bus that a player sold their spot to a buyer
+                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, buySell.Seller);
+
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
             else
@@ -217,10 +228,12 @@ public class BuySellService : IBuySellService
                 };
 
                 message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
+
+                // Send a message to Service Bus that a player added themselves to selling queue
+                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", null, buySell.Session.SessionId, buySell.Session.SessionDate, null, buySell.Seller);
+
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
-
-            //await NotifyBuySellUpdate(result);
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
@@ -423,6 +436,9 @@ public class BuySellService : IBuySellService
             var message = $"Buyer: {buySell.Buyer.FirstName} {buySell.Buyer.LastName} cancelled BuySell";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
+            // Send a message to Service Bus that a player removed themselves from buying
+            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Seller, buySell.Buyer);
+
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
         catch (Exception ex)
@@ -451,6 +467,9 @@ public class BuySellService : IBuySellService
 
             var message = $"Seller: {buySell.Seller.FirstName} {buySell.Seller.LastName} cancelled BuySell";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
+
+            // Send a message to Service Bus that a player removed themselves from selling
+            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", null, buySell.Session.SessionId, buySell.Session.SessionDate, buySell.Buyer, buySell.Seller);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
@@ -709,5 +728,54 @@ public class BuySellService : IBuySellService
             } : null,
             QueuePosition = await _buySellRepository.GetQueuePositionAsync(buySell.BuySellId) ?? 0,
         };
+    }
+
+    private async Task SendBuySellServiceBusCommsMessageAsync(string type, Dictionary<string, string>? messageDataAdditions, int sessionId, DateTime sessionDate, AspNetUser? buyer, AspNetUser? seller)
+    {
+        var baseUrl = _configuration["BaseUrl"];
+        var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{sessionId}";
+
+        var users = await _userRepository.GetDetailedUsersAsync();
+        var userEmails = users.Where(u => u.Active && u.NotificationPreference == NotificationPreference.All).Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).ToArray();
+
+        var commsMessage = new ServiceBusCommsMessage
+        {
+            Metadata = new Dictionary<string, string>
+            {
+                { "Type", type },
+                { "CommunicationEventId", Guid.NewGuid().ToString() }
+            },
+            CommunicationMethod = new Dictionary<string, string>
+            {
+                { "BuyerEmail", buyer != null ? buyer.Email : "" },
+                { "SellerEmail", seller != null ? seller.Email : "" },
+                { "BuyerNotificationPreference", buyer != null ? buyer.NotificationPreference.ToString() : "" },
+                { "SellerNotificationPreference", seller != null ? seller.NotificationPreference.ToString() : "" },
+            },
+            RelatedEntities = new Dictionary<string, string>
+            {
+                { "BuyerUserId", buyer != null ? buyer.Id : "" },
+                { "SellerUserId", seller != null ? seller.Id : "" },
+                { "BuyerFirstName", buyer != null ? buyer.FirstName : "" },
+                { "SellerFirstName", seller != null ? seller.FirstName : "" },
+                { "BuyerLastName", buyer != null ? buyer.LastName : "" },
+                { "SellerLastName", seller != null ? seller.LastName : "" }
+            },
+            MessageData = new Dictionary<string, string>
+            {
+                { "SessionDate", sessionDate.ToString() },
+                { "SessionUrl", sessionUrl },
+            },
+            NotificationEmails = userEmails!,
+            NotificationDeviceIds = null
+        };
+
+        // Append the extra message data fields
+        foreach (var mda in messageDataAdditions)
+        {
+            commsMessage.MessageData.Add(mda.Key, mda.Value);
+        }
+
+        await _serviceBus.SendAsync(commsMessage, subject: type, correlationId: Guid.NewGuid().ToString(), queueName: _configuration["ServiceBusCommsQueueName"]);
     }
 }
