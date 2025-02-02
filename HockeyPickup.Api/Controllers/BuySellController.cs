@@ -171,4 +171,32 @@ public class BuySellController : ControllerBase
         var response = ApiDataResponse<bool>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
+
+    [Authorize]
+    [HttpGet("{sessionId}/can-buy")]
+    [Description("Determine if User CanBuy for a BuySell")]
+    [Produces(typeof(ApiDataResponse<BuySellStatusResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellStatusResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellStatusResponse>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<BuySellStatusResponse>>> CanBuy(int sessionId)
+    {
+        var userId = _httpContextAccessor.GetUserId();
+        var result = await _BuySellService.CanBuyAsync(userId, sessionId);
+        var response = ApiDataResponse<BuySellStatusResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
+    [HttpGet("{sessionId}/can-sell")]
+    [Description("Determine if User CanSell for a BuySell")]
+    [Produces(typeof(ApiDataResponse<BuySellStatusResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellStatusResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellStatusResponse>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<BuySellStatusResponse>>> CanSell(int sessionId)
+    {
+        var userId = _httpContextAccessor.GetUserId();
+        var result = await _BuySellService.CanSellAsync(userId, sessionId);
+        var response = ApiDataResponse<BuySellStatusResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
 }
