@@ -40,7 +40,7 @@ public enum PositionPreference
 public enum PlayerStatus
 {
     [GraphQLName("NotPlaying")]
-    [Display(Name = @"Not Playing")]
+    [Display(Name = @"NotPlaying")]
     [Description("Player no longer in the roster")]
     NotPlaying = 0,
 
@@ -55,7 +55,7 @@ public enum PlayerStatus
     Substitute = 2,
 
     [GraphQLName("InQueue")]
-    [Display(Name = @"In Queue")]
+    [Display(Name = @"InQueue")]
     [Description("Player in the queue")]
     InQueue = 3
 }
