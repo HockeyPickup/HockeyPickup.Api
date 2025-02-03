@@ -14,7 +14,7 @@ public enum NotificationPreference
     All = 1,
 
     [GraphQLName("OnlyMyBuySell")]
-    [Display(Name = @"Only My Buy/Sell")]
+    [Display(Name = @"OnlyMyBuySell")]
     OnlyMyBuySell = 2,
 }
 
