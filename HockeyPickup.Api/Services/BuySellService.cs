@@ -511,6 +511,15 @@ public class BuySellService : IBuySellService
                 });
             }
 
+            if (!buyer.Active)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "User is not active"
+                });
+            }
+
             // Check if session is in the past
             var currentPacificTime = TimeZoneUtils.GetCurrentPacificTime();
             if (session.SessionDate <= currentPacificTime)
@@ -621,6 +630,25 @@ public class BuySellService : IBuySellService
                 {
                     IsAllowed = false,
                     Reason = "Session not found"
+                });
+            }
+
+            var seller = await _userManager.FindByIdAsync(userId);
+            if (seller == null)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "User not found"
+                });
+            }
+
+            if (!seller.Active)
+            {
+                return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                {
+                    IsAllowed = false,
+                    Reason = "User is not active"
                 });
             }
 
