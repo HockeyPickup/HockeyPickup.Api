@@ -108,7 +108,7 @@ public class BuySellService : IBuySellService
                 message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
 
                 // Send a message to Service Bus that a player bought their spot from a seller
-                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromBuyer", null, session.SessionId, session.SessionDate, buyer, seller);
+                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", null, session.SessionId, session.SessionDate, buyer, seller);
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
