@@ -1,6 +1,6 @@
 ﻿using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
-using HockeyPickup.Api.Models.Domain;
+using HockeyPickup.Api.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace HockeyPickup.Api.Data.Repositories;
@@ -31,7 +31,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error creating BuySell {buySell.BuySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error creating BuySell {buySell.BuySellId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -49,7 +49,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error updating BuySell {buySell.BuySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error updating BuySell {buySell.BuySellId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -65,11 +65,13 @@ public class BuySellRepository : IBuySellRepository
             _context.BuySells.Remove(buySell);
             await _context.SaveChangesAsync();
 
+            await _sessionRepository.AddActivityAsync(buySell.SessionId, message);
+
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error deleting BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error deleting BuySell {buySellId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -86,7 +88,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error getting BuySell {buySellId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -103,7 +105,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting BuySells for Session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error getting BuySells for Session {sessionId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -120,7 +122,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting BuySells for User {userId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error getting BuySells for User {userId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -137,7 +139,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting BuySells for User {userId} and Session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error getting BuySells for User {userId} and Session {sessionId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -154,7 +156,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error finding matching Sell BuySells for Session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error finding matching Sell BuySells for Session {sessionId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -171,7 +173,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error finding matching Buy BuySells for Session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error finding matching Buy BuySells for Session {sessionId}: {ex.GetRelevantMessage}");
             throw;
         }
     }
@@ -191,7 +193,7 @@ public class BuySellRepository : IBuySellRepository
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error getting queue position for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}");
+            _logger.LogError(ex, $"Error getting queue position for BuySell {buySellId}: {ex.GetRelevantMessage}");
             throw;
         }
     }

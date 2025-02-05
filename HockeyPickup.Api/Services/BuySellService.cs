@@ -1,4 +1,4 @@
-﻿using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Domain;
@@ -108,7 +108,7 @@ public class BuySellService : IBuySellService
                 message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
 
                 // Send a message to Service Bus that a player bought their spot from a seller
-                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", null, session.SessionId, session.SessionDate, buyer, seller);
+                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller);
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
@@ -137,7 +137,7 @@ public class BuySellService : IBuySellService
                 message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
 
                 // Send a message to Service Bus that a player added themselves to buyer queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", null, session.SessionId, session.SessionDate, buyer, null);
+                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", session.SessionId, session.SessionDate, buyer, null);
 
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
@@ -146,7 +146,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error processing buy request for session {request.SessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error processing buy request for session {request.SessionId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -201,7 +201,7 @@ public class BuySellService : IBuySellService
                 message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
 
                 // Send a message to Service Bus that a player sold their spot to a buyer
-                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", null, session.SessionId, session.SessionDate, buySell.Buyer, seller);
+                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller);
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
             }
@@ -230,7 +230,7 @@ public class BuySellService : IBuySellService
                 message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
 
                 // Send a message to Service Bus that a player added themselves to selling queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", null, session.SessionId, session.SessionDate, null, seller);
+                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller);
 
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
             }
@@ -239,7 +239,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error processing sell request for session {request.SessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error processing sell request for session {request.SessionId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -269,7 +269,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error confirming payment sent request for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error confirming payment sent request for BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -298,7 +298,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error confirming payment received request for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error confirming payment received request for BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -328,7 +328,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error unconfirming payment sent for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException?.Message : ex.Message)}";
+            var msg = $"Error unconfirming payment sent for BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -357,7 +357,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error unconfirming payment received for BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException?.Message : ex.Message)}";
+            var msg = $"Error unconfirming payment received for BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -375,7 +375,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error getting BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error getting BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellResponse>.CreateFailure(msg);
         }
@@ -392,7 +392,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error getting BuySells for Session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error getting BuySells for Session {sessionId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure(msg);
         }
@@ -409,7 +409,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error getting BuySells for User {userId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error getting BuySells for User {userId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure(msg);
         }
@@ -439,13 +439,13 @@ public class BuySellService : IBuySellService
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from buying
-            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", null, session.SessionId, session.SessionDate, buySell.Buyer, null);
+            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", session.SessionId, session.SessionDate, buySell.Buyer, null);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
         catch (Exception ex)
         {
-            var msg = $"Error cancelling Buy BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error cancelling Buy BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<bool>.CreateFailure(msg);
         }
@@ -475,13 +475,13 @@ public class BuySellService : IBuySellService
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from selling
-            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", null, session.SessionId, session.SessionDate, null, buySell.Seller);
+            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", session.SessionId, session.SessionDate, null, buySell.Seller);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
         catch (Exception ex)
         {
-            var msg = $"Error cancelling Sell BuySell {buySellId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error cancelling Sell BuySell {buySellId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<bool>.CreateFailure(msg);
         }
@@ -613,7 +613,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error checking buy eligibility for user {userId} in session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error checking buy eligibility for user {userId} in session {sessionId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellStatusResponse>.CreateFailure(msg);
         }
@@ -704,7 +704,7 @@ public class BuySellService : IBuySellService
         }
         catch (Exception ex)
         {
-            var msg = $"Error checking sell eligibility for user {userId} in session {sessionId}: {(ex.Message.Contains("inner exception") ? ex.InnerException.Message : ex.Message)}";
+            var msg = $"Error checking sell eligibility for user {userId} in session {sessionId}: {ex.GetRelevantMessage()}";
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellStatusResponse>.CreateFailure(msg);
         }
@@ -764,7 +764,7 @@ public class BuySellService : IBuySellService
         };
     }
 
-    private async Task SendBuySellServiceBusCommsMessageAsync(string type, Dictionary<string, string>? messageDataAdditions, int sessionId, DateTime sessionDate, AspNetUser? buyer, AspNetUser? seller)
+    private async Task SendBuySellServiceBusCommsMessageAsync(string type, int sessionId, DateTime sessionDate, AspNetUser? buyer, AspNetUser? seller)
     {
         var baseUrl = _configuration["BaseUrl"];
         var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{sessionId}";
@@ -803,15 +803,6 @@ public class BuySellService : IBuySellService
             NotificationEmails = userEmails!,
             NotificationDeviceIds = null
         };
-
-        // Append the extra message data fields
-        if (messageDataAdditions != null)
-        {
-            foreach (var mda in messageDataAdditions)
-            {
-                commsMessage.MessageData.Add(mda.Key, mda.Value);
-            }
-        }
 
         await _serviceBus.SendAsync(commsMessage, subject: type, correlationId: Guid.NewGuid().ToString(), queueName: _configuration["ServiceBusCommsQueueName"]);
     }

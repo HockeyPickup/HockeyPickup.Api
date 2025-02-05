@@ -175,4 +175,14 @@ public static class DbContextExtensions
     }
 }
 
+public static class ExceptionExtensions
+{
+    public static string GetRelevantMessage(this Exception ex)
+    {
+        return ex.Message.Contains("inner exception") && ex.InnerException != null
+            ? ex.InnerException.Message
+            : ex.Message;
+    }
+}
+
 #pragma warning restore IDE0057 // Use range operator
