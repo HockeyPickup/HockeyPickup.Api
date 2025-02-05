@@ -307,4 +307,175 @@ public class BuySellControllerTests
         var response = okResult.Value.Should().BeOfType<ApiDataResponse<BuySellStatusResponse>>().Subject;
         response.Data.Should().BeEquivalentTo(expected);
     }
+
+    [Fact]
+    public async Task Sell_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var sellRequest = new SellRequest { SessionId = 1, Note = "Test sell" };
+        _mockBuySellService.Setup(s => s.ProcessSellRequestAsync(TestUserId, sellRequest))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.Sell(sellRequest);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmPaymentSent_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var buySellId = 1;
+        var paymentMethod = PaymentMethodType.Venmo;
+        _mockBuySellService.Setup(s => s.ConfirmPaymentSentAsync(TestUserId, buySellId, paymentMethod))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.ConfirmPaymentSent(buySellId, paymentMethod);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ConfirmPaymentReceived_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var buySellId = 1;
+        _mockBuySellService.Setup(s => s.ConfirmPaymentReceivedAsync(TestUserId, buySellId))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.ConfirmPaymentReceived(buySellId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UnconfirmPaymentSent_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var buySellId = 1;
+        _mockBuySellService.Setup(s => s.UnconfirmPaymentSentAsync(TestUserId, buySellId))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.UnconfirmPaymentSent(buySellId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UnconfirmPaymentReceived_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var buySellId = 1;
+        _mockBuySellService.Setup(s => s.UnconfirmPaymentReceivedAsync(TestUserId, buySellId))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.UnconfirmPaymentReceived(buySellId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetSessionBuySells_ServiceReturnsFailure_ReturnsNotFound()
+    {
+        // Arrange
+        var sessionId = 1;
+        _mockBuySellService.Setup(s => s.GetSessionBuySellsAsync(sessionId))
+            .ReturnsAsync(ServiceResult<IEnumerable<BuySellResponse>>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.GetSessionBuySells(sessionId);
+
+        // Assert
+        var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        var response = notFoundResult.Value.Should().BeOfType<ApiDataResponse<IEnumerable<BuySellResponse>>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CancelBuy_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var buySellId = 1;
+        _mockBuySellService.Setup(s => s.CancelBuyAsync(TestUserId, buySellId))
+            .ReturnsAsync(ServiceResult<bool>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.CancelBuy(buySellId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<bool>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CancelSell_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var buySellId = 1;
+        _mockBuySellService.Setup(s => s.CancelSellAsync(TestUserId, buySellId))
+            .ReturnsAsync(ServiceResult<bool>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.CancelSell(buySellId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<bool>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CanBuy_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var sessionId = 1;
+        _mockBuySellService.Setup(s => s.CanBuyAsync(TestUserId, sessionId))
+            .ReturnsAsync(ServiceResult<BuySellStatusResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.CanBuy(sessionId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellStatusResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CanSell_ServiceReturnsFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var sessionId = 1;
+        _mockBuySellService.Setup(s => s.CanSellAsync(TestUserId, sessionId))
+            .ReturnsAsync(ServiceResult<BuySellStatusResponse>.CreateFailure("Test error"));
+
+        // Act
+        var result = await _controller.CanSell(sessionId);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellStatusResponse>>().Subject;
+        response.Success.Should().BeFalse();
+    }
 }

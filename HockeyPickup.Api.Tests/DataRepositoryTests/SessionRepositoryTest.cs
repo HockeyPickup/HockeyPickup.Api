@@ -1341,7 +1341,11 @@ public class BuyingQueueTests
             TransactionStatus = "Pending",
             QueueStatus = "Active",
             PaymentSent = false,
-            PaymentReceived = false
+            PaymentReceived = false,
+            BuyerUserId = "user123",
+            SellerUserId = "user456",
+            Buyer = null,
+            Seller = null
         };
 
         // Assert
