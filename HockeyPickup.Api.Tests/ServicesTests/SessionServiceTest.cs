@@ -1373,3 +1373,204 @@ public partial class SessionServiceTests
         _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
     }
 }
+
+public partial class SessionServiceTests
+{
+    [Fact]
+    public async Task DeleteRosterPlayer_Success_ReturnsUpdatedSession()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var user = new AspNetUser
+        {
+            Id = userId,
+            FirstName = "Test",
+            LastName = "User",
+            Email = "test@example.com",
+            NotificationPreference = NotificationPreference.All
+        };
+        var session = CreateTestSession(userId, 2, 1);
+        var updatedSession = CreateTestSession(userId, 2, 1); // Create a new instance for the updated session
+
+        var mockUsers = new List<UserDetailedResponse>
+    {
+        new()
+        {
+            Id = "user1",
+            Email = "active.all@test.com",
+            Active = true,
+            NotificationPreference = NotificationPreference.All,
+            UserName = "user1",
+            Preferred = false,
+            PreferredPlus = false,
+            Rating = 1.0m
+        }
+    };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.DeletePlayerFromRosterAsync(sessionId, userId))
+            .ReturnsAsync(updatedSession);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
+            .ReturnsAsync(updatedSession);
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .ReturnsAsync(mockUsers);
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns("https://test.com");
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Returns("testqueue");
+
+        _mockSubscriptionHandler.Setup(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()))
+            .Returns(Task.CompletedTask);
+
+        ServiceBusCommsMessage? capturedMessage = null;
+
+        _serviceBus
+            .Setup(x => x.SendAsync(
+                It.IsAny<ServiceBusCommsMessage>(),
+                It.Is<string>(s => s == "TeamAssignmentChange"),
+                It.IsAny<string>(),
+                It.Is<string>(s => s == "testqueue"),
+                default))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, subject, corrId, queue, token) =>
+            {
+                capturedMessage = msg;
+            })
+            .Returns(Task.FromResult(true));
+
+        // Act
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal($"Test User deleted from roster", result.Message);
+        Assert.NotNull(result.Data);
+
+        // Verify repository calls
+        _mockSessionRepository.Verify(x => x.DeletePlayerFromRosterAsync(sessionId, userId), Times.Once);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(updatedSession), Times.Once);
+
+        // Verify service bus message
+        if (capturedMessage != null)
+        {
+            Assert.Equal("DeletedFromRoster", capturedMessage!.Metadata["Type"]);
+            Assert.Equal(userId, capturedMessage.RelatedEntities["UserId"]);
+            Assert.Equal("Test", capturedMessage.RelatedEntities["FirstName"]);
+            Assert.Equal("User", capturedMessage.RelatedEntities["LastName"]);
+            Assert.Contains("active.all@test.com", capturedMessage.NotificationEmails);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteRosterPlayer_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "nonexistentUser";
+        var sessionId = 1;
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((AspNetUser?) null);
+
+        // Act
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User not found", result.Message);
+
+        // Verify no other methods were called
+        _mockSessionRepository.Verify(x => x.DeletePlayerFromRosterAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()), Times.Never);
+        _serviceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteRosterPlayer_SessionNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))!.ReturnsAsync((SessionDetailedResponse?) null);
+
+        // Act
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Session not found", result.Message);
+
+        // Verify no other methods were called
+        _mockSessionRepository.Verify(x => x.DeletePlayerFromRosterAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteRosterPlayer_UserNotInRoster_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession("differentUser", 2, 1); // Note: Different user
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(session);
+
+        // Act
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User is not part of this session's current roster", result.Message);
+
+        // Verify no other methods were called
+        _mockSessionRepository.Verify(x => x.DeletePlayerFromRosterAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteRosterPlayer_ThrowsException_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var expectedException = new Exception("Test exception");
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .ThrowsAsync(expectedException);
+
+        // Act
+        var result = await _sessionService.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal($"An error occurred deleting player from roster: {expectedException.Message}", result.Message);
+
+        // Verify logger was called
+        _mockLogger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, t) => true),
+            It.IsAny<Exception>(),
+            It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+
+        // Verify no other methods were called
+        _mockSessionRepository.Verify(x => x.DeletePlayerFromRosterAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()), Times.Never);
+    }
+}

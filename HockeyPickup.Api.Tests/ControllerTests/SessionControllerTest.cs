@@ -323,4 +323,46 @@ public class SessionControllerTests
         Assert.False(response.Success);
         Assert.Equal("An error occurred", response.Message);
     }
+
+    [Fact]
+    public async Task DeleteRosterPlayer_Success_ReturnsOkResult()
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "testUser";
+        var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateSuccess(
+            CreateTestSession(), "Player removed from roster");
+
+        _sessionService.Setup(x => x.DeleteRosterPlayer(sessionId, userId))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(okResult.Value);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public async Task DeleteRosterPlayer_Failure_ReturnsBadRequest()
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "testUser";
+        var serviceResponse = ServiceResult<SessionDetailedResponse>.CreateFailure("Player not found in roster");
+
+        _sessionService.Setup(x => x.DeleteRosterPlayer(sessionId, userId))
+            .ReturnsAsync(serviceResponse);
+
+        // Act
+        var result = await _controller.DeleteRosterPlayer(sessionId, userId);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(badRequestResult.Value);
+        Assert.False(response.Success);
+        Assert.Equal("Player not found in roster", response.Message);
+    }
 }

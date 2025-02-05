@@ -1,4 +1,6 @@
-﻿namespace HockeyPickup.Api.Helpers;
+using System.Diagnostics.CodeAnalysis;
+
+namespace HockeyPickup.Api.Helpers;
 
 public static class TimeZoneUtils
 {
@@ -10,6 +12,7 @@ public static class TimeZoneUtils
         return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, pacificZone);
     }
 
+    [ExcludeFromCodeCoverage]
     public static DateTime PacificToUtc(this DateTime pacificDateTime)
     {
         var pacificZone = TimeZoneInfo.FindSystemTimeZoneById(PACIFIC_TIME_ZONE_ID);

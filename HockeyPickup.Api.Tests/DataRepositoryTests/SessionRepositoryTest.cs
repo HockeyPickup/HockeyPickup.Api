@@ -1254,6 +1254,10 @@ public class BuyingQueueTests
         queue.PaymentReceived.Should().BeFalse();
         queue.BuyerNote.Should().BeNull();
         queue.SellerNote.Should().BeNull();
+        queue.BuyerUserId.Should().BeNull();
+        queue.SellerUserId.Should().BeNull();
+        queue.Buyer.Should().BeNull();
+        queue.Seller.Should().BeNull();
     }
 
     [Fact]
@@ -1319,6 +1323,10 @@ public class BuyingQueueTests
         queue.QueueStatus.Should().BeNull();
         queue.BuyerNote.Should().BeNull();
         queue.SellerNote.Should().BeNull();
+        queue.Buyer.Should().BeNull();
+        queue.Seller.Should().BeNull();
+        queue.BuyerUserId.Should().BeNull();
+        queue.SellerUserId.Should().BeNull();
     }
 
     [Fact]
@@ -1348,6 +1356,10 @@ public class BuyingQueueTests
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.PaymentReceived))!.PropertyType.Should().Be(typeof(bool));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerNote))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerNote))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerUserId))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerUserId))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.Buyer))!.PropertyType.Should().Be(typeof(UserDetailedResponse));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.Seller))!.PropertyType.Should().Be(typeof(UserDetailedResponse));
     }
 
     [Fact]
@@ -2883,5 +2895,189 @@ public class DeleteSessionRepositoryTests : IDisposable
         await using var assertContext = new DetailedSessionTestContext(_options);
         var deletedSession = await assertContext.Sessions!.FindAsync(session.SessionId);
         deletedSession.Should().BeNull();
+    }
+
+    public class DeletePlayerFromRosterRepositoryTests : IDisposable
+    {
+        private readonly Mock<ILogger<SessionRepository>> _mockLogger;
+        private readonly Mock<HttpContextAccessor> _mockContextAccessor;
+        private readonly Mock<IConfiguration> _mockConfiguration;
+        private readonly SqliteConnection _connection;
+        private readonly DbContextOptions<HockeyPickupContext> _options;
+        private readonly DateTime _testDate = DateTime.UtcNow;
+
+        public DeletePlayerFromRosterRepositoryTests()
+        {
+            _mockLogger = new Mock<ILogger<SessionRepository>>();
+            _mockContextAccessor = new Mock<HttpContextAccessor>();
+            _mockConfiguration = new Mock<IConfiguration>();
+            _mockConfiguration.Setup(x => x["SessionBuyPrice"]).Returns("27.00");
+
+            _connection = new SqliteConnection("DataSource=:memory:");
+            _connection.Open();
+
+            _options = new DbContextOptionsBuilder<HockeyPickupContext>()
+                .UseSqlite(_connection)
+                .EnableSensitiveDataLogging()
+                .Options;
+
+            using var context = new DetailedSessionTestContext(_options);
+            context.Database.EnsureCreated();
+        }
+
+        public void Dispose()
+        {
+            _connection.Dispose();
+        }
+
+        [Fact]
+        public async Task DeletePlayerFromRosterAsync_ValidPlayer_DeletesAndReturnsUpdatedSession()
+        {
+            // Arrange
+            await using var arrangeContext = new DetailedSessionTestContext(_options);
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
+            };
+            arrangeContext.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = _testDate,
+                UpdateDateTime = _testDate,
+                SessionDate = _testDate.AddDays(1)
+            };
+            arrangeContext.Sessions!.Add(session);
+            await arrangeContext.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                TeamAssignment = (TeamAssignment) 1,
+                JoinedDateTime = _testDate
+            };
+            arrangeContext.SessionRosters!.Add(roster);
+            await arrangeContext.SaveChangesAsync();
+
+            // Act
+            await using var actContext = new DetailedSessionTestContext(_options);
+            var repository = new SessionRepository(
+                actContext,
+                _mockLogger.Object,
+                _mockContextAccessor.Object,
+                _mockConfiguration.Object);
+
+            var result = await repository.DeletePlayerFromRosterAsync(1, "testUser");
+
+            // Assert
+            result.Should().NotBeNull();
+
+            // Verify the roster entry was deleted
+            var rosterStillExists = await actContext.SessionRosters!
+                .AnyAsync(r => r.SessionId == 1 && r.UserId == "testUser");
+            rosterStillExists.Should().BeFalse();
+
+            // Verify session still exists and is returned
+            result.SessionId.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task DeletePlayerFromRosterAsync_PlayerNotInRoster_ThrowsKeyNotFoundException()
+        {
+            // Arrange
+            await using var arrangeContext = new DetailedSessionTestContext(_options);
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = _testDate,
+                UpdateDateTime = _testDate,
+                SessionDate = _testDate.AddDays(1)
+            };
+            arrangeContext.Sessions!.Add(session);
+            await arrangeContext.SaveChangesAsync();
+
+            // Act & Assert
+            await using var actContext = new DetailedSessionTestContext(_options);
+            var repository = new SessionRepository(
+                actContext,
+                _mockLogger.Object,
+                _mockContextAccessor.Object,
+                _mockConfiguration.Object);
+
+            await repository.Invoking(r => r.DeletePlayerFromRosterAsync(1, "nonexistentUser"))
+                .Should().ThrowAsync<KeyNotFoundException>()
+                .WithMessage("Player not found in session roster");
+        }
+
+        [Fact]
+        public async Task DeletePlayerFromRosterAsync_DeleteSuccessful_DetachesContext()
+        {
+            // Arrange
+            await using var arrangeContext = new DetailedSessionTestContext(_options);
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1
+            };
+            arrangeContext.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = _testDate,
+                UpdateDateTime = _testDate,
+                SessionDate = _testDate.AddDays(1)
+            };
+            arrangeContext.Sessions!.Add(session);
+            await arrangeContext.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                TeamAssignment = (TeamAssignment) 1,
+                JoinedDateTime = _testDate
+            };
+            arrangeContext.SessionRosters!.Add(roster);
+            await arrangeContext.SaveChangesAsync();
+
+            // Act
+            await using var actContext = new DetailedSessionTestContext(_options);
+            var repository = new SessionRepository(
+                actContext,
+                _mockLogger.Object,
+                _mockContextAccessor.Object,
+                _mockConfiguration.Object);
+
+            // Get the initial tracking count
+            var initialTrackedCount = actContext.ChangeTracker.Entries().Count();
+
+            // Perform the delete operation
+            await actContext.SessionRosters!
+                .Where(sr => sr.SessionId == 1 && sr.UserId == "testUser")
+                .ExecuteDeleteAsync();
+
+            // Verify immediate state after delete
+            actContext.ChangeTracker.Clear();
+
+            // Assert
+            // Verify that after clearing, no entities are tracked
+            actContext.ChangeTracker.Entries().Should().BeEmpty();
+
+            // Verify the delete was successful
+            var rosterStillExists = await actContext.SessionRosters!
+                .AnyAsync(r => r.SessionId == 1 && r.UserId == "testUser");
+            rosterStillExists.Should().BeFalse();
+        }
     }
 }
