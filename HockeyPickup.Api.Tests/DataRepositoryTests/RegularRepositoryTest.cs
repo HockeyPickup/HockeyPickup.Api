@@ -945,4 +945,132 @@ public class RegularRepositoryTests : IDisposable
         secondResult.Should().NotBeNull();
         secondResult!.RegularSetId.Should().BeGreaterThan(firstResult!.RegularSetId);
     }
+
+    [Fact]
+    public async Task GetRegularSetsAsync_MapsPaymentMethodsCorrectly()
+    {
+        // Arrange
+        var user = new AspNetUser
+        {
+            Id = "user1",
+            UserName = "test@example.com",
+            Email = "test@example.com",
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1,
+            PaymentMethods = new List<UserPaymentMethod>
+        {
+            new()
+            {
+                UserPaymentMethodId = 1,
+                MethodType = PaymentMethodType.PayPal,
+                Identifier = "user@paypal.com",
+                PreferenceOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                UserPaymentMethodId = 2,
+                MethodType = PaymentMethodType.Venmo,
+                Identifier = "@venmo-user",
+                PreferenceOrder = 2,
+                IsActive = true
+            }
+        }
+        };
+
+        var regularSet = new RegularSet
+        {
+            RegularSetId = 1,
+            Description = "Test Set",
+            DayOfWeek = 1,
+            CreateDateTime = _testDate,
+            Regulars = new List<Regular>
+        {
+            new()
+            {
+                RegularSetId = 1,
+                UserId = user.Id,
+                TeamAssignment = (TeamAssignment)1,
+                PositionPreference = (PositionPreference)1,
+                User = user
+            }
+        }
+        };
+
+        await _context.Users.AddAsync(user);
+        await _context.RegularSets.AddAsync(regularSet);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetRegularSetsAsync();
+
+        // Assert
+        var firstSet = result.First();
+        var firstRegular = firstSet.Regulars.First();
+        firstRegular.User.Should().NotBeNull();
+        firstRegular.User!.PaymentMethods.Should().NotBeNull();
+        firstRegular.User.PaymentMethods.Should().HaveCount(2);
+
+        var firstPaymentMethod = firstRegular.User.PaymentMethods.First();
+        firstPaymentMethod.UserPaymentMethodId.Should().Be(1);
+        firstPaymentMethod.MethodType.Should().Be(PaymentMethodType.PayPal);
+        firstPaymentMethod.Identifier.Should().Be("user@paypal.com");
+        firstPaymentMethod.PreferenceOrder.Should().Be(1);
+        firstPaymentMethod.IsActive.Should().BeTrue();
+
+        var secondPaymentMethod = firstRegular.User.PaymentMethods.Skip(1).First();
+        secondPaymentMethod.UserPaymentMethodId.Should().Be(2);
+        secondPaymentMethod.MethodType.Should().Be(PaymentMethodType.Venmo);
+        secondPaymentMethod.Identifier.Should().Be("@venmo-user");
+        secondPaymentMethod.PreferenceOrder.Should().Be(2);
+        secondPaymentMethod.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetRegularSetsAsync_EmptyPaymentMethods_MapsToEmptyList()
+    {
+        // Arrange
+        var user = new AspNetUser
+        {
+            Id = "user1",
+            UserName = "test@example.com",
+            Email = "test@example.com",
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1,
+            PaymentMethods = new List<UserPaymentMethod>() // Empty list
+        };
+
+        var regularSet = new RegularSet
+        {
+            RegularSetId = 1,
+            Description = "Test Set",
+            DayOfWeek = 1,
+            CreateDateTime = _testDate,
+            Regulars = new List<Regular>
+        {
+            new()
+            {
+                RegularSetId = 1,
+                UserId = user.Id,
+                TeamAssignment = (TeamAssignment)1,
+                PositionPreference = (PositionPreference)1,
+                User = user
+            }
+        }
+        };
+
+        await _context.Users.AddAsync(user);
+        await _context.RegularSets.AddAsync(regularSet);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetRegularSetsAsync();
+
+        // Assert
+        var firstSet = result.First();
+        var firstRegular = firstSet.Regulars.First();
+        firstRegular.User.Should().NotBeNull();
+        firstRegular.User!.PaymentMethods.Should().NotBeNull();
+        firstRegular.User.PaymentMethods.Should().BeEmpty();
+    }
 }

@@ -83,6 +83,7 @@ public static class IntExtensions
     }
 }
 
+[ExcludeFromCodeCoverage]
 public static class EnumExtensions
 {
     public static string GetDisplayName(this Enum enumValue)
@@ -175,6 +176,7 @@ public static class DbContextExtensions
     }
 }
 
+[ExcludeFromCodeCoverage]
 public static class ExceptionExtensions
 {
     public static string GetRelevantMessage(this Exception ex)

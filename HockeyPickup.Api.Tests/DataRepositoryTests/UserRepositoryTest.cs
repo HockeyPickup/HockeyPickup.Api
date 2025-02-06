@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
 using Microsoft.AspNetCore.Identity;
+using System.Reflection;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -800,5 +801,46 @@ public partial class UserRepositoryTest
 
         // Assert
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetPlayerStatus_CoversAllStatuses()
+    {
+        // Arrange
+        var rosters = new List<SessionRoster>
+        {
+            new() { UserId = "user1", IsPlaying = true, IsRegular = true },
+            new() { UserId = "user2", IsPlaying = true, IsRegular = false },
+            new() { UserId = "user3", IsPlaying = false }
+        };
+            var buySells = new List<BuySell>
+        {
+            new() { BuyerUserId = "user4" }
+        };
+
+        var getStatusMethod = typeof(UserRepository)
+            .GetMethod("GetPlayerStatus", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act & Assert
+
+        // Test Regular
+        var result = getStatusMethod!.Invoke(null, new object[] { "user1", rosters, buySells });
+        result.Should().Be(PlayerStatus.Regular);
+
+        // Test Substitute
+        result = getStatusMethod.Invoke(null, new object[] { "user2", rosters, buySells });
+        result.Should().Be(PlayerStatus.Substitute);
+
+        // Test NotPlaying
+        result = getStatusMethod.Invoke(null, new object[] { "user3", rosters, buySells });
+        result.Should().Be(PlayerStatus.NotPlaying);
+
+        // Test NotPlaying (user not in roster)
+        result = getStatusMethod.Invoke(null, new object[] { "nonexistent", rosters, buySells });
+        result.Should().Be(PlayerStatus.NotPlaying);
+
+        // Test InQueue
+        result = getStatusMethod.Invoke(null, new object[] { "user4", rosters, buySells });
+        result.Should().Be(PlayerStatus.InQueue);
     }
 }

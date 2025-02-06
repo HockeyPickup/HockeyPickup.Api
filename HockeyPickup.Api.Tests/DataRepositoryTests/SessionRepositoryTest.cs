@@ -3084,4 +3084,145 @@ public class DeleteSessionRepositoryTests : IDisposable
             rosterStillExists.Should().BeFalse();
         }
     }
+
+    [Theory]
+    [InlineData("Regular", PlayerStatus.Regular)]
+    [InlineData("Substitute", PlayerStatus.Substitute)]
+    [InlineData("Not Playing", PlayerStatus.NotPlaying)]
+    [InlineData("In Queue", PlayerStatus.InQueue)]
+    public void ParsePlayerStatus_ValidStatuses_ReturnsCorrectEnum(string status, PlayerStatus expected)
+    {
+        // Arrange
+        var parseMethod = typeof(SessionRepository)
+            .GetMethod("ParsePlayerStatus", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = parseMethod!.Invoke(null, new object[] { status });
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void MapBuySells_WithMultipleBuySells_MapsAndOrdersCorrectly()
+    {
+        // Arrange
+        var buySells = new List<BuySell>
+        {
+            new()
+            {
+                BuySellId = 2,
+                BuyerUserId = "buyer2",
+                SellerUserId = "seller2",
+                SellerNote = "Note2",
+                BuyerNote = "BuyerNote2",
+                PaymentSent = true,
+                PaymentReceived = false,
+                CreateDateTime = DateTime.UtcNow.AddDays(-1),
+                TeamAssignment = TeamAssignment.Dark,
+                UpdateDateTime = DateTime.UtcNow,
+                Price = 25.00m,
+                CreateByUserId = "creator2",
+                UpdateByUserId = "updater2",
+                PaymentMethod = PaymentMethodType.Venmo,
+                TransactionStatus = "Pending",
+                SellerNoteFlagged = true,
+                BuyerNoteFlagged = false
+            },
+            new()
+            {
+                BuySellId = 1,
+                BuyerUserId = "buyer1",
+                SellerUserId = "seller1",
+                PaymentMethod = null,
+                Price = null
+            }
+        };
+
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapBuySells", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = (List<BuySellResponse>) mapMethod!.Invoke(null, new object[] { buySells })!;
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(2);
+        result[0].BuySellId.Should().Be(1);
+        result[1].BuySellId.Should().Be(2);
+
+        // Verify nullable handling
+        result[0].PaymentMethod.Should().Be(PaymentMethodType.Unknown);
+        result[0].Price.Should().Be(0m);
+
+        // Verify complete mapping of properties
+        var secondBuySell = result[1];
+        secondBuySell.BuyerUserId.Should().Be("buyer2");
+        secondBuySell.SellerUserId.Should().Be("seller2");
+        secondBuySell.SellerNote.Should().Be("Note2");
+        secondBuySell.BuyerNote.Should().Be("BuyerNote2");
+        secondBuySell.PaymentSent.Should().BeTrue();
+        secondBuySell.PaymentReceived.Should().BeFalse();
+        secondBuySell.TeamAssignment.Should().Be(TeamAssignment.Dark);
+        secondBuySell.Price.Should().Be(25.00m);
+        secondBuySell.CreateByUserId.Should().Be("creator2");
+        secondBuySell.UpdateByUserId.Should().Be("updater2");
+        secondBuySell.PaymentMethod.Should().Be(PaymentMethodType.Venmo);
+        secondBuySell.TransactionStatus.Should().Be("Pending");
+        secondBuySell.SellerNoteFlagged.Should().BeTrue();
+        secondBuySell.BuyerNoteFlagged.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MapToUserDetailedResponse_WithPaymentMethods_MapsCorrectly()
+    {
+        // Arrange
+        var user = new AspNetUser
+        {
+            Id = "user1",
+            PaymentMethods = new List<UserPaymentMethod>
+        {
+            new()
+            {
+                UserPaymentMethodId = 1,
+                MethodType = PaymentMethodType.PayPal,
+                Identifier = "test@paypal.com",
+                PreferenceOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                UserPaymentMethodId = 2,
+                MethodType = PaymentMethodType.Venmo,
+                Identifier = "@venmo",
+                PreferenceOrder = 2,
+                IsActive = false
+            }
+        }
+        };
+
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapToUserDetailedResponse", BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = (UserDetailedResponse?) mapMethod!.Invoke(null, new object[] { user });
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.PaymentMethods.Should().HaveCount(2);
+
+        var firstPayment = result.PaymentMethods.First();
+        firstPayment.UserPaymentMethodId.Should().Be(1);
+        firstPayment.MethodType.Should().Be(PaymentMethodType.PayPal);
+        firstPayment.Identifier.Should().Be("test@paypal.com");
+        firstPayment.PreferenceOrder.Should().Be(1);
+        firstPayment.IsActive.Should().BeTrue();
+
+        var secondPayment = result.PaymentMethods.Skip(1).First();
+        secondPayment.UserPaymentMethodId.Should().Be(2);
+        secondPayment.MethodType.Should().Be(PaymentMethodType.Venmo);
+        secondPayment.Identifier.Should().Be("@venmo");
+        secondPayment.PreferenceOrder.Should().Be(2);
+        secondPayment.IsActive.Should().BeFalse();
+    }
 }
