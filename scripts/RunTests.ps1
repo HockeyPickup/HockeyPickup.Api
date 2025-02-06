@@ -1,7 +1,7 @@
 param([String]$ci="false") 
 
 # Run the test coverage
-$TestOutput = dotnet coverlet "HockeyPickup.Api.Tests/bin/Debug/net9.0/HockeyPickup.Api.Tests.dll" --target "dotnet" --targetargs "test --verbosity normal --no-build" --format lcov --output HockeyPickup.Api.Tests/TestResults/ --threshold=50 --threshold-type=line --threshold-stat=total --exclude-by-file "**.g.cs"
+$TestOutput = dotnet coverlet "HockeyPickup.Api.Tests/bin/Debug/net9.0/HockeyPickup.Api.Tests.dll" --target "dotnet" --targetargs "test --verbosity normal --no-build" --format lcov --output HockeyPickup.Api.Tests/TestResults/ --threshold=100 --threshold-type=line --threshold-stat=total --exclude-by-file "**.g.cs"
 
 Write-Host $TestOutput
 
