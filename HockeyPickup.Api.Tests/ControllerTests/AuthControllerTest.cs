@@ -633,7 +633,8 @@ public partial class AuthControllerTest
             EmergencyName = invalidValue,
             EmergencyPhone = invalidValue,
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
-            PositionPreference = PositionPreference.TBD
+            PositionPreference = PositionPreference.TBD,
+            Shoots = ShootPreference.TBD
         };
 
         _mockUserService
@@ -694,7 +695,8 @@ public partial class AuthControllerTest
             LastName = "Doe",
             EmergencyName = "Jane Doe",
             EmergencyPhone = "555-123-4567",
-            PositionPreference = preference
+            PositionPreference = preference,
+            Shoots = ShootPreference.Left
         };
 
         SetupUserClaims(userId);

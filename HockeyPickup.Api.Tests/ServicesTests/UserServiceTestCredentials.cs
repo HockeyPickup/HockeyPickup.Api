@@ -226,7 +226,8 @@ public partial class UserServiceTest
                 u.EmailConfirmed == false &&
                 u.LockoutEnabled == false &&
                 u.NotificationPreference == NotificationPreference.OnlyMyBuySell &&
-                u.PositionPreference == PositionPreference.TBD),
+                u.PositionPreference == PositionPreference.TBD &&
+                u.Shoots == ShootPreference.TBD),
             request.Password),
             Times.Once);
 

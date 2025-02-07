@@ -50,6 +50,7 @@ public class RegularRepositoryTests : IDisposable
                 LastName = "Doe",
                 NotificationPreference = (NotificationPreference) 1,
                 PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1,
                 Rating = 4.5m,
                 Preferred = true,
                 PreferredPlus = false,
@@ -68,6 +69,7 @@ public class RegularRepositoryTests : IDisposable
                 LastName = "Smith",
                 NotificationPreference = (NotificationPreference) 2,
                 PositionPreference = (PositionPreference) 2,
+                Shoots = (ShootPreference) 2,
                 Rating = 3.5m,
                 Preferred = false,
                 PreferredPlus = true,
@@ -163,6 +165,7 @@ public class RegularRepositoryTests : IDisposable
         firstRegular.User.EmergencyPhone.Should().Be("123-456-7890");
         firstRegular.User.NotificationPreference.Should().Be(NotificationPreference.All);
         firstRegular.User.PositionPreference.Should().Be(PositionPreference.Forward);
+        firstRegular.User.Shoots.Should().Be(ShootPreference.Left);
         firstRegular.User.LockerRoom13.Should().BeTrue();
         firstRegular.User.DateCreated.Should().Be(_testDate);
         firstRegular.User.Roles.Should().NotBeNull();
@@ -957,6 +960,7 @@ public class RegularRepositoryTests : IDisposable
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
             PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1,
             PaymentMethods = new List<UserPaymentMethod>
         {
             new()
@@ -1037,6 +1041,7 @@ public class RegularRepositoryTests : IDisposable
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
             PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1,
             PaymentMethods = new List<UserPaymentMethod>() // Empty list
         };
 

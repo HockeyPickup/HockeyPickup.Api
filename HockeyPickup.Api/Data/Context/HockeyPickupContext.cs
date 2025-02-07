@@ -85,6 +85,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.LastName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.NotificationPreference).HasConversion<int>().HasDefaultValue(NotificationPreference.OnlyMyBuySell).IsRequired().HasSentinel(NotificationPreference.None);
             entity.Property(e => e.PositionPreference).HasConversion<int>().HasDefaultValue(PositionPreference.TBD).IsRequired();
+            entity.Property(e => e.Shoots).HasConversion<int>().HasDefaultValue(ShootPreference.TBD).IsRequired();
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
             entity.Property(e => e.Rating).HasColumnType("decimal(18,2)").HasDefaultValue(0);
@@ -216,6 +217,10 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
             entity.Property(e => e.PositionPreference)
                 .HasDefaultValue(PositionPreference.TBD)
+                .HasConversion<int>();
+
+            entity.Property(e => e.Shoots)
+                .HasDefaultValue(ShootPreference.TBD)
                 .HasConversion<int>();
         });
 

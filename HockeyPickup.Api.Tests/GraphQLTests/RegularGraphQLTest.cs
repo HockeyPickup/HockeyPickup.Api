@@ -27,6 +27,7 @@ public class RegularGraphQLTests
             Active = true,
             NotificationPreference = NotificationPreference.All,
             PositionPreference = PositionPreference.TBD,
+            Shoots = ShootPreference.TBD,
             DateCreated = DateTime.UtcNow,
             Roles = []
         };

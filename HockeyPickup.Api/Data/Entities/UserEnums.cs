@@ -102,3 +102,18 @@ public enum PaymentMethodType
     [Display(Name = @"Bitcoin")]
     Bitcoin = 5
 }
+
+public enum ShootPreference
+{
+    [GraphQLName("TBD")]
+    [Display(Name = @"TBD")]
+    TBD = 0,
+
+    [GraphQLName("Left")]
+    [Display(Name = @"Left")]
+    Left = 1,
+
+    [GraphQLName("Right")]
+    [Display(Name = @"Right")]
+    Right = 2
+}

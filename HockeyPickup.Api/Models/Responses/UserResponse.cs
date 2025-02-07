@@ -142,6 +142,14 @@ public class UserDetailedResponse
     [GraphQLDescription("Profile Photo Url")]
     public string? PhotoUrl { get; set; }
 
+    [Description("User's shoot preference")]
+    [JsonPropertyName("Shoots")]
+    [JsonProperty(nameof(Shoots), Required = Required.Default)]
+    [GraphQLName("Shoots")]
+    [GraphQLDescription("User's shoot preference")]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<ShootPreference>))]
+    public ShootPreference? Shoots { get; set; }
+
     [Description("Date and time when lockout ends")]
     [DataType(DataType.DateTime)]
     [JsonPropertyName("DateCreated")]

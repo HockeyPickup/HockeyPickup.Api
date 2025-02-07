@@ -88,7 +88,8 @@ public class CustomUserStore : UserStore<AspNetUser, AspNetRole, HockeyPickupCon
                     JerseyNumber = @JerseyNumber,
                     LockerRoom13 = @LockerRoom13,
                     DateCreated = @DateCreated,
-                    PhotoUrl = @PhotoUrl
+                    PhotoUrl = @PhotoUrl,
+                    Shoots = @Shoots
                     WHERE Id = @Id";
 
             await _context.Database.ExecuteSqlRawAsync(sql,
@@ -120,6 +121,7 @@ public class CustomUserStore : UserStore<AspNetUser, AspNetRole, HockeyPickupCon
                 new Microsoft.Data.SqlClient.SqlParameter("@LockerRoom13", user.LockerRoom13),
                 new Microsoft.Data.SqlClient.SqlParameter("@DateCreated", user.DateCreated),
                 new Microsoft.Data.SqlClient.SqlParameter("@PhotoUrl", user.PhotoUrl ?? (object) DBNull.Value),
+                new Microsoft.Data.SqlClient.SqlParameter("@Shoots", user.Shoots),
                 new Microsoft.Data.SqlClient.SqlParameter("@Id", user.Id));
 
             return IdentityResult.Success;

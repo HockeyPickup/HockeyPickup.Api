@@ -276,7 +276,8 @@ public partial class SessionServiceTests
             UserName = "test@example.com",
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         context.Users!.Add(user);
 

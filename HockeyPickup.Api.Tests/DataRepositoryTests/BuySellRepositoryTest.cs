@@ -43,6 +43,8 @@ public class BuySellTestHockeyPickupContext : HockeyPickupContext
                 .HasDefaultValue(NotificationPreference.OnlyMyBuySell);
             entity.Property(e => e.PositionPreference)
                 .HasDefaultValue(PositionPreference.TBD);
+            entity.Property(e => e.Shoots)
+                .HasDefaultValue(ShootPreference.TBD);
 
             // Ignore navigation properties
             entity.Ignore(e => e.Roles);

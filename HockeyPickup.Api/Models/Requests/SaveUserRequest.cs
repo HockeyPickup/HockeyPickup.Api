@@ -62,6 +62,13 @@ public class SaveUserRequest
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
     public PositionPreference? PositionPreference { get; set; }
+
+    [Description("User's shoot preference setting")]
+    [JsonPropertyName("Shoots")]
+    [JsonProperty(nameof(Shoots), Required = Required.Default)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<ShootPreference>))]
+    public ShootPreference? Shoots { get; set; }
 }
 
 public class SaveUserRequestEx : SaveUserRequest

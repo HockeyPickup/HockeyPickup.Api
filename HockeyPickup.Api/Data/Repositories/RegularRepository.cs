@@ -303,6 +303,7 @@ public static class UserMappingExtensions
             NotificationPreference = user.NotificationPreference,
             PositionPreference = user.PositionPreference,
             PhotoUrl = user.PhotoUrl,
+            Shoots = user.Shoots,
             DateCreated = user.DateCreated,
             Roles = [],
             PaymentMethods = user.PaymentMethods.Select(pm => new UserPaymentMethodResponse

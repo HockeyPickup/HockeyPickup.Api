@@ -39,6 +39,7 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
             entity.Property(e => e.PreferredPlus).HasDefaultValue(false);
             entity.Property(e => e.NotificationPreference).HasDefaultValue(NotificationPreference.OnlyMyBuySell);
             entity.Property(e => e.PositionPreference).HasDefaultValue(PositionPreference.TBD);
+            entity.Property(e => e.Shoots).HasDefaultValue(ShootPreference.TBD);
 
             // Ignore navigation properties
             entity.Ignore(e => e.Roles);
@@ -245,6 +246,7 @@ public partial class UserRepositoryTest
             Active = true,
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
             PositionPreference = PositionPreference.TBD,
+            Shoots = ShootPreference.TBD,
             DateCreated = DateTime.Parse("02/25/1969"),
             PaymentMethods = []
         });

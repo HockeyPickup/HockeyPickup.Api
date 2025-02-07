@@ -19,6 +19,7 @@ public partial class UserServiceTest
             EmergencyPhone = "555-1234",
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
             PositionPreference = PositionPreference.TBD,
+            Shoots = ShootPreference.TBD
         };
     }
 
@@ -49,6 +50,7 @@ public partial class UserServiceTest
         user.EmergencyPhone.Should().Be(request.EmergencyPhone);
         user.NotificationPreference.Should().Be(request.NotificationPreference!.Value);
         user.PositionPreference.Should().Be(request.PositionPreference!.Value);
+        user.Shoots.Should().Be(request.Shoots!.Value);
     }
 
     [Fact]
@@ -62,7 +64,8 @@ public partial class UserServiceTest
             FirstName = "Original",
             LastName = "Name",
             NotificationPreference = (int) NotificationPreference.None,
-            PositionPreference = (int) PositionPreference.TBD
+            PositionPreference = (int) PositionPreference.TBD,
+            Shoots = (int) ShootPreference.TBD
         };
 
         var request = new SaveUserRequest
@@ -89,6 +92,7 @@ public partial class UserServiceTest
         user.LastName.Should().Be("Name");
         user.NotificationPreference.Should().Be((int) NotificationPreference.None);
         user.PositionPreference.Should().Be((int) PositionPreference.TBD);
+        user.Shoots.Should().Be((int) ShootPreference.TBD);
     }
 
     [Fact]
@@ -172,13 +176,15 @@ public partial class UserServiceTest
         {
             Id = userId,
             NotificationPreference = (int) NotificationPreference.None,
-            PositionPreference = (int) PositionPreference.TBD
+            PositionPreference = (int) PositionPreference.TBD,
+            Shoots = (int) ShootPreference.TBD
         };
 
         var request = new SaveUserRequest
         {
             NotificationPreference = NotificationPreference.None,
-            PositionPreference = PositionPreference.TBD
+            PositionPreference = PositionPreference.TBD,
+            Shoots = ShootPreference.TBD
         };
 
         _mockUserManager.Setup(x => x.FindByIdAsync(userId))
@@ -194,6 +200,7 @@ public partial class UserServiceTest
         result.IsSuccess.Should().BeTrue();
         user.NotificationPreference.Should().Be((int) NotificationPreference.None);
         user.PositionPreference.Should().Be((int) PositionPreference.TBD);
+        user.Shoots.Should().Be((int) ShootPreference.TBD);
     }
 
     [Fact]
@@ -438,7 +445,8 @@ public partial class UserServiceTest
             PreferredPlus = false,
             LockerRoom13 = false,
             NotificationPreference = NotificationPreference.OnlyMyBuySell,
-            PositionPreference = PositionPreference.TBD
+            PositionPreference = PositionPreference.TBD,
+            Shoots = ShootPreference.TBD
         };
     }
 

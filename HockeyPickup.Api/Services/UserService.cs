@@ -128,6 +128,7 @@ public class UserService : IUserService
         if (request.EmergencyPhone != null) user.EmergencyPhone = request.EmergencyPhone;
         if (request.NotificationPreference.HasValue) user.NotificationPreference = request.NotificationPreference.Value;
         if (request.PositionPreference.HasValue) user.PositionPreference = request.PositionPreference.Value;
+        if (request.Shoots.HasValue) user.Shoots = request.Shoots.Value;
         user.JerseyNumber = request.JerseyNumber;
     }
 
@@ -295,6 +296,7 @@ public class UserService : IUserService
                 NormalizedUserName = request.Email.ToUpperInvariant(),
                 SecurityStamp = Guid.NewGuid().ToString(),
                 PhotoUrl = string.Empty,
+                Shoots = (int) ShootPreference.TBD
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
@@ -360,6 +362,7 @@ public class UserService : IUserService
                 PreferredPlus = aspNetUser.PreferredPlus,
                 NotificationPreference = aspNetUser.NotificationPreference,
                 PositionPreference = aspNetUser.PositionPreference,
+                Shoots = aspNetUser.Shoots,
                 Active = aspNetUser.Active,
                 EmergencyName = aspNetUser.EmergencyName,
                 EmergencyPhone = aspNetUser.EmergencyPhone,

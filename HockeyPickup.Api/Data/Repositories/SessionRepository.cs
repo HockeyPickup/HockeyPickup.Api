@@ -392,6 +392,7 @@ public class SessionRepository : ISessionRepository
             NotificationPreference = user.NotificationPreference,
             PositionPreference = user.PositionPreference,
             PhotoUrl = user.PhotoUrl,
+            Shoots = user.Shoots,
             DateCreated = user.DateCreated,
             Roles = user.Roles.ToRoleNames(),
             PaymentMethods = user.PaymentMethods.Select(pm => new UserPaymentMethodResponse

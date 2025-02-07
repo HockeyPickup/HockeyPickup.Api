@@ -125,6 +125,14 @@ public class User
     public PositionPreference PositionPreference { get; set; }
 
     [Required]
+    [Description("User's shooting preference")]
+    [Range(0, int.MaxValue)]
+    [JsonPropertyName("Shoots")]
+    [JsonProperty(nameof(Shoots), Required = Required.Always)]
+    [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<ShootPreference>))]
+    public ShootPreference Shoots { get; set; }
+
+    [Required]
     [Description("Indicates if user account is active")]
     [JsonPropertyName("Active")]
     [JsonProperty(nameof(Active), Required = Required.Always)]
@@ -210,8 +218,9 @@ public class User
             Active = Active,
             Preferred = Preferred,
             PreferredPlus = PreferredPlus,
-            NotificationPreference = (NotificationPreference) NotificationPreference,
-            PositionPreference = (PositionPreference) PositionPreference,
+            NotificationPreference = NotificationPreference,
+            PositionPreference = PositionPreference,
+            Shoots = Shoots,
             EmergencyName = EmergencyName,
             EmergencyPhone = EmergencyPhone,
             LockerRoom13 = LockerRoom13,

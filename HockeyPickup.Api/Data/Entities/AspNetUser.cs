@@ -22,6 +22,7 @@ public partial class AspNetUser : IdentityUser<string>
         AccessFailedCount = 0;
         NotificationPreference = NotificationPreference.OnlyMyBuySell;
         PositionPreference = PositionPreference.TBD;
+        Shoots = ShootPreference.TBD;
         Active = false;
         Rating = 0;
         PreferredPlus = false;
@@ -60,6 +61,7 @@ public partial class AspNetUser : IdentityUser<string>
     public bool LockerRoom13 { get; set; }
     public string? PhotoUrl { get; set; }
     public DateTime DateCreated { get; set; }
+    public ShootPreference Shoots { get; set; }
 
     // Virtual navigation property
     public virtual ICollection<AspNetRole> Roles { get; set; } = new List<AspNetRole>();

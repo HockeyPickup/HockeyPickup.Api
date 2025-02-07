@@ -98,6 +98,7 @@ public class DetailedSessionTestContext : HockeyPickupContext
             entity.Property(e => e.LastName);
             entity.Property(e => e.NotificationPreference);
             entity.Property(e => e.PositionPreference);
+            entity.Property(e => e.Shoots);
 
             // Configure relationships
             entity.HasMany(u => u.BuyerTransactions).WithOne(b => b.Buyer);
@@ -285,7 +286,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             FirstName = "Test",
             LastName = "User",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         _context.Users.Add(user);
 
@@ -457,7 +459,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test@example.com",
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         _context.Users.Add(user);
 
@@ -503,7 +506,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test@example.com",
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         _context.Users.Add(user);
 
@@ -610,7 +614,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test1@example.com",
             Email = "test1@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         var user2 = new AspNetUser
         {
@@ -618,7 +623,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
             UserName = "test2@example.com",
             Email = "test2@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         _context.Users.AddRange(user1, user2);
 
@@ -1997,7 +2003,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 NotificationPreference = (NotificationPreference) 1,
-                PositionPreference = (PositionPreference) 1
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2063,7 +2070,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 NotificationPreference = (NotificationPreference) 1,
-                PositionPreference = (PositionPreference) 1
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2126,7 +2134,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 NotificationPreference = (NotificationPreference) 1,
-                PositionPreference = (PositionPreference) 1
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2173,7 +2182,8 @@ public partial class DetailedSessionRepositoryTests
             UserName = "test@example.com",
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         context.Users!.Add(user);
         await context.SaveChangesAsync();
@@ -2211,7 +2221,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 NotificationPreference = (NotificationPreference) 1,
-                PositionPreference = (PositionPreference) 1
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2277,7 +2288,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 NotificationPreference = (NotificationPreference) 1,
-                PositionPreference = (PositionPreference) 1
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2340,7 +2352,8 @@ public partial class DetailedSessionRepositoryTests
                 UserName = "test@example.com",
                 Email = "test@example.com",
                 NotificationPreference = (NotificationPreference) 1,
-                PositionPreference = (PositionPreference) 1
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
             };
             context.Users!.Add(user);
 
@@ -2387,7 +2400,8 @@ public partial class DetailedSessionRepositoryTests
             UserName = "test@example.com",
             Email = "test@example.com",
             NotificationPreference = (NotificationPreference) 1,
-            PositionPreference = (PositionPreference) 1
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
         };
         context.Users!.Add(user);
         await context.SaveChangesAsync();
