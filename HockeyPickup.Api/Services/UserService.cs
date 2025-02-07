@@ -111,6 +111,9 @@ public class UserService : IUserService
             if (!result.Succeeded)
                 return ServiceResult.CreateFailure(result.Errors.FirstOrDefault()?.Description ?? "Failed to save user");
 
+            // Send a message to Service Bus that a user saved preferences
+            await SendUserServiceBusCommsMessageAsync("SaveUser", null, user.Id, user.Email, user.NotificationPreference, user.FirstName, user.LastName);
+
             return ServiceResult.CreateSuccess();
         }
         catch (Exception ex)
