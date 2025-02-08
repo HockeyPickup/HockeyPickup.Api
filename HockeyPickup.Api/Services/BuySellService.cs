@@ -105,12 +105,12 @@ public class BuySellService : IBuySellService
                 buySell.UpdateDateTime = DateTime.UtcNow;
                 buySell.BuyerNote = request.Note;
 
-                message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}";
-
-                // Send a message to Service Bus that a player bought their spot from a seller
-                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller);
+                message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}. Team Assignment: {matchingSell.TeamAssignment}";
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+                // Send a message to Service Bus that a player bought their spot from a seller
+                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller, matchingSell.TeamAssignment);
             }
             else
             {
@@ -136,10 +136,10 @@ public class BuySellService : IBuySellService
 
                 message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
 
-                // Send a message to Service Bus that a player added themselves to buyer queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", session.SessionId, session.SessionDate, buyer, null);
-
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+
+                // Send a message to Service Bus that a player added themselves to buyer queue
+                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", session.SessionId, session.SessionDate, buyer, null, null);
             }
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
@@ -198,12 +198,12 @@ public class BuySellService : IBuySellService
                 buySell.TeamAssignment = sellerRoster.TeamAssignment;
                 buySell.SellerNote = request.Note;
 
-                message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}";
-
-                // Send a message to Service Bus that a player sold their spot to a buyer
-                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller);
+                message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}. Team Assignment: {matchingBuy.TeamAssignment}";
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+                // Send a message to Service Bus that a player sold their spot to a buyer
+                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller, matchingBuy.TeamAssignment);
             }
             else
             {
@@ -229,10 +229,10 @@ public class BuySellService : IBuySellService
 
                 message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
 
-                // Send a message to Service Bus that a player added themselves to selling queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller);
-
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+
+                // Send a message to Service Bus that a player added themselves to selling queue
+                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller, null);
             }
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
@@ -439,7 +439,7 @@ public class BuySellService : IBuySellService
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from buying
-            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", session.SessionId, session.SessionDate, buySell.Buyer, null);
+            await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", session.SessionId, session.SessionDate, buySell.Buyer, null, null);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
@@ -475,7 +475,7 @@ public class BuySellService : IBuySellService
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from selling
-            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", session.SessionId, session.SessionDate, null, buySell.Seller);
+            await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", session.SessionId, session.SessionDate, null, buySell.Seller, null);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
@@ -764,7 +764,7 @@ public class BuySellService : IBuySellService
         };
     }
 
-    private async Task SendBuySellServiceBusCommsMessageAsync(string type, int sessionId, DateTime sessionDate, AspNetUser? buyer, AspNetUser? seller)
+    private async Task SendBuySellServiceBusCommsMessageAsync(string type, int sessionId, DateTime sessionDate, AspNetUser? buyer, AspNetUser? seller, TeamAssignment? teamAssignment)
     {
         var baseUrl = _configuration["BaseUrl"];
         var sessionUrl = $"{baseUrl.TrimEnd('/')}/session/{sessionId}";
@@ -793,7 +793,8 @@ public class BuySellService : IBuySellService
                 { "BuyerLastName", buyer != null ? buyer.LastName : "" },
                 { "SellerUserId", seller != null ? seller.Id : "" },
                 { "SellerFirstName", seller != null ? seller.FirstName : "" },
-                { "SellerLastName", seller != null ? seller.LastName : "" }
+                { "SellerLastName", seller != null ? seller.LastName : "" },
+                { "TeamAssignment", teamAssignment != null ? teamAssignment.ToString() : "" }
             },
             MessageData = new Dictionary<string, string>
             {
