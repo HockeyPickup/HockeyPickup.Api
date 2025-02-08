@@ -84,8 +84,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.FirstName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.LastName).HasColumnType("nvarchar(max)");
             entity.Property(e => e.NotificationPreference).HasConversion<int>().HasDefaultValue(NotificationPreference.OnlyMyBuySell).IsRequired().HasSentinel(NotificationPreference.None);
-            entity.Property(e => e.PositionPreference).HasConversion<int>().HasDefaultValue(PositionPreference.TBD).IsRequired();
-            entity.Property(e => e.Shoots).HasConversion<int>().HasDefaultValue(ShootPreference.TBD).IsRequired();
+            entity.Property(e => e.PositionPreference).HasConversion<int>().IsRequired();
+            entity.Property(e => e.Shoots).HasConversion<int>().IsRequired();
             entity.Property(e => e.Active).HasDefaultValue(true);
             entity.Property(e => e.Preferred).HasDefaultValue(false);
             entity.Property(e => e.Rating).HasColumnType("decimal(18,2)").HasDefaultValue(0);
@@ -280,7 +280,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.Property(e => e.SellerNote).HasColumnType("nvarchar(max)").IsRequired(false);
 
             // Required fields with defaults
-            entity.Property(e => e.TeamAssignment).HasConversion<int>().HasDefaultValue(TeamAssignment.TBD).IsRequired();
+            entity.Property(e => e.TeamAssignment).HasConversion<int>().IsRequired();
             entity.Property(e => e.SellerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
             entity.Property(e => e.BuyerNoteFlagged).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
             entity.Property(e => e.PaymentSent).HasColumnType("bit").HasDefaultValue(false).IsRequired().ValueGeneratedNever();
@@ -427,7 +427,8 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
             entity.Property(e => e.IsPlaying).HasDefaultValue(true);
             entity.Property(e => e.IsRegular).HasDefaultValue(false);
-            entity.Property(e => e.Position).HasConversion<int>().HasDefaultValue(PositionPreference.TBD);
+            entity.Property(e => e.Position).HasConversion<int>();
+            entity.Property(e => e.TeamAssignment).HasConversion<int>().IsRequired();
             entity.Property(e => e.JoinedDateTime).HasColumnType("datetime");
             entity.Property(e => e.LeftDateTime).HasColumnType("datetime");
             entity.Property(e => e.UserId).HasMaxLength(128).IsRequired();
