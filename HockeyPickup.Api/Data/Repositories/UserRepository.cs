@@ -62,7 +62,9 @@ public class UserRepository : IUserRepository
 
     public async Task<UserDetailedResponse> GetUserAsync(string userId)
     {
-        return await _context.Users
+        // First get basic user info
+        var user = await _context.Users
+            .AsNoTracking()
             .Where(u => u.Id == userId)
             .Select(u => new UserDetailedResponse
             {
@@ -96,42 +98,59 @@ public class UserRepository : IUserRepository
                         IsActive = p.IsActive
                     })
                     .ToList(),
-                BuyerTransactions = u.BuyerTransactions
-                    .Select(bsr => new BuySellResponse
-                    {
-                        SessionId = bsr.SessionId,
-                        SessionDate = bsr.Session.SessionDate,
-                        BuySellId = bsr.BuySellId,
-                        SellerUserId = bsr.SellerUserId,
-                        BuyerUserId = bsr.BuyerUserId,
-                        CreateDateTime = bsr.CreateDateTime,
-                        UpdateDateTime = bsr.UpdateDateTime,
-                        PaymentReceived = bsr.PaymentReceived,
-                        PaymentSent = bsr.PaymentSent,
-                        TeamAssignment = bsr.TeamAssignment,
-                        TransactionStatus = bsr.TransactionStatus,
-                        Price = bsr.Price ?? 0m,
-                    })
-                    .ToList(),
-                SellerTransactions = u.SellerTransactions
-                    .Select(bsr => new BuySellResponse
-                    {
-                        SessionId = bsr.SessionId,
-                        SessionDate = bsr.Session.SessionDate,
-                        BuySellId = bsr.BuySellId,
-                        SellerUserId = bsr.SellerUserId,
-                        BuyerUserId = bsr.BuyerUserId,
-                        CreateDateTime = bsr.CreateDateTime,
-                        UpdateDateTime = bsr.UpdateDateTime,
-                        PaymentReceived = bsr.PaymentReceived,
-                        PaymentSent = bsr.PaymentSent,
-                        TeamAssignment = bsr.TeamAssignment,
-                        TransactionStatus = bsr.TransactionStatus,
-                        Price = bsr.Price ?? 0m,
-                    })
-                    .ToList(),
+                BuyerTransactions = new List<BuySellResponse>(),
+                SellerTransactions = new List<BuySellResponse>()
             })
-        .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync();
+
+        if (user == null)
+            return null;
+
+        // Then get transactions separately
+        var buyerTransactions = await _context.BuySells
+            .AsNoTracking()
+            .Where(b => b.BuyerUserId == userId)
+            .Select(b => new BuySellResponse
+            {
+                SessionId = b.SessionId,
+                SessionDate = b.Session != null ? b.Session.SessionDate : DateTime.MinValue,
+                BuySellId = b.BuySellId,
+                SellerUserId = b.SellerUserId,
+                BuyerUserId = b.BuyerUserId,
+                CreateDateTime = b.CreateDateTime,
+                UpdateDateTime = b.UpdateDateTime,
+                PaymentReceived = b.PaymentReceived,
+                PaymentSent = b.PaymentSent,
+                TeamAssignment = b.TeamAssignment,
+                TransactionStatus = b.TransactionStatus ?? string.Empty,
+                Price = b.Price ?? 0m,
+            })
+            .ToListAsync();
+
+        var sellerTransactions = await _context.BuySells
+            .AsNoTracking()
+            .Where(b => b.SellerUserId == userId)
+            .Select(b => new BuySellResponse
+            {
+                SessionId = b.SessionId,
+                SessionDate = b.Session != null ? b.Session.SessionDate : DateTime.MinValue,
+                BuySellId = b.BuySellId,
+                SellerUserId = b.SellerUserId,
+                BuyerUserId = b.BuyerUserId,
+                CreateDateTime = b.CreateDateTime,
+                UpdateDateTime = b.UpdateDateTime,
+                PaymentReceived = b.PaymentReceived,
+                PaymentSent = b.PaymentSent,
+                TeamAssignment = b.TeamAssignment,
+                TransactionStatus = b.TransactionStatus ?? string.Empty,
+                Price = b.Price ?? 0m,
+            })
+            .ToListAsync();
+
+        user.BuyerTransactions = buyerTransactions.OrderByDescending(b => b.BuySellId).ToList();
+        user.SellerTransactions = sellerTransactions.OrderByDescending(b => b.BuySellId).ToList();
+
+        return user!;
     }
 
     public async Task<IEnumerable<LockerRoom13Response>> GetLockerRoom13SessionsAsync()

@@ -3141,7 +3141,12 @@ public class DeleteSessionRepositoryTests : IDisposable
                 PaymentMethod = PaymentMethodType.Venmo,
                 TransactionStatus = "Pending",
                 SellerNoteFlagged = true,
-                BuyerNoteFlagged = false
+                BuyerNoteFlagged = false,
+                Session = new Session
+                {
+                    SessionId = 1,
+                    SessionDate = DateTime.UtcNow.AddDays(1)
+                }
             },
             new()
             {
@@ -3149,7 +3154,12 @@ public class DeleteSessionRepositoryTests : IDisposable
                 BuyerUserId = "buyer1",
                 SellerUserId = "seller1",
                 PaymentMethod = null,
-                Price = null
+                Price = null,
+                Session = new Session
+                {
+                    SessionId = 2,
+                    SessionDate = DateTime.UtcNow.AddDays(1)
+                }
             }
         };
 
