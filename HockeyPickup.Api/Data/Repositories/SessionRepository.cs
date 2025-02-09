@@ -305,6 +305,8 @@ public class SessionRepository : ISessionRepository
 
         return buySells.Select(b => new BuySellResponse
         {
+            SessionId = b.SessionId,
+            SessionDate = b.Session.SessionDate,
             BuySellId = b.BuySellId,
             BuyerUserId = b.BuyerUserId,
             SellerUserId = b.SellerUserId,

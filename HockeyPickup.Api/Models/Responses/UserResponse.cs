@@ -182,6 +182,20 @@ public class UserDetailedResponse
     [GraphQLName("PaymentMethods")]
     [GraphQLDescription("User's payment methods")]
     public ICollection<UserPaymentMethodResponse>? PaymentMethods { get; set; }
+
+    [Description("User's transactions as buyer")]
+    [JsonPropertyName("BuyerTransactions")]
+    [JsonProperty(nameof(BuyerTransactions))]
+    [GraphQLName("BuyerTransactions")]
+    [GraphQLDescription("User's transactions as buyer")]
+    public ICollection<BuySellResponse>? BuyerTransactions { get; set; }
+
+    [Description("User's transactions as seller")]
+    [JsonPropertyName("SellerTransactions")]
+    [JsonProperty(nameof(SellerTransactions))]
+    [GraphQLName("SellerTransactions")]
+    [GraphQLDescription("User's transactions as seller")]
+    public ICollection<BuySellResponse>? SellerTransactions { get; set; }
 }
 
 [GraphQLName("LockerRoom13Players")]

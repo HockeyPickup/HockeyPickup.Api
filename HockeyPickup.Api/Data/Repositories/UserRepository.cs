@@ -95,7 +95,41 @@ public class UserRepository : IUserRepository
                         PreferenceOrder = p.PreferenceOrder,
                         IsActive = p.IsActive
                     })
-                    .ToList()
+                    .ToList(),
+                BuyerTransactions = u.BuyerTransactions
+                    .Select(bsr => new BuySellResponse
+                    {
+                        SessionId = bsr.SessionId,
+                        SessionDate = bsr.Session.SessionDate,
+                        BuySellId = bsr.BuySellId,
+                        SellerUserId = bsr.SellerUserId,
+                        BuyerUserId = bsr.BuyerUserId,
+                        CreateDateTime = bsr.CreateDateTime,
+                        UpdateDateTime = bsr.UpdateDateTime,
+                        PaymentReceived = bsr.PaymentReceived,
+                        PaymentSent = bsr.PaymentSent,
+                        TeamAssignment = bsr.TeamAssignment,
+                        TransactionStatus = bsr.TransactionStatus,
+                        Price = bsr.Price ?? 0m,
+                    })
+                    .ToList(),
+                SellerTransactions = u.SellerTransactions
+                    .Select(bsr => new BuySellResponse
+                    {
+                        SessionId = bsr.SessionId,
+                        SessionDate = bsr.Session.SessionDate,
+                        BuySellId = bsr.BuySellId,
+                        SellerUserId = bsr.SellerUserId,
+                        BuyerUserId = bsr.BuyerUserId,
+                        CreateDateTime = bsr.CreateDateTime,
+                        UpdateDateTime = bsr.UpdateDateTime,
+                        PaymentReceived = bsr.PaymentReceived,
+                        PaymentSent = bsr.PaymentSent,
+                        TeamAssignment = bsr.TeamAssignment,
+                        TransactionStatus = bsr.TransactionStatus,
+                        Price = bsr.Price ?? 0m,
+                    })
+                    .ToList(),
             })
         .FirstOrDefaultAsync();
     }

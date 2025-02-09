@@ -150,6 +150,23 @@ public class BuySellResponse
     [GraphQLDescription("Unique identifier for the BuySell")]
     public required int BuySellId { get; set; }
 
+    [Required]
+    [Description("Unique identifier for the session")]
+    [JsonPropertyName("SessionId")]
+    [JsonProperty(nameof(SessionId), Required = Required.Always)]
+    [GraphQLName("SessionId")]
+    [GraphQLDescription("Unique identifier for the session")]
+    public required int SessionId { get; set; }
+
+    [Required]
+    [Description("Date and time when the session is scheduled")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("SessionDate")]
+    [JsonProperty(nameof(SessionDate), Required = Required.Always)]
+    [GraphQLName("SessionDate")]
+    [GraphQLDescription("Date and time when the session is scheduled")]
+    public required DateTime SessionDate { get; set; }
+
     [Description("User Id of the buyer")]
     [MaxLength(128)]
     [JsonPropertyName("BuyerUserId")]

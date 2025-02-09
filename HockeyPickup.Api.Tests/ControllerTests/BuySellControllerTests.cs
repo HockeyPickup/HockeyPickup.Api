@@ -48,7 +48,9 @@ public class BuySellControllerTests
             PaymentSent = false,
             PaymentReceived = false,
             BuyerNoteFlagged = false,
-            SellerNoteFlagged = false
+            SellerNoteFlagged = false,
+            SessionId = 1,
+            SessionDate = _testDate,
         };
     }
 

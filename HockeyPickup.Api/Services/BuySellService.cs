@@ -717,6 +717,8 @@ public class BuySellService : IBuySellService
 
         return new BuySellResponse
         {
+            SessionId = buySell.SessionId,
+            SessionDate = buySell.Session.SessionDate,
             BuySellId = buySell.BuySellId,
             BuyerUserId = buySell.BuyerUserId,
             SellerUserId = buySell.SellerUserId,
