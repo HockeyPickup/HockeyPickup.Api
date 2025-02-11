@@ -15,4 +15,6 @@ public interface ISessionRepository
     Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, TeamAssignment team);
     Task<bool> DeleteSessionAsync(int sessionId);
     Task<SessionDetailedResponse> DeletePlayerFromRosterAsync(int sessionId, string userId);
+    Task<SessionDetailedResponse> UpdatePlayerStatusAsync(int sessionId, string userId, bool isPlaying, DateTime? leftDateTime, int? lastBuySellId);
+    Task<SessionDetailedResponse> AddOrUpdatePlayerToRosterAsync(int sessionId, string userId, TeamAssignment teamAssignment, PositionPreference positionPreference, int? lastBuySellId);
 }

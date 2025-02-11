@@ -98,7 +98,7 @@ public class BuySellService : IBuySellService
                 if (sellerRoster == null)
                     return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
 
-                // Match with existing sell BuySell
+                // Matched with existing sell BuySell
                 buySell = matchingSell;
                 buySell.BuyerUserId = userId;
                 buySell.UpdateByUserId = userId;
@@ -108,6 +108,9 @@ public class BuySellService : IBuySellService
                 message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}. Team Assignment: {matchingSell.TeamAssignment}";
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+                // Add buyer as playing to SessionRoster
+                session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buyer.PositionPreference, buySell.BuySellId);
 
                 // Send a message to Service Bus that a player bought their spot from a seller
                 await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller, matchingSell.TeamAssignment);
@@ -190,7 +193,7 @@ public class BuySellService : IBuySellService
 
             if (matchingBuy != null)
             {
-                // Match with existing buy BuySell
+                // Matched with existing buy BuySell
                 buySell = matchingBuy;
                 buySell.SellerUserId = userId;
                 buySell.UpdateByUserId = userId;
@@ -201,6 +204,12 @@ public class BuySellService : IBuySellService
                 message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}. Team Assignment: {matchingBuy.TeamAssignment}";
 
                 result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+                // Update SessionRoster to mark seller as not playing
+                session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
+
+                // Add buyer as playing to SessionRoster
+                session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buySell.Buyer.PositionPreference, buySell.BuySellId);
 
                 // Send a message to Service Bus that a player sold their spot to a buyer
                 await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller, matchingBuy.TeamAssignment);
@@ -230,6 +239,9 @@ public class BuySellService : IBuySellService
                 message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
 
                 result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+
+                // Update SessionRoster to mark seller as not playing
+                session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
 
                 // Send a message to Service Bus that a player added themselves to selling queue
                 await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller, null);
@@ -473,6 +485,13 @@ public class BuySellService : IBuySellService
 
             var message = $"Seller: {buySell.Seller.FirstName} {buySell.Seller.LastName} cancelled BuySell";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
+
+            // If the seller is on the roster, update their status to playing
+            var sellerRoster = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
+            if (sellerRoster != null)
+            {
+                session = await _sessionRepository.UpdatePlayerStatusAsync(session.SessionId, userId, true, null, null);
+            }
 
             // Send a message to Service Bus that a player removed themselves from selling
             await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", session.SessionId, session.SessionDate, null, buySell.Seller, null);

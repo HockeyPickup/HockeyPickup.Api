@@ -65,9 +65,7 @@ public class SessionRepository : ISessionRepository
 
     public async Task<SessionDetailedResponse> UpdateSessionAsync(Session session)
     {
-        var existingSession = await _context.Sessions!
-            .FirstOrDefaultAsync(s => s.SessionId == session.SessionId);
-
+        var existingSession = await _context.Sessions!.FirstOrDefaultAsync(s => s.SessionId == session.SessionId);
         if (existingSession == null)
         {
             throw new KeyNotFoundException($"Session not found with Id: {session.SessionId}");
@@ -129,6 +127,70 @@ public class SessionRepository : ISessionRepository
         var session = await GetSessionAsync(sessionId);
 
         return session;
+    }
+
+    public async Task<SessionDetailedResponse> UpdatePlayerStatusAsync(int sessionId, string userId, bool isPlaying, DateTime? leftDateTime, int? lastBuySellId)
+    {
+        // Find and update the roster entry
+        var rosterEntry = await _context.SessionRosters!.FirstOrDefaultAsync(r => r.SessionId == sessionId && r.UserId == userId);
+        if (rosterEntry == null)
+        {
+            throw new KeyNotFoundException($"Player not found in session roster");
+        }
+
+        // Update the roster entry
+        rosterEntry.IsPlaying = isPlaying;
+        rosterEntry.LeftDateTime = leftDateTime;
+        rosterEntry.LastBuySellId = lastBuySellId;
+
+        await _context.SaveChangesAsync();
+        _context.DetachChangeTracker();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(sessionId);
+
+        return session;
+    }
+
+    public async Task<SessionDetailedResponse> AddOrUpdatePlayerToRosterAsync(int sessionId, string userId, TeamAssignment teamAssignment, PositionPreference positionPreference, int? lastBuySellId)
+    {
+        // Check if player is already in the roster
+        var existingRosterEntry = await _context.SessionRosters!.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+        if (existingRosterEntry != null)
+        {
+            // Update existing entry
+            existingRosterEntry.TeamAssignment = teamAssignment;
+            existingRosterEntry.IsPlaying = true;
+            existingRosterEntry.IsRegular = false;
+            existingRosterEntry.Position = positionPreference;
+            existingRosterEntry.JoinedDateTime = DateTime.UtcNow;
+            existingRosterEntry.LastBuySellId = lastBuySellId;
+
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // Add the player to the roster
+            var newRosterEntry = new SessionRoster
+            {
+                SessionId = sessionId,
+                UserId = userId,
+                TeamAssignment = teamAssignment,
+                IsPlaying = true,
+                IsRegular = false,
+                Position = positionPreference,
+                JoinedDateTime = DateTime.UtcNow,
+                LastBuySellId = lastBuySellId
+            };
+
+            await _context.SessionRosters.AddAsync(newRosterEntry);
+            await _context.SaveChangesAsync();
+        }
+
+        _context.DetachChangeTracker();
+
+        // Return the updated session details
+        return await GetSessionAsync(sessionId);
     }
 
     public async Task<SessionDetailedResponse> DeletePlayerFromRosterAsync(int sessionId, string userId)

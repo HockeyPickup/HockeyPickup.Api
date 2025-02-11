@@ -1524,8 +1524,6 @@ public class BuyingQueueTests
             dataTypeAttr!.DataType.Should().Be(DataType.Text, $"{propertyName} should be of DataType.Text");
         }
     }
-
-
 }
 
 public class RosterPlayerTests
@@ -2263,6 +2261,228 @@ public partial class DetailedSessionRepositoryTests
         }
     }
 
+    [Fact]
+    public async Task UpdatePlayerStatusAsync_ValidUpdate_ChangesTeamAndReturnsSession()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema and seed data
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
+            };
+            context.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                IsPlaying = false,
+                TeamAssignment = (TeamAssignment) 1,
+                JoinedDateTime = DateTime.UtcNow
+            };
+            context.SessionRosters!.Add(roster);
+
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+
+            // Act
+            var result = await repository.UpdatePlayerStatusAsync(1, "testUser", true, DateTime.UtcNow, null);
+
+            // Assert
+            result.Should().NotBeNull();
+            var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser");
+            updatedRoster.IsPlaying.Should().Be(true);
+        }
+    }
+
+    [Fact]
+    public async Task AddPlayerTeamAsync_ValidNewRosterPlayer_AndReturnsSession()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema and seed data
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
+            };
+            context.Users!.Add(user);
+            var user2 = new AspNetUser
+            {
+                Id = "testUser2",
+                UserName = "test2@example.com",
+                Email = "test2@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
+            };
+            context.Users!.Add(user2);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                TeamAssignment = (TeamAssignment) 1,
+                JoinedDateTime = DateTime.UtcNow
+            };
+            context.SessionRosters!.Add(roster);
+
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+
+            // Act
+            var result = await repository.AddOrUpdatePlayerToRosterAsync(1, "testUser2", (TeamAssignment) 1, (PositionPreference) 2, null);
+
+            // Assert
+            result.Should().NotBeNull();
+            var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser2");
+            updatedRoster.TeamAssignment.Should().Be((TeamAssignment) 1);
+            updatedRoster.Position.Should().Be((PositionPreference) 2);
+        }
+    }
+
+    [Fact]
+    public async Task AddPlayerTeamAsync_ValidUpdateRosterPlayer_AndReturnsSession()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema and seed data
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
+            };
+            context.Users!.Add(user);
+            var user2 = new AspNetUser
+            {
+                Id = "testUser2",
+                UserName = "test2@example.com",
+                Email = "test2@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
+            };
+            context.Users!.Add(user2);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+
+            var roster = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser",
+                TeamAssignment = (TeamAssignment) 1,
+                JoinedDateTime = DateTime.UtcNow
+            };
+            var roster2 = new SessionRoster
+            {
+                SessionId = 1,
+                UserId = "testUser2",
+                TeamAssignment = (TeamAssignment) 1,
+                JoinedDateTime = DateTime.UtcNow
+            };
+            context.SessionRosters!.Add(roster2);
+
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+
+            // Act
+            var result = await repository.AddOrUpdatePlayerToRosterAsync(1, "testUser2", (TeamAssignment) 1, (PositionPreference) 2, null);
+
+            // Assert
+            result.Should().NotBeNull();
+            var updatedRoster = await context.SessionRosters!.FirstAsync(r => r.SessionId == 1 && r.UserId == "testUser2");
+            updatedRoster.TeamAssignment.Should().Be((TeamAssignment) 1);
+            updatedRoster.Position.Should().Be((PositionPreference) 2);
+        }
+    }
+
     [Theory]
     [InlineData(0)]  // TBD
     [InlineData(1)]  // Light
@@ -2381,6 +2601,56 @@ public partial class DetailedSessionRepositoryTests
     }
 
     [Fact]
+    public async Task UpdatePlayerStatusAsync_PlayerNotInRoster_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        // Create the schema
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            var user = new AspNetUser
+            {
+                Id = "testUser",
+                UserName = "test@example.com",
+                Email = "test@example.com",
+                NotificationPreference = (NotificationPreference) 1,
+                PositionPreference = (PositionPreference) 1,
+                Shoots = (ShootPreference) 1
+            };
+            context.Users!.Add(user);
+
+            var session = new Session
+            {
+                SessionId = 1,
+                CreateDateTime = DateTime.UtcNow,
+                UpdateDateTime = DateTime.UtcNow,
+                SessionDate = DateTime.UtcNow.AddDays(1)
+            };
+            context.Sessions!.Add(session);
+            await context.SaveChangesAsync();
+        }
+
+        // Use a new context instance for the test
+        await using (var context = new DetailedSessionTestContext(options))
+        {
+            var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+
+            // Act & Assert
+            await repository.Invoking(r => r.UpdatePlayerStatusAsync(1, "nonexistentUser", false, DateTime.UtcNow, null))
+                .Should().ThrowAsync<KeyNotFoundException>()
+                .WithMessage("Player not found in session roster");
+        }
+    }
+
+    [Fact]
     public async Task UpdatePlayerTeamAsync_InvalidSession_ThrowsKeyNotFoundException()
     {
         // Arrange
@@ -2410,6 +2680,40 @@ public partial class DetailedSessionRepositoryTests
 
         // Act & Assert
         await repository.Invoking(r => r.UpdatePlayerTeamAsync(999, "testUser", (TeamAssignment) 2))
+            .Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Player not found in session roster");
+    }
+
+    [Fact]
+    public async Task UpdatePlayerStatusAsync_InvalidSession_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var context = new DetailedSessionTestContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var user = new AspNetUser
+        {
+            Id = "testUser",
+            UserName = "test@example.com",
+            Email = "test@example.com",
+            NotificationPreference = (NotificationPreference) 1,
+            PositionPreference = (PositionPreference) 1,
+            Shoots = (ShootPreference) 1
+        };
+        context.Users!.Add(user);
+        await context.SaveChangesAsync();
+
+        var repository = new SessionRepository(context, _mockLogger.Object, _mockContextAccessor.Object, _mockConfiguration.Object);
+
+        // Act & Assert
+        await repository.Invoking(r => r.UpdatePlayerStatusAsync(999, "testUser", false, DateTime.UtcNow, null))
             .Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage("Player not found in session roster");
     }

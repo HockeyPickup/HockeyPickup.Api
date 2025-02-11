@@ -350,6 +350,7 @@ public class BuySellServiceTests
         _userManager.Setup(x => x.FindByIdAsync(It.Is<string>(id => id == userId))).ReturnsAsync(user);
         _userManager.Setup(x => x.FindByIdAsync(It.Is<string>(id => id == sellerId))).ReturnsAsync(seller);
         _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.AddOrUpdatePlayerToRosterAsync(request.SessionId, userId, It.IsAny<TeamAssignment>(), It.IsAny<PositionPreference>(), It.IsAny<int>())).ReturnsAsync(session);
         _mockBuySellRepository.Setup(x => x.FindMatchingSellBuySellAsync(request.SessionId)).ReturnsAsync(existingSell);
         _mockBuySellRepository.Setup(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(updatedBuySell);
         _mockUserRepository.Setup(x => x.GetUserAsync(userId)).ReturnsAsync(userResponse);
@@ -417,6 +418,7 @@ public class BuySellServiceTests
 
         _userManager.Setup(x => x.FindByIdAsync(It.Is<string>(id => id == userId))).ReturnsAsync(user);
         _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.UpdatePlayerStatusAsync(request.SessionId, userId, It.IsAny<bool>(), It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync(session);
         _mockBuySellRepository.Setup(x => x.FindMatchingBuyBuySellAsync(request.SessionId)).ReturnsAsync((BuySell?) null);
         _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId))
             .ReturnsAsync(new List<BuySell>());
@@ -569,6 +571,8 @@ public class BuySellServiceTests
         _userManager.Setup(x => x.FindByIdAsync(It.Is<string>(id => id == sellerId))).ReturnsAsync(seller);
         _userManager.Setup(x => x.FindByIdAsync(It.Is<string>(id => id == buyerId))).ReturnsAsync(buyer);
         _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.UpdatePlayerStatusAsync(request.SessionId, sellerId, It.IsAny<bool>(), It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.AddOrUpdatePlayerToRosterAsync(request.SessionId, buyerId, It.IsAny<TeamAssignment>(), It.IsAny<PositionPreference>(), It.IsAny<int>())).ReturnsAsync(session);
         _mockBuySellRepository.Setup(x => x.FindMatchingBuyBuySellAsync(request.SessionId)).ReturnsAsync(existingBuy);
         _mockBuySellRepository.Setup(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(updatedBuySell);
         _mockUserRepository.Setup(x => x.GetUserAsync(sellerId)).ReturnsAsync(sellerResponse);
