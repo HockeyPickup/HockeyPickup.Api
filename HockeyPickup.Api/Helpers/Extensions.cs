@@ -123,7 +123,7 @@ public static class RatingSecurityExtensions
         return GetSecureRatingInternal(user.Rating);
     }
 
-    public static decimal GetSecureRating(this RosterPlayer? player)
+    public static decimal GetSecureRating(this CurrentSessionRoster? player)
     {
         if (player == null || player.Rating == 0) return 0;
         return GetSecureRatingInternal(player.Rating);

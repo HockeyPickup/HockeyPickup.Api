@@ -1175,7 +1175,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
     public void RosterPlayer_InitializesWithDefaultValues()
     {
         // Arrange & Act
-        var player = new Data.Entities.RosterPlayer();
+        var player = new Data.Entities.CurrentSessionRoster();
 
         // Assert
         player.SessionRosterId.Should().Be(0);
@@ -1200,7 +1200,7 @@ public partial class DetailedSessionRepositoryTests : IDisposable
     public void RosterPlayer_SetPropertiesCorrectly()
     {
         // Arrange
-        var player = new Data.Entities.RosterPlayer
+        var player = new Data.Entities.CurrentSessionRoster
         {
             SessionRosterId = 1,
             UserId = "user123",
@@ -1536,7 +1536,7 @@ public class RosterPlayerTests
     public void RosterPlayer_InitializesWithDefaultValues()
     {
         // Arrange & Act
-        var player = new Data.Entities.RosterPlayer();
+        var player = new Data.Entities.CurrentSessionRoster();
 
         // Assert
         player.SessionRosterId.Should().Be(0);
@@ -1561,7 +1561,7 @@ public class RosterPlayerTests
     public void RosterPlayer_SetPropertiesCorrectly()
     {
         // Arrange
-        var player = new Data.Entities.RosterPlayer
+        var player = new Data.Entities.CurrentSessionRoster
         {
             SessionRosterId = 1,
             UserId = "user123",
@@ -1604,7 +1604,7 @@ public class RosterPlayerTests
     public void RosterPlayer_AllowsNullValues()
     {
         // Arrange
-        var player = new Data.Entities.RosterPlayer
+        var player = new Data.Entities.CurrentSessionRoster
         {
             SessionRosterId = 1,
             SessionId = 5,
@@ -1634,7 +1634,7 @@ public class RosterPlayerTests
     public void RosterPlayer_AcceptsValidPlayerStatus(string status)
     {
         // Arrange
-        var player = new Data.Entities.RosterPlayer
+        var player = new Data.Entities.CurrentSessionRoster
         {
             SessionRosterId = 1,
             SessionId = 1,
@@ -1655,7 +1655,7 @@ public class RosterPlayerTests
     public void RosterPlayer_AcceptsValidTeamAssignments(int teamAssignment)
     {
         // Arrange
-        var player = new Data.Entities.RosterPlayer
+        var player = new Data.Entities.CurrentSessionRoster
         {
             SessionRosterId = 1,
             SessionId = 1,
@@ -1672,7 +1672,7 @@ public class RosterPlayerTests
     public void RosterPlayer_RatingHandlesDecimalValues()
     {
         // Arrange & Act
-        var player = new Data.Entities.RosterPlayer
+        var player = new Data.Entities.CurrentSessionRoster
         {
             SessionRosterId = 1,
             SessionId = 1,

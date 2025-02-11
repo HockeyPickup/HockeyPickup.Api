@@ -42,7 +42,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     public DbSet<Regular>? Regulars { get; set; }
     public DbSet<BuySell>? BuySells { get; set; }
     public DbSet<ActivityLog>? ActivityLogs { get; set; }
-    public DbSet<RosterPlayer>? CurrentSessionRosters { get; set; }
+    public DbSet<CurrentSessionRoster>? CurrentSessionRosters { get; set; }
     public DbSet<BuyingQueue>? SessionBuyingQueues { get; set; }
     public DbSet<UserPaymentMethod> UserPaymentMethods { get; set; }
 
@@ -250,7 +250,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .HasForeignKey(e => e.RegularSetId)
                 .HasConstraintName("FK_dbo.Sessions_dbo.RegularSets_RegularSetId");
 
-            entity.HasMany(s => s.CurrentRosters)
+            entity.HasMany(s => s.CurrentSessionRoster)
                     .WithOne()
                     .HasForeignKey(r => r.SessionId)
                     .OnDelete(DeleteBehavior.Cascade);
@@ -387,7 +387,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
         });
 
         // Configure Views
-        modelBuilder.Entity<RosterPlayer>(entity =>
+        modelBuilder.Entity<CurrentSessionRoster>(entity =>
         {
             entity.ToView("CurrentSessionRoster");
             entity.HasKey(r => r.SessionRosterId);

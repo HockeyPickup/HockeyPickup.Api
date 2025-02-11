@@ -20,7 +20,7 @@ public class Session
     public virtual RegularSet? RegularSet { get; set; }
     public virtual ICollection<BuySell> BuySells { get; set; } = new List<BuySell>();
     public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
-    public virtual ICollection<RosterPlayer> CurrentRosters { get; set; } = new List<RosterPlayer>();
+    public virtual ICollection<CurrentSessionRoster> CurrentSessionRoster { get; set; } = new List<CurrentSessionRoster>();
     public virtual ICollection<BuyingQueue> BuyingQueues { get; set; } = new List<BuyingQueue>();
 }
 
@@ -142,7 +142,7 @@ public class SessionRoster
 }
 
 [Table("CurrentSessionRoster")]
-public class RosterPlayer
+public class CurrentSessionRoster
 {
     [Key]
     public int SessionRosterId { get; set; }

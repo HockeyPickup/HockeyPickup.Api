@@ -107,8 +107,8 @@ public partial class RatingSecurityExtensionsTests
     public void GetSecureRating_RosterPlayer_NullOrZeroRating_ReturnsZero()
     {
         // Arrange
-        RosterPlayer? player = null;
-        var playerWithZero = new RosterPlayer { Rating = 0 };
+        CurrentSessionRoster? player = null;
+        var playerWithZero = new CurrentSessionRoster { Rating = 0 };
 
         // Act
         var resultNull = player.GetSecureRating();
@@ -124,7 +124,7 @@ public partial class RatingSecurityExtensionsTests
     {
         // Arrange
         SetupUserContext("AdminUser", new[] { "Admin" });
-        var player = new RosterPlayer { Rating = 5.0m };
+        var player = new CurrentSessionRoster { Rating = 5.0m };
 
         // Act
         var result = player.GetSecureRating();

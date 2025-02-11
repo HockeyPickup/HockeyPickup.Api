@@ -109,7 +109,7 @@ public class BuySellServiceTests
             SessionDate = currentPacificTime,
             BuyDayMinimum = 7,
             Cost = 20.00m,
-            CurrentRosters = new List<Data.Entities.RosterPlayer>(),
+            CurrentSessionRoster = new List<Data.Entities.CurrentSessionRoster>(),
             CreateDateTime = DateTime.UtcNow,
             UpdateDateTime = DateTime.UtcNow,
             Note = "Test Session"

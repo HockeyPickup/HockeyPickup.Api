@@ -179,7 +179,7 @@ public class SessionRepository : ISessionRepository
                 .ThenInclude(r => r.Regulars)
                     .ThenInclude(reg => reg.User)
             // Views are already denormalized, so include directly
-            .Include(s => s.CurrentRosters.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
+            .Include(s => s.CurrentSessionRoster.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
             .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
             .AsSplitQuery() // Added this as without it, it's very slow
             .OrderByDescending(s => s.SessionDate).ToListAsync();
@@ -203,7 +203,7 @@ public class SessionRepository : ISessionRepository
                 .ThenInclude(r => r.Regulars)
                     .ThenInclude(reg => reg.User)
             // Views are already denormalized, so include directly
-            .Include(s => s.CurrentRosters.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
+            .Include(s => s.CurrentSessionRoster.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
             .Include(s => s.BuyingQueues
                 .OrderBy(q => q.BuySellId))
                 .ThenInclude(q => q.Buyer)
@@ -234,16 +234,16 @@ public class SessionRepository : ISessionRepository
             BuySells = MapBuySells(session.BuySells),
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
             RegularSet = MapRegularSet(session.RegularSet),
-            CurrentRosters = MapCurrentRoster(session.CurrentRosters),
+            CurrentRosters = MapCurrentRoster(session.CurrentSessionRoster),
             BuyingQueues = MapBuyingQueue(session.BuyingQueues)
         };
     }
 
-    private static List<Models.Responses.RosterPlayer> MapCurrentRoster(ICollection<Entities.RosterPlayer> roster)
+    private static List<RosterPlayer> MapCurrentRoster(ICollection<CurrentSessionRoster> currentSessionRoster)
     {
-        if (roster == null) return new List<Models.Responses.RosterPlayer>();
+        if (currentSessionRoster == null) return new List<RosterPlayer>();
 
-        return roster.Select(r => new Models.Responses.RosterPlayer
+        return currentSessionRoster.Select(r => new RosterPlayer
         {
             SessionRosterId = r.SessionRosterId,
             SessionId = r.SessionId,
