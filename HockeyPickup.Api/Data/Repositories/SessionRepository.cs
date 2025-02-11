@@ -165,6 +165,7 @@ public class SessionRepository : ISessionRepository
             existingRosterEntry.Position = positionPreference;
             existingRosterEntry.JoinedDateTime = DateTime.UtcNow;
             existingRosterEntry.LastBuySellId = lastBuySellId;
+            existingRosterEntry.LeftDateTime = null;
 
             await _context.SaveChangesAsync();
         }
@@ -180,7 +181,8 @@ public class SessionRepository : ISessionRepository
                 IsRegular = false,
                 Position = positionPreference,
                 JoinedDateTime = DateTime.UtcNow,
-                LastBuySellId = lastBuySellId
+                LastBuySellId = lastBuySellId,
+                LeftDateTime = null
             };
 
             await _context.SessionRosters.AddAsync(newRosterEntry);
