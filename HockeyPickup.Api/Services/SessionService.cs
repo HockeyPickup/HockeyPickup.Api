@@ -14,6 +14,7 @@ public interface ISessionService
     Task<ServiceResult<SessionDetailedResponse>> UpdateSession(UpdateSessionRequest request);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPosition(int sessionId, string userId, PositionPreference newPosition);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, TeamAssignment newTeamAssignment);
+    Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPlayingStatus(int sessionId, string userId, bool isPlaying, string note);
     Task<ServiceResult<SessionDetailedResponse>> DeleteRosterPlayer(int sessionId, string userId);
     Task<ServiceResult<bool>> DeleteSessionAsync(int sessionId);
 }
@@ -206,6 +207,61 @@ public class SessionService : ISessionService
         {
             _logger.LogError(ex, $"Error updating player team assignment for session: {sessionId}, user: {userId}");
             return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating player team assignment: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPlayingStatus(int sessionId, string userId, bool isPlaying, string note)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User not found");
+            }
+
+            var session = await _sessionRepository.GetSessionAsync(sessionId);
+            if (session == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Session not found");
+            }
+
+            var currentRoster = session.CurrentRosters.Where(u => u.UserId == userId).FirstOrDefault();
+            if (currentRoster == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User is not part of this session's current roster");
+            }
+
+            if (currentRoster.IsPlaying == isPlaying)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure($"Playing status is already {(isPlaying ? "playing" : "not playing")}");
+            }
+
+            await _sessionRepository.UpdatePlayerStatusAsync(sessionId, userId, isPlaying, isPlaying == false ? DateTime.UtcNow : null, null);
+
+            var msg = $"{user.FirstName} {user.LastName} playing status changed from {(currentRoster.IsPlaying ? "playing" : "not playing")} to {(isPlaying ? "playing" : "not playing")}";
+            if (!string.IsNullOrEmpty(note))
+            {
+                msg += $" - {note}";
+            }
+
+            var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
+            await _subscriptionHandler.HandleUpdate(updatedSession);
+
+            // Send a message to Service Bus that a players playing status was updated
+            await SendSessionServiceBusCommsMessageAsync("PlayingStatusChange", new Dictionary<string, string>
+            {
+                { "PreviousPlayingStatus", currentRoster.IsPlaying.ToString() },
+                { "UpdatedPlayingStatus", isPlaying.ToString() },
+                { "Note", note },
+            }, sessionId, session.SessionDate, user);
+
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error updating playing status for session: {sessionId}, user: {userId}");
+            return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred updating playing status: {ex.Message}");
         }
     }
 

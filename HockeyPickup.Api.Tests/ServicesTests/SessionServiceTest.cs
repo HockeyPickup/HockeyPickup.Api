@@ -74,7 +74,7 @@ public partial class SessionServiceTests
             _mockUserRepository.Object);
     }
 
-    private static SessionDetailedResponse CreateTestSession(string userId, int position, int team)
+    private static SessionDetailedResponse CreateTestSession(string userId, int position, int team, bool isPlaying = true)
     {
         return new SessionDetailedResponse
         {
@@ -94,7 +94,7 @@ public partial class SessionServiceTests
                     Email = "user@anywhere.com",
                     SessionId = 1,
                     TeamAssignment = (TeamAssignment) team,
-                    IsPlaying = true,
+                    IsPlaying = isPlaying,
                     IsRegular = false,
                     PlayerStatus = PlayerStatus.Substitute,
                     Rating = 1.0m,
@@ -1573,5 +1573,214 @@ public partial class SessionServiceTests
         _mockSessionRepository.Verify(x => x.DeletePlayerFromRosterAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         _mockSessionRepository.Verify(x => x.AddActivityAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
         _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<SessionDetailedResponse>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_ValidRequest_ReturnsSuccess()
+    {
+        // Arrange
+        var userId = "testUser";
+        var sessionId = 1;
+        var isPlaying = false;
+        var note = "Test note";
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession(userId, 2, 1);
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId))
+            .Returns(Task.FromResult(session));
+        _mockSessionRepository.Setup(x => x.UpdatePlayerStatusAsync(sessionId, userId, isPlaying, It.IsAny<DateTime?>(), null))
+            .Returns(Task.FromResult(session));
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>()))
+            .Returns(Task.FromResult(session));
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns("https://test.com");
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Returns("testqueue");
+
+        ServiceBusCommsMessage? capturedMessage = null;
+        _serviceBus
+            .Setup(x => x.SendAsync(
+                It.IsAny<ServiceBusCommsMessage>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                default))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            {
+                capturedMessage = msg;
+            })
+            .Returns(Task.FromResult(true));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(sessionId, userId, isPlaying, note);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Data);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerStatusAsync(sessionId, userId, isPlaying, It.IsAny<DateTime?>(), null), Times.Once);
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId, It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_UserNotFound_ReturnsFailure()
+    {
+        // Arrange
+        _userManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+            .Returns(Task.FromResult<AspNetUser?>(null));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(1, "nonexistent", true, "");
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User not found", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<DateTime?>(), null), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_SessionNotFound_ReturnsFailure()
+    {
+        // Arrange
+        var user = new AspNetUser { Id = "testUser" };
+        _userManager.Setup(x => x.FindByIdAsync("testUser"))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+            .Returns(Task.FromResult<SessionDetailedResponse>(null!));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(1, "testUser", true, "");
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Session not found", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<DateTime?>(), null), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_UserNotInRoster_ReturnsFailure()
+    {
+        // Arrange
+        var userId = "testUser";
+        var user = new AspNetUser { Id = userId };
+        var session = CreateTestSession("differentUser", 2, 1); // Note: Different user
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(1, userId, true, "");
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal("User is not part of this session's current roster", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<DateTime?>(), null), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UpdateRosterPlayingStatus_SamePlayingStatus_ReturnsFailure(bool currentStatus)
+    {
+        // Arrange
+        var userId = "testUser";
+        var user = new AspNetUser { Id = userId };
+        var session = CreateTestSession(userId, 2, 1, currentStatus);
+
+        _userManager.Setup(x => x.FindByIdAsync(userId))
+            .Returns(Task.FromResult(user)!);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(It.IsAny<int>()))
+            .Returns(Task.FromResult(session));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(1, userId, currentStatus, "");
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Equal($"Playing status is already {(currentStatus ? "playing" : "not playing")}", result.Message);
+        _mockSessionRepository.Verify(x => x.UpdatePlayerStatusAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<DateTime?>(), null), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_ExceptionThrown_ReturnsFailure()
+    {
+        // Arrange
+        var exception = new Exception("Test exception");
+        _userManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+            .ThrowsAsync(exception);
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(1, "testUser", true, "");
+
+        // Assert
+        Assert.False(result.IsSuccess);
+        Assert.Contains("An error occurred updating playing status: Test exception", result.Message);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task UpdateRosterPlayingStatus_ValidRequest_UpdatesPlayerStatus(bool initialPlayingStatus, bool updatedPlayingStatus)
+    {
+        // Arrange
+        var sessionId = 1;
+        var userId = "testUser";
+        var user = new AspNetUser { Id = userId, FirstName = "Test", LastName = "User" };
+        var session = CreateTestSession(userId, 1, 1);
+        session.CurrentRosters.First().IsPlaying = initialPlayingStatus;
+
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.UpdatePlayerStatusAsync(sessionId, userId, updatedPlayingStatus,
+            updatedPlayingStatus == false ? It.IsAny<DateTime>() : null, null))
+            .ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(sessionId, It.IsAny<string>())).ReturnsAsync(session);
+        _mockSubscriptionHandler.Setup(x => x.HandleUpdate(session)).Returns(Task.CompletedTask);
+        _configuration.Setup(x => x["BaseUrl"])
+            .Returns("https://test.com");
+        _configuration.Setup(x => x["ServiceBusCommsQueueName"])
+            .Returns("testqueue");
+
+        ServiceBusCommsMessage? capturedMessage = null;
+        _serviceBus
+            .Setup(x => x.SendAsync(
+                It.IsAny<ServiceBusCommsMessage>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                default))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            {
+                capturedMessage = msg;
+            })
+            .Returns(Task.FromResult(true));
+
+        // Act
+        var result = await _sessionService.UpdateRosterPlayingStatus(sessionId, userId, updatedPlayingStatus, "Test note");
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Data);
+
+        //_mockSessionRepository.Verify(x => x.UpdatePlayerStatusAsync(sessionId, userId, updatedPlayingStatus,
+        //    It.IsAny<DateTime>(), null), Times.Once);
+
+        var expectedPlayingText = initialPlayingStatus ? "playing" : "not playing";
+        var expectedNotPlayingText = updatedPlayingStatus ? "playing" : "not playing";
+        _mockSessionRepository.Verify(x => x.AddActivityAsync(sessionId,
+            It.Is<string>(msg => msg.Contains($"{expectedPlayingText} to {expectedNotPlayingText}"))), Times.Once);
+
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(session), Times.Once);
     }
 }

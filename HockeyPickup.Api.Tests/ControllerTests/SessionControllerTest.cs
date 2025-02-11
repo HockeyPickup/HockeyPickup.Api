@@ -1,9 +1,11 @@
+using FluentAssertions;
 using HockeyPickup.Api.Controllers;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -364,5 +366,109 @@ public class SessionControllerTests
         var response = Assert.IsType<ApiDataResponse<SessionDetailedResponse>>(badRequestResult.Value);
         Assert.False(response.Success);
         Assert.Equal("Player not found in roster", response.Message);
+    }
+}
+
+public class SessionControllerUpdateRosterPlayingStatusTests
+{
+    private readonly Mock<ISessionService> _mockSessionService;
+    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly SessionController _controller;
+
+    public SessionControllerUpdateRosterPlayingStatusTests()
+    {
+        _mockSessionService = new Mock<ISessionService>();
+        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        _controller = new SessionController(_mockSessionService.Object);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_Success_ReturnsOkResult()
+    {
+        // Arrange
+        var request = new UpdateRosterPlayingStatusRequest
+        {
+            SessionId = 1,
+            UserId = "testUser",
+            IsPlaying = true,
+            Note = "Test note"
+        };
+
+        var sessionResponse = new SessionDetailedResponse
+        {
+            SessionId = 1,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session"
+        };
+
+        _mockSessionService
+            .Setup(x => x.UpdateRosterPlayingStatus(
+                request.SessionId,
+                request.UserId,
+                request.IsPlaying,
+                request.Note))
+            .ReturnsAsync(ServiceResult<SessionDetailedResponse>.CreateSuccess(sessionResponse));
+
+        // Act
+        var result = await _controller.UpdateRosterPlayingStatus(request);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiDataResponse<SessionDetailedResponse>>().Subject;
+
+        response.Success.Should().BeTrue();
+        response.Data.Should().NotBeNull();
+        response.Data.SessionId.Should().Be(request.SessionId);
+
+        _mockSessionService.Verify(
+            x => x.UpdateRosterPlayingStatus(
+                request.SessionId,
+                request.UserId,
+                request.IsPlaying,
+                request.Note),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateRosterPlayingStatus_ServiceFailure_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new UpdateRosterPlayingStatusRequest
+        {
+            SessionId = 1,
+            UserId = "testUser",
+            IsPlaying = true,
+            Note = "Test note"
+        };
+
+        var errorMessage = "Failed to update playing status";
+        _mockSessionService
+            .Setup(x => x.UpdateRosterPlayingStatus(
+                request.SessionId,
+                request.UserId,
+                request.IsPlaying,
+                request.Note))
+            .ReturnsAsync(ServiceResult<SessionDetailedResponse>.CreateFailure(errorMessage));
+
+        // Act
+        var result = await _controller.UpdateRosterPlayingStatus(request);
+
+        // Assert
+        var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<SessionDetailedResponse>>().Subject;
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Be(errorMessage);
+        response.Data.Should().BeNull();
+
+        _mockSessionService.Verify(
+            x => x.UpdateRosterPlayingStatus(
+                request.SessionId,
+                request.UserId,
+                request.IsPlaying,
+                request.Note),
+            Times.Once);
     }
 }

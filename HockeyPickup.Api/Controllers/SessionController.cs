@@ -85,6 +85,20 @@ public class SessionController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpPut("update-roster-playing-status")]
+    [Description("Updates a roster player playing status")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> UpdateRosterPlayingStatus([FromBody] UpdateRosterPlayingStatusRequest updateRosterPlayingStatusRequest)
+    {
+        var result = await _sessionService.UpdateRosterPlayingStatus(updateRosterPlayingStatusRequest.SessionId, updateRosterPlayingStatusRequest.UserId, updateRosterPlayingStatusRequest.IsPlaying, updateRosterPlayingStatusRequest.Note);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("delete-roster-player/{sessionId}/{userId}")]
     [Description("Removes a player from the Session Roster")]
     [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
