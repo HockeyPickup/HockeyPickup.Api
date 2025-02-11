@@ -1,17 +1,46 @@
 /* Tune Indexes */
 EXEC sp_updatestats;
 
---exec [PopulateHistoricalSessionRosters]
-EXEC [GetUserStats] 'fdbfe74a-a5c5-4ff0-8edb-c98a5df9d85a'
-
-/* Players that have set their jersey number or shoots (Left / Right) */
-select firstname, lastname, shoots, jerseynumber, PositionPreference from AspNetUsers where active = 1 and shoots <> 0 or jerseynumber <> '0' order by FirstName
-
 /* Recent Activities, shows SessionDate column for context */
 SELECT TOP 200 FirstName + ' ' + LastName AS Name, DATEADD(HH, -8, ActivityLogs.CreateDateTime) as 'CreateDateTime PST', Activity, DATENAME(WEEKDAY, SessionDate) AS SessionDay, ActivityLogs.SessionId, SessionDate, ActivityLogs.UserId from ActivityLogs
 INNER JOIN Sessions ON ActivityLogs.SessionId = sessions.SessionId
 INNER JOIN AspNetUsers ON AspNetUsers.Id = UserId
 ORDER BY ActivityLogs.CreateDateTime DESC
+
+--exec [PopulateHistoricalSessionRosters]
+EXEC [GetUserStats] 'fdbfe74a-a5c5-4ff0-8edb-c98a5df9d85a'
+
+/* Players that have set their jersey number or shoots (Left / Right) */
+select firstname, lastname, shoots, jerseynumber, PositionPreference from AspNetUsers where active = 1 and shoots <> 0 or jerseynumber <> '0' order by JerseyNumber
+select firstname, lastname, shoots, jerseynumber, PositionPreference from AspNetUsers where active = 1 and NotificationPreference = 1
+
+/* Trigger list */
+SELECT 
+    t.name AS TriggerName,
+    s.name AS SchemaName,
+    o.name AS TableName,
+    t.is_instead_of_trigger,
+    t.create_date,
+    t.modify_date
+FROM sys.triggers t
+JOIN sys.objects o ON t.parent_id = o.object_id
+JOIN sys.schemas s ON o.schema_id = s.schema_id
+WHERE o.type = 'U'  -- User-created tables
+AND t.is_ms_shipped = 0  -- Exclude system triggers
+AND t.name NOT LIKE '%dss%'  -- Exclude replication triggers
+ORDER BY s.name, o.name, t.name;
+
+/* Sproc list */
+SELECT 
+    p.name AS ProcedureName,
+    s.name AS SchemaName,
+    p.create_date,
+    p.modify_date
+FROM sys.procedures p
+JOIN sys.schemas s ON p.schema_id = s.schema_id
+WHERE s.name = 'dbo'
+ORDER BY s.name, p.name;
+
 
 /* Emergency Info */
 SELECT FirstName, LastName, EmergencyName, EmergencyPhone FROM AspNetUsers WHERE EmergencyName IS NOT NULL OR EmergencyPhone IS NOT NULL
