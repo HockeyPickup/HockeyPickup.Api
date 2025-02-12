@@ -7,6 +7,12 @@ INNER JOIN Sessions ON ActivityLogs.SessionId = sessions.SessionId
 INNER JOIN AspNetUsers ON AspNetUsers.Id = UserId
 ORDER BY ActivityLogs.CreateDateTime DESC
 
+/* Integrity check on SessionRosters. Should never be 0 */
+select FirstName, LastName, * from SessionRosters 
+inner join AspNetUsers on Id = UserId
+where TeamAssignment = 0
+order by SessionId desc
+
 --exec [PopulateHistoricalSessionRosters]
 EXEC [GetUserStats] 'fdbfe74a-a5c5-4ff0-8edb-c98a5df9d85a'
 

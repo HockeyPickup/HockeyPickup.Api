@@ -447,7 +447,7 @@ public class BuySellService : IBuySellService
             if (buySell.SellerUserId != null)
                 return ServiceResult<bool>.CreateFailure("Cannot cancel spot that is already bought");
 
-            var message = $"Buyer: {buySell.Buyer.FirstName} {buySell.Buyer.LastName} cancelled BuySell";
+            var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} removed from BUYING queue";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // Send a message to Service Bus that a player removed themselves from buying
@@ -483,7 +483,7 @@ public class BuySellService : IBuySellService
             if (buySell.BuyerUserId != null)
                 return ServiceResult<bool>.CreateFailure("Cannot cancel spot that is already sold");
 
-            var message = $"Seller: {buySell.Seller.FirstName} {buySell.Seller.LastName} cancelled BuySell";
+            var message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} removed from SELLING queue";
             var result = await _buySellRepository.DeleteBuySellAsync(buySellId, message);
 
             // If the seller is on the roster, update their status to playing
