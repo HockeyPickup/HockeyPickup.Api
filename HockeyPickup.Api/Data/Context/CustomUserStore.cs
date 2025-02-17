@@ -16,6 +16,19 @@ public class CustomUserStore : UserStore<AspNetUser, AspNetRole, HockeyPickupCon
         _context = context;
     }
 
+    public override async Task<AspNetUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfDisposed();
+
+        // Try both normalized and non-normalized email to be more flexible
+        return await _context.Set<AspNetUser>()
+            .FirstOrDefaultAsync(u =>
+                u.NormalizedEmail == normalizedEmail ||
+                u.Email.ToUpper() == normalizedEmail,
+                cancellationToken);
+    }
+
     public override async Task<IdentityResult> CreateAsync(AspNetUser user, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

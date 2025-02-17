@@ -295,8 +295,8 @@ public class UserService : IUserService
                 LockoutEnabled = false,
                 NotificationPreference = NotificationPreference.OnlyMyBuySell,
                 PositionPreference = (int) PositionPreference.TBD,
-                NormalizedEmail = request.Email.ToUpperInvariant(),
-                NormalizedUserName = request.Email.ToUpperInvariant(),
+                NormalizedEmail = _userManager.NormalizeEmail(request.Email),
+                NormalizedUserName = _userManager.NormalizeName(request.Email),
                 SecurityStamp = Guid.NewGuid().ToString(),
                 PhotoUrl = string.Empty,
                 Shoots = (int) ShootPreference.TBD
