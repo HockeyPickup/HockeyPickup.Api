@@ -3039,7 +3039,9 @@ public class DeleteSessionRepositoryTests : IDisposable
             TeamAssignment = (TeamAssignment)1,
             PaymentSent = false,
             PaymentReceived = false,
-            TransactionStatus = "Looking to Buy"  // Default value based on BuyerUserId being set and SellerUserId being null
+            TransactionStatus = "Looking to Buy",  // Default value based on BuyerUserId being set and SellerUserId being null
+            CreateByUserId = user.Id,
+            UpdateByUserId = user.Id
         };
         arrangeContext.BuySells!.Add(buySell);
 
@@ -3140,7 +3142,9 @@ public class DeleteSessionRepositoryTests : IDisposable
             TeamAssignment = (TeamAssignment)1,
             PaymentSent = false,
             PaymentReceived = false,
-            TransactionStatus = "Looking to Buy"  // Default value based on BuyerUserId being set and SellerUserId being null
+            TransactionStatus = "Looking to Buy",  // Default value based on BuyerUserId being set and SellerUserId being null
+            CreateByUserId = user.Id,
+            UpdateByUserId = user.Id
         };
         context.BuySells!.Add(buySell);
 

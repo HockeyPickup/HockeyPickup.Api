@@ -185,14 +185,23 @@ public class Program
             .AddCheck<DatabaseHealthCheck>("Database")
             .AddCheck<ServiceBusHealthCheck>("ServiceBus", failureStatus: HealthStatus.Degraded, tags: new[] { "servicebus", "messaging" });
 
-        // TODO: Remove this after v1 retirement
+        // TODO: [February 2025] This can be removed after sufficient time has passed for all v1 users 
+        // to have either changed or reset their passwords. Estimate: Early 2026.
+        // If removed too early, users with v1-era passwords will be unable to log in.
+        // Consider adding metrics/logging to track how many users are still using v1 password hashes.
+
+        // TODO: Remove this after all users have either:
+        // 1. Changed their password in v2
+        // 2. Or reset their password
         builder.Services.Configure<PasswordHasherOptions>(options =>
         {
-            options.CompatibilityMode = PasswordHasherCompatibilityMode.IdentityV2;
+            options.CompatibilityMode = PasswordHasherCompatibilityMode.IdentityV3;
         });
 
-        // TODO: Remove this after v1 retirement
-        // Temporarily disable for transition period.
+        // TODO: Remove this after all users have either:
+        // 1. Changed their password in v2
+        // 2. Or reset their password
+        // This disables security stamp validation which was necessary for v1 compatibility
         builder.Services.Configure<SecurityStampValidatorOptions>(options =>
         {
             options.ValidationInterval = TimeSpan.MaxValue;
