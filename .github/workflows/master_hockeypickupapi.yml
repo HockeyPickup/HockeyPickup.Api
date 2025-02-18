@@ -23,6 +23,10 @@ jobs:
 
     - name: Bump version and push tag
       uses: anothrNick/github-tag-action@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: HockeyPickup
+        DEFAULT_BUMP: patch
 
   build:
     runs-on: windows-latest
