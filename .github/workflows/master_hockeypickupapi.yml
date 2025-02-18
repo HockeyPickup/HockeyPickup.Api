@@ -13,7 +13,7 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
 
     - name: Bump version and push tag
       uses: anothrNick/github-tag-action@v1
@@ -21,6 +21,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         REPO_OWNER: HockeyPickup
         DEFAULT_BUMP: patch
+        DOTNET_CORE_VERSION: 9.x
+        WORKING_DIRECTORY: HockeyPickup.Api
+        AZURE_WEBAPP_PACKAGE_PATH: HockeyPickup.Api\publish
+        AZURE_WEBAPP_NAME: HockeyPickupApi
 
   build:
     runs-on: windows-latest
@@ -31,7 +35,7 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x'
+          dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
 
       - name: Restore
         run: |
@@ -75,32 +79,29 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: Publish Artifact
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: |
+          dotnet publish ${{ env.WORKING_DIRECTORY }} --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          name: webapp
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
   deploy:
     runs-on: windows-latest
     needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v4
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-      - name: Deploy to Azure WebApp
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'HockeyPickupApi'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_96F26ADF16CB43838E665B91D02A7B1A }}
-          package: .
+    - name: Deploy to Azure WebApp
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_96F26ADF16CB43838E665B91D02A7B1A }}
