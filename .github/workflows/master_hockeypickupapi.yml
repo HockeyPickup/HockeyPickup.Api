@@ -1,7 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and Deploy
+name: Build, Test, Cover, Deploy
 
 on:
   push:
@@ -32,15 +29,28 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up .NET Core
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
-          include-prerelease: true
 
       - name: Restore
         run: |
           dotnet restore
           dotnet tool restore
+
+      - name: Fixups
+        run: |
+          git fetch --tags
+          git update-index --chmod=+x ./scripts/*
+          chmod +x ./scripts/*
+          # ./scripts/update-git.sh
+
+      - name: Versions
+        run: |
+          dotnet --version
+          git --version
+          az --version
+          bash --version
 
         # This step is necessary because during the build step, the bash -c invoke of build-version.vbs fails.
       - name: Run Build Version Script
@@ -61,10 +71,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: HockeyPickup.Api.Tests/TestResults/coverage.info
 
-      - name: Build Release Version
-        run: dotnet build --configuration Release
-
-      - name: Publish
+      - name: Build Artifact
         run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload Artifact
@@ -86,9 +93,9 @@ jobs:
         with:
           name: .net-app
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure WebApp
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'HockeyPickupApi'
           slot-name: 'Production'
