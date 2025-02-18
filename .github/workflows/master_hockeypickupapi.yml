@@ -6,6 +6,12 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: HockeyPickupApi
+  AZURE_WEBAPP_PACKAGE_PATH: HockeyPickup.Api\publish
+  DOTNET_CORE_VERSION: 9.x
+  WORKING_DIRECTORY: HockeyPickup.Api
+
 jobs:
   tag_version:
     runs-on: ubuntu-latest
@@ -17,14 +23,6 @@ jobs:
 
     - name: Bump version and push tag
       uses: anothrNick/github-tag-action@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        REPO_OWNER: HockeyPickup
-        DEFAULT_BUMP: patch
-        DOTNET_CORE_VERSION: 9.x
-        WORKING_DIRECTORY: HockeyPickup.Api
-        AZURE_WEBAPP_PACKAGE_PATH: HockeyPickup.Api\publish
-        AZURE_WEBAPP_NAME: HockeyPickupApi
 
   build:
     runs-on: windows-latest
