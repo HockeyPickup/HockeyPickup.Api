@@ -2,10 +2,13 @@
 EXEC sp_updatestats;
 
 /* Recent Activities, shows SessionDate column for context */
-SELECT TOP 200 FirstName + ' ' + LastName AS Name, ActivityLogs.CreateDateTime AT TIME ZONE 'UTC' AT TIME ZONE 'Pacific Standard Time' as 'CreateDateTime PST', Activity, DATENAME(WEEKDAY, SessionDate) AS SessionDay, ActivityLogs.SessionId, SessionDate, ActivityLogs.UserId from ActivityLogs
+SELECT TOP 100 FirstName + ' ' + LastName AS Name, ActivityLogs.CreateDateTime AT TIME ZONE 'UTC' AT TIME ZONE 'Pacific Standard Time' as 'CreateDateTime PST', Activity, DATENAME(WEEKDAY, SessionDate) AS SessionDay, ActivityLogs.SessionId, SessionDate, ActivityLogs.UserId from ActivityLogs
 INNER JOIN Sessions ON ActivityLogs.SessionId = sessions.SessionId
 INNER JOIN AspNetUsers ON AspNetUsers.Id = UserId
 ORDER BY ActivityLogs.CreateDateTime DESC
+
+/* List potential buyers based on how recently they played */
+EXEC [GetPotentialBuyers] 2889
 
 /* Integrity check on SessionRosters. Should never be 0 */
 select FirstName, LastName, * from SessionRosters 
