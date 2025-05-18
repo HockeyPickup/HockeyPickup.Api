@@ -194,6 +194,9 @@ public class BuyingQueue
     public bool PaymentReceived { get; set; }
     public string? BuyerNote { get; set; }
     public string? SellerNote { get; set; }
+    public bool BuyerNoteFlagged { get; set; } = false;  // Add default value
+    public bool SellerNoteFlagged { get; set; } = false;  // Add default value
+
     [ForeignKey(nameof(BuyerUserId))]
     public virtual AspNetUser? Buyer { get; set; }
 

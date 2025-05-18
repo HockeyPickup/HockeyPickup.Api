@@ -1366,6 +1366,8 @@ public class BuyingQueueTests
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.PaymentReceived))!.PropertyType.Should().Be(typeof(bool));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerNote))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerNote))!.PropertyType.Should().Be(typeof(string));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerNoteFlagged))!.PropertyType.Should().Be(typeof(bool));
+        queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerNoteFlagged))!.PropertyType.Should().Be(typeof(bool));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.BuyerUserId))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.SellerUserId))!.PropertyType.Should().Be(typeof(string));
         queueItem.GetType().GetProperty(nameof(BuyingQueueItem.Buyer))!.PropertyType.Should().Be(typeof(UserDetailedResponse));
@@ -1418,6 +1420,8 @@ public class BuyingQueueTests
         queueItem.SellerName.Should().BeNull();
         queueItem.BuyerNote.Should().BeNull();
         queueItem.SellerNote.Should().BeNull();
+        queueItem.BuyerNoteFlagged.Should().BeFalse();
+        queueItem.SellerNoteFlagged.Should().BeFalse();
     }
 
     [Fact]

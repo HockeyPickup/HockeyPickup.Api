@@ -584,6 +584,20 @@ public class BuyingQueueItem
     [GraphQLDescription("Note from the seller")]
     public string? SellerNote { get; set; }
 
+    [Description("Indicates if the seller note has been flagged")]
+    [JsonPropertyName("SellerNoteFlagged")]
+    [JsonProperty(nameof(SellerNoteFlagged), Required = Required.Always)]
+    [GraphQLName("SellerNoteFlagged")]
+    [GraphQLDescription("Indicates if the seller note has been flagged")]
+    public bool SellerNoteFlagged { get; set; }
+
+    [Description("Indicates if the buyer note has been flagged")]
+    [JsonPropertyName("BuyerNoteFlagged")]
+    [JsonProperty(nameof(BuyerNoteFlagged), Required = Required.Always)]
+    [GraphQLName("BuyerNoteFlagged")]
+    [GraphQLDescription("Indicates if the buyer note has been flagged")]
+    public bool BuyerNoteFlagged { get; set; }
+
     [Description("Buyer details")]
     [JsonPropertyName("Buyer")]
     [JsonProperty(nameof(Buyer))]

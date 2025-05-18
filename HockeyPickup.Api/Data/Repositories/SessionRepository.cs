@@ -358,6 +358,8 @@ public class SessionRepository : ISessionRepository
             PaymentReceived = q.PaymentReceived,
             BuyerNote = q.BuyerNote,
             SellerNote = q.SellerNote,
+            BuyerNoteFlagged = q.BuyerNoteFlagged,
+            SellerNoteFlagged = q.SellerNoteFlagged,
             Buyer = MapToUserDetailedResponse(q.Buyer),
             Seller = MapToUserDetailedResponse(q.Seller)
         }).ToList();
