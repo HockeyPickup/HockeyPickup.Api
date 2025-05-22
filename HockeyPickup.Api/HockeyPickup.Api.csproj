@@ -27,10 +27,10 @@
     <PackageReference Include="Azure.Identity" Version="1.14.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.19.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
-    <PackageReference Include="HotChocolate.AspNetCore" Version="15.1.4" />
-    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.4" />
-    <PackageReference Include="HotChocolate.Data" Version="15.1.4" />
-    <PackageReference Include="HotChocolate.Types" Version="15.1.4" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="15.1.5" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.5" />
+    <PackageReference Include="HotChocolate.Data" Version="15.1.5" />
+    <PackageReference Include="HotChocolate.Types" Version="15.1.5" />
     <PackageReference Include="Ical.Net" Version="4.3.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.5" />
