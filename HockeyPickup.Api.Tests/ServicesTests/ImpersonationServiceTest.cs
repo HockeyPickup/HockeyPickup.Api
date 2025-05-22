@@ -2,6 +2,7 @@ using FluentAssertions;
 using FluentAssertions.Execution;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ public class ImpersonationServiceTests : IDisposable
 {
     private readonly Mock<IUserService> _mockUserService;
     private readonly Mock<IJwtService> _mockJwtService;
+    private readonly Mock<IServiceBus> _mockServiceBus;
     private readonly Mock<ILogger<ImpersonationService>> _mockLogger;
     private readonly HockeyPickupContext _context;
     private readonly ImpersonationService _service;
@@ -32,6 +34,7 @@ public class ImpersonationServiceTests : IDisposable
         _mockUserService = new Mock<IUserService>();
         _mockJwtService = new Mock<IJwtService>();
         _mockLogger = new Mock<ILogger<ImpersonationService>>();
+        _mockServiceBus = new Mock<IServiceBus>();
 
         var options = new DbContextOptionsBuilder<HockeyPickupContext>()
             .UseInMemoryDatabase(databaseName: $"ImpersonationTest_{Guid.NewGuid()}")
@@ -42,7 +45,8 @@ public class ImpersonationServiceTests : IDisposable
             _mockUserService.Object,
             _mockJwtService.Object,
             _mockLogger.Object,
-            _context
+            _context,
+            _mockServiceBus.Object
         );
 
         // Initialize common test data
@@ -86,6 +90,13 @@ public class ImpersonationServiceTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<string>>()))
             .Returns(() => _jwtReturn);
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
     }
 
     private void SetupSuccessfulRevertImpersonation(string[] adminRoles)
@@ -100,6 +111,13 @@ public class ImpersonationServiceTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<string>>()))
             .Returns(() => _jwtReturn);
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
     }
 
     private ClaimsPrincipal CreatePrincipalWithAdminClaim(string adminId)

@@ -20,17 +20,15 @@ public class ImpersonationService : IImpersonationService
     private readonly IJwtService _jwtService;
     private readonly ILogger<ImpersonationService> _logger;
     private readonly HockeyPickupContext _context;
+    private readonly IServiceBus _serviceBus;
 
-    public ImpersonationService(
-        IUserService userService,
-        IJwtService jwtService,
-        ILogger<ImpersonationService> logger,
-        HockeyPickupContext context)
+    public ImpersonationService(IUserService userService, IJwtService jwtService, ILogger<ImpersonationService> logger, HockeyPickupContext context, IServiceBus serviceBus)
     {
         _userService = userService;
         _jwtService = jwtService;
         _logger = logger;
         _context = context;
+        _serviceBus = serviceBus;
     }
 
     public async Task<ServiceResult<ImpersonationResponse>> ImpersonateUserAsync(string adminUserId, string targetUserId)
@@ -67,6 +65,8 @@ public class ImpersonationService : IImpersonationService
                 StartTime = DateTime.UtcNow,
                 ImpersonatedUser = targetUser.ToDetailedResponse()
             };
+
+            await _serviceBus.SendAsync($"Impersonation Started by {admin.FirstName} {admin.LastName} for {targetUser.FirstName} {targetUser.LastName}");
 
             return ServiceResult<ImpersonationResponse>.CreateSuccess(response);
         }
@@ -107,6 +107,8 @@ public class ImpersonationService : IImpersonationService
                 OriginalUserId = originalAdminId,
                 EndTime = DateTime.UtcNow
             };
+
+            await _serviceBus.SendAsync($"Impersonation Reverted by {admin.FirstName} {admin.LastName}");
 
             return ServiceResult<RevertImpersonationResponse>.CreateSuccess(response);
         }

@@ -168,6 +168,7 @@ public class Program
         builder.Services.AddScoped<IRegularService, RegularService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();
         builder.Services.AddScoped<IBuySellService, BuySellService>();
+        builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();
@@ -269,7 +270,6 @@ public class Program
         builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IServiceBus, ResilientServiceBus>();
         builder.Services.AddScoped<ITokenBlacklistService, TokenBlacklistService>();
-        builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 
         var app = builder.Build();
 
