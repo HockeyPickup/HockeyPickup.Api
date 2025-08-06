@@ -261,3 +261,71 @@ WHERE (Id NOT IN
                  WHERE (SellerUserId IS NOT NULL))) AND (Email NOT LIKE '%brettmorrison%') AND (Id NOT IN
                  (SELECT DISTINCT UserId
                  FROM    dbo.ActivityLogs))
+
+/* List of sells by player by year */
+DECLARE @UserId NVARCHAR(128) = '7a06eb4d-d110-421c-9f4d-b3c965acb5a7';
+WITH SellingActivity AS (
+    -- Get all sessions where Alex either went through selling queue OR sold directly
+    SELECT DISTINCT
+        s.SessionId,
+        s.SessionDate,
+        seller.FirstName AS FirstName,
+        seller.LastName AS LastName,
+        -- Find when they were added to selling queue (if they were)
+        (SELECT MIN(al.CreateDateTime) 
+         FROM ActivityLogs al 
+         WHERE al.SessionId = s.SessionId 
+         AND al.Activity LIKE seller.FirstName + ' ' + seller.LastName + '%added to SELLING queue'
+        ) AS TimestampListed,
+        -- Find when they sold
+        (SELECT MIN(al.CreateDateTime) 
+         FROM ActivityLogs al 
+         WHERE al.SessionId = s.SessionId 
+         AND (
+             al.Activity LIKE seller.FirstName + ' ' + seller.LastName + '%SOLD%'
+             OR 
+             al.Activity LIKE '%BOUGHT%from seller: ' + seller.FirstName + ' ' + seller.LastName + '%'
+         )
+        ) AS TimestampSold
+    FROM Sessions s
+        INNER JOIN AspNetUsers seller ON seller.Id = @UserId
+        INNER JOIN Regulars r ON r.UserId = seller.Id
+        INNER JOIN RegularSets rs ON r.RegularSetId = rs.RegularSetId
+    WHERE YEAR(s.SessionDate) = 2025
+        AND s.Note NOT LIKE '%cancelled%'
+        AND (
+            -- Either they were in selling queue
+            EXISTS (
+                SELECT 1 FROM ActivityLogs al 
+                WHERE al.SessionId = s.SessionId 
+                AND al.Activity LIKE seller.FirstName + ' ' + seller.LastName + '%added to SELLING queue'
+            )
+            OR
+            -- Or they sold without queue activity
+            EXISTS (
+                SELECT 1 FROM ActivityLogs al 
+                WHERE al.SessionId = s.SessionId 
+                AND (
+                    al.Activity LIKE seller.FirstName + ' ' + seller.LastName + '%SOLD%'
+                    OR 
+                    al.Activity LIKE '%BOUGHT%from seller: ' + seller.FirstName + ' ' + seller.LastName + '%'
+                )
+            )
+        )
+)
+SELECT 
+    SessionId,
+    SessionDate,
+    FirstName,
+    LastName,
+    COALESCE(TimestampListed, TimestampSold) AS TimestampListed,  -- Use sale time if no listing time
+    TimestampSold,
+    CASE 
+        WHEN TimestampSold IS NULL THEN 'Listed and not sold'
+        WHEN TimestampListed IS NULL THEN 'Sold when listed'  -- No queue activity, sold immediately
+        ELSE 'Sold when buyer entered queue'  -- Went through selling queue process
+    END AS Status
+FROM SellingActivity
+WHERE (COALESCE(TimestampListed, TimestampSold) < SessionDate)  -- Either listing or sale before session
+    AND (TimestampSold IS NULL OR TimestampSold < SessionDate)
+ORDER BY SessionDate DESC, COALESCE(TimestampListed, TimestampSold) DESC;
