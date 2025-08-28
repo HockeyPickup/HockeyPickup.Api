@@ -24,30 +24,30 @@
     <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.14.0" />
+    <PackageReference Include="Azure.Identity" Version="1.15.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.24.1" />
-    <PackageReference Include="HotChocolate.AspNetCore" Version="15.1.5" />
-    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.5" />
-    <PackageReference Include="HotChocolate.Data" Version="15.1.5" />
-    <PackageReference Include="HotChocolate.Types" Version="15.1.5" />
-    <PackageReference Include="Ical.Net" Version="4.3.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.6" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.6" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.25.0" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="15.1.9" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.9" />
+    <PackageReference Include="HotChocolate.Data" Version="15.1.9" />
+    <PackageReference Include="HotChocolate.Types" Version="15.1.9" />
+    <PackageReference Include="Ical.Net" Version="5.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.6" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.6">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="NSwag.AspNetCore" Version="14.4.0" />
-    <PackageReference Include="Polly" Version="8.6.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="9.0.1" />
-    <PackageReference Include="System.Formats.Asn1" Version="9.0.6" />
+    <PackageReference Include="NSwag.AspNetCore" Version="14.5.0" />
+    <PackageReference Include="Polly" Version="8.6.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="9.0.4" />
+    <PackageReference Include="System.Formats.Asn1" Version="9.0.8" />
   </ItemGroup>
   <Target Name="PreBuild" AfterTargets="PreBuildEvent">
     <Exec Condition="$(OS) == 'Windows_NT'" Command="cscript.exe ..\scripts\build-version.vbs" />
