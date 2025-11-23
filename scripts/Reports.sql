@@ -329,3 +329,203 @@ FROM SellingActivity
 WHERE (COALESCE(TimestampListed, TimestampSold) < SessionDate)  -- Either listing or sale before session
     AND (TimestampSold IS NULL OR TimestampSold < SessionDate)
 ORDER BY SessionDate DESC, COALESCE(TimestampListed, TimestampSold) DESC;
+
+/* Top players by attendance */
+DECLARE @Year INT = 2025;
+
+SELECT 
+    u.FirstName,
+    u.LastName,
+    COUNT(DISTINCT sr.SessionId) AS GamesPlayed
+FROM 
+    SessionRosters sr
+    INNER JOIN AspNetUsers u ON sr.UserId = u.Id
+    INNER JOIN Sessions s ON sr.SessionId = s.SessionId
+WHERE 
+    sr.IsPlaying = 1  -- Only count players who actually played
+    AND YEAR(s.SessionDate) = @Year  -- Filter by the specified year
+    AND s.SessionDate <= GETDATE()  -- Only count past games, not future scheduled ones
+    AND (s.Note IS NULL OR s.Note NOT LIKE '%cancelled%')  -- Exclude cancelled sessions
+GROUP BY 
+    u.FirstName, 
+    u.LastName,
+    u.Id  -- Include Id in GROUP BY to handle players with same name
+ORDER BY 
+    GamesPlayed DESC,  -- Primary sort by games played (descending)
+    u.LastName ASC,    -- Secondary sort by last name
+    u.FirstName ASC;   -- Tertiary sort by first name
+
+DECLARE @GoalieYear INT = 2024;
+-- Goalie Games Played Report (Fixed for comma-separated format)
+-- Parses goalie names from session notes in format: "Goalies: FirstName LastName, FirstName LastName"
+-- Returns: FirstName, LastName, GamesPlayed
+
+WITH SessionGoalieText AS (
+    -- Extract the text after "Goalies: " from session notes
+    SELECT 
+        SessionId,
+        SessionDate,
+        Note,
+        -- Extract everything after "Goalies: " until line break or end
+        LTRIM(RTRIM(
+            SUBSTRING(
+                Note, 
+                CHARINDEX('Goalies: ', Note) + 9, -- Skip "Goalies: " (9 chars)
+                CASE 
+                    -- Find the end point (newline or end of string)
+                    WHEN CHARINDEX(CHAR(13), Note, CHARINDEX('Goalies: ', Note) + 9) > 0
+                    THEN CHARINDEX(CHAR(13), Note, CHARINDEX('Goalies: ', Note) + 9) - CHARINDEX('Goalies: ', Note) - 9
+                    WHEN CHARINDEX(CHAR(10), Note, CHARINDEX('Goalies: ', Note) + 9) > 0
+                    THEN CHARINDEX(CHAR(10), Note, CHARINDEX('Goalies: ', Note) + 9) - CHARINDEX('Goalies: ', Note) - 9
+                    ELSE LEN(Note)
+                END
+            )
+        )) AS GoalieListText
+    FROM Sessions
+    WHERE 
+        YEAR(SessionDate) = @GoalieYear
+        AND SessionDate <= GETDATE()
+        AND Note IS NOT NULL 
+        AND Note LIKE '%Goalies: %'
+        AND (Note NOT LIKE '%cancelled%')
+),
+-- Parse individual goalies from comma-separated list
+ParsedGoalies AS (
+    SELECT 
+        SessionId,
+        SessionDate,
+        GoalieListText,
+        -- Goalie 1 (before first comma, or entire string if no comma)
+        LTRIM(RTRIM(
+            CASE 
+                WHEN CHARINDEX(',', GoalieListText) > 0 
+                THEN LEFT(GoalieListText, CHARINDEX(',', GoalieListText) - 1)
+                ELSE GoalieListText
+            END
+        )) AS Goalie1,
+        -- Goalie 2 (after first comma)
+        CASE 
+            WHEN CHARINDEX(',', GoalieListText) > 0 
+            THEN LTRIM(RTRIM(
+                CASE 
+                    WHEN CHARINDEX(',', GoalieListText, CHARINDEX(',', GoalieListText) + 1) > 0
+                    THEN SUBSTRING(GoalieListText, 
+                                  CHARINDEX(',', GoalieListText) + 1, 
+                                  CHARINDEX(',', GoalieListText, CHARINDEX(',', GoalieListText) + 1) - CHARINDEX(',', GoalieListText) - 1)
+                    ELSE SUBSTRING(GoalieListText, CHARINDEX(',', GoalieListText) + 1, LEN(GoalieListText))
+                END
+            ))
+            ELSE NULL
+        END AS Goalie2,
+        -- Goalie 3 (after second comma)
+        CASE 
+            WHEN LEN(GoalieListText) - LEN(REPLACE(GoalieListText, ',', '')) >= 2
+            THEN LTRIM(RTRIM(
+                SUBSTRING(GoalieListText, 
+                         CHARINDEX(',', GoalieListText, CHARINDEX(',', GoalieListText) + 1) + 1, 
+                         LEN(GoalieListText))
+            ))
+            ELSE NULL
+        END AS Goalie3
+    FROM SessionGoalieText
+    WHERE GoalieListText IS NOT NULL AND GoalieListText != ''
+),
+-- Union all goalies into individual rows
+AllGoalieNames AS (
+    SELECT SessionId, SessionDate, Goalie1 AS FullName 
+    FROM ParsedGoalies 
+    WHERE Goalie1 IS NOT NULL AND Goalie1 != '' AND LEN(Goalie1) > 5
+    
+    UNION ALL
+    
+    SELECT SessionId, SessionDate, Goalie2 AS FullName 
+    FROM ParsedGoalies 
+    WHERE Goalie2 IS NOT NULL AND Goalie2 != '' AND LEN(Goalie2) > 5
+    
+    UNION ALL
+    
+    SELECT SessionId, SessionDate, Goalie3 AS FullName 
+    FROM ParsedGoalies 
+    WHERE Goalie3 IS NOT NULL AND Goalie3 != '' AND LEN(Goalie3) > 5
+),
+-- Extract first and last names, then create normalized keys
+NormalizedGoalies AS (
+    SELECT 
+        SessionId,
+        SessionDate,
+        FullName,
+        -- Extract first name (text before first space)
+        CASE 
+            WHEN CHARINDEX(' ', LTRIM(RTRIM(FullName))) > 0
+            THEN LEFT(LTRIM(RTRIM(FullName)), CHARINDEX(' ', LTRIM(RTRIM(FullName))) - 1)
+            ELSE ''
+        END AS FirstName,
+        -- Extract last name (text after first space)
+        CASE 
+            WHEN CHARINDEX(' ', LTRIM(RTRIM(FullName))) > 0
+            THEN LTRIM(SUBSTRING(LTRIM(RTRIM(FullName)), 
+                                 CHARINDEX(' ', LTRIM(RTRIM(FullName))) + 1, 
+                                 LEN(FullName)))
+            ELSE ''
+        END AS LastName,
+        -- Create normalized key (first 3 chars of first + first 3 chars of last)
+        LOWER(LEFT(
+            CASE 
+                WHEN CHARINDEX(' ', LTRIM(RTRIM(FullName))) > 0
+                THEN LEFT(LTRIM(RTRIM(FullName)), CHARINDEX(' ', LTRIM(RTRIM(FullName))) - 1)
+                ELSE ''
+            END, 3)) + 
+        LOWER(LEFT(
+            CASE 
+                WHEN CHARINDEX(' ', LTRIM(RTRIM(FullName))) > 0
+                THEN LTRIM(SUBSTRING(LTRIM(RTRIM(FullName)), 
+                                     CHARINDEX(' ', LTRIM(RTRIM(FullName))) + 1, 
+                                     LEN(FullName)))
+                ELSE ''
+            END, 3)) AS NormalizedKey
+    FROM AllGoalieNames
+    WHERE CHARINDEX(' ', LTRIM(RTRIM(FullName))) > 0 -- Must have both first and last name
+),
+-- Group by normalized key to combine variations of the same goalie
+GroupedGoalies AS (
+    SELECT 
+        NormalizedKey,
+        -- Take the most common version of the name
+        (SELECT TOP 1 FirstName FROM NormalizedGoalies n2 
+         WHERE n2.NormalizedKey = n1.NormalizedKey 
+         GROUP BY FirstName 
+         ORDER BY COUNT(*) DESC) AS FirstName,
+        (SELECT TOP 1 LastName FROM NormalizedGoalies n2 
+         WHERE n2.NormalizedKey = n1.NormalizedKey 
+         GROUP BY LastName 
+         ORDER BY COUNT(*) DESC) AS LastName,
+        COUNT(DISTINCT SessionId) AS GamesPlayed
+    FROM NormalizedGoalies n1
+    WHERE 
+        LEN(FirstName) > 1 
+        AND LEN(LastName) > 1
+        AND FirstName NOT LIKE '%[0-9]%'
+        AND LastName NOT LIKE '%[0-9]%'
+    GROUP BY NormalizedKey
+)
+-- Final result
+SELECT 
+    FirstName,
+    LastName,
+    GamesPlayed
+FROM GroupedGoalies
+WHERE NormalizedKey != '' -- Filter out any empty keys
+ORDER BY 
+    GamesPlayed DESC,
+    LastName ASC,
+    FirstName ASC;
+
+/* 
+Note: This query assumes goalie names are mentioned in the session notes
+in patterns like:
+- "Goalies: John Smith and Jane Doe"
+- "Goalie: Mike Johnson"
+- "Goalkeepers: Bob Wilson, Tom Brown"
+
+If your data uses different patterns, the parsing logic may need adjustment.
+*/
