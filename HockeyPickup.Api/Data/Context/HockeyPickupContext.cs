@@ -53,7 +53,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Don't call base.OnModelCreating(modelBuilder) since we're configuring everything manually
+        base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<AspNetUser>(entity =>
         {

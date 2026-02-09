@@ -1,5 +1,4 @@
 using Moq;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
 using HockeyPickup.Api.Controllers;
@@ -8,7 +7,6 @@ using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Helpers;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using HockeyPickup.Api.Data.Entities;
 using System.ComponentModel.DataAnnotations;

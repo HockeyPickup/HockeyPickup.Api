@@ -4,7 +4,6 @@ using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 

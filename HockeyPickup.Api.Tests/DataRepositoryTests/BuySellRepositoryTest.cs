@@ -8,8 +8,6 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Models.Responses;
 using RosterPlayer = HockeyPickup.Api.Models.Responses.RosterPlayer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
 
@@ -171,7 +169,6 @@ public class BuySellRepositoryTest : IDisposable
     private readonly Mock<ISessionRepository> _mockSessionRepository;
     private readonly HockeyPickupContext _context;
     private readonly BuySellRepository _repository;
-    private static int _dbCounter;
     private const string TEST_USER_ID = "testUser123";
 
     public BuySellRepositoryTest()
@@ -180,7 +177,7 @@ public class BuySellRepositoryTest : IDisposable
         _mockSessionRepository = new Mock<ISessionRepository>();
 
         var optionsBuilder = new DbContextOptionsBuilder<HockeyPickupContext>();
-        optionsBuilder.UseInMemoryDatabase($"HockeyPickupTest_{Interlocked.Increment(ref _dbCounter)}");
+        optionsBuilder.UseInMemoryDatabase($"BuySellTest_{Guid.NewGuid()}");
 
         _context = new BuySellTestHockeyPickupContext(optionsBuilder.Options);
         _repository = new BuySellRepository(_context, _mockLogger.Object, _mockSessionRepository.Object);

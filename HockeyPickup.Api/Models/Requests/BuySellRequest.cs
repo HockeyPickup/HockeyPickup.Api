@@ -1,4 +1,3 @@
-﻿using HockeyPickup.Api.Data.Entities;
 using Newtonsoft.Json;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;

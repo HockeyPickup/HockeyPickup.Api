@@ -1,7 +1,6 @@
 
 using FluentAssertions;
 using HockeyPickup.Api.Helpers;
-using Microsoft.AspNetCore.Http;
 using Moq;
 using System.Security.Claims;
 

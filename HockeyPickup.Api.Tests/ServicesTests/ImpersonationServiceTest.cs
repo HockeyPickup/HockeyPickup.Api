@@ -2,7 +2,6 @@ using FluentAssertions;
 using FluentAssertions.Execution;
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
-using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

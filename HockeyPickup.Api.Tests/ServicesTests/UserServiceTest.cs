@@ -1,13 +1,9 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using Azure.Storage.Blobs;
 using HockeyPickup.Api.Data.Repositories;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;

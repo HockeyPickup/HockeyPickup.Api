@@ -6,7 +6,6 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Models.Responses;
 using System.Reflection;
 using Moq;
-using Microsoft.Data.SqlClient;
 using System.Data;
 using Microsoft.Extensions.Logging;
 

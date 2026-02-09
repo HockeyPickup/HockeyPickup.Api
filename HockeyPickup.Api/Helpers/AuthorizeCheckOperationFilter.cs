@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Diagnostics.CodeAnalysis;
 
@@ -20,23 +20,8 @@ public class AuthorizeCheckOperationFilter : IOperationFilter
             // If the endpoint has [Authorize] attribute, display the "Authorize" button
             operation.Responses.TryAdd("401", new OpenApiResponse { Description = "Unauthorized" });
 
-            operation.Security = new List<OpenApiSecurityRequirement>
-            {
-                new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[] {}
-                    }
-                }
-            };
+            var schemeRef = new OpenApiSecuritySchemeReference("Bearer", context.Document, "");
+            operation.Security = [new OpenApiSecurityRequirement { [schemeRef] = [] }];
         }
     }
 }

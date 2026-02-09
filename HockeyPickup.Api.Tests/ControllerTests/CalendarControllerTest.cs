@@ -1,14 +1,9 @@
 using Moq;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
 using HockeyPickup.Api.Controllers;
 using HockeyPickup.Api.Services;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Routing;
 using HockeyPickup.Api.Helpers;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;

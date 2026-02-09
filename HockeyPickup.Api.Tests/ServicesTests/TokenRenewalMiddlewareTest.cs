@@ -1,11 +1,8 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using FluentAssertions;
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
 using HockeyPickup.Api.Services;
-using Microsoft.IdentityModel.Tokens;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -49,7 +46,7 @@ public class TokenRenewalMiddlewareTests
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Exp,
+            new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Exp,
                 DateTimeOffset.UtcNow.AddDays(20).ToUnixTimeSeconds().ToString()),
             new Claim(ClaimTypes.NameIdentifier, "user-id"),
             new Claim(ClaimTypes.Name, "test@example.com"),
@@ -79,7 +76,7 @@ public class TokenRenewalMiddlewareTests
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Exp,
+            new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Exp,
                 DateTimeOffset.UtcNow.AddDays(5).ToUnixTimeSeconds().ToString()),
             new Claim(ClaimTypes.NameIdentifier, "user-id"),
             new Claim(ClaimTypes.Name, "test@example.com"),
@@ -142,7 +139,7 @@ public class TokenRenewalMiddlewareTests
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Exp,
+            new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Exp,
                 DateTimeOffset.UtcNow.AddDays(5).ToUnixTimeSeconds().ToString()),
             // Missing NameIdentifier or Name claims
         };
@@ -170,7 +167,7 @@ public class TokenRenewalMiddlewareTests
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Exp,
+            new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Exp,
                 DateTimeOffset.UtcNow.AddDays(5).ToUnixTimeSeconds().ToString()),
             new Claim(ClaimTypes.NameIdentifier, "user-id"),
             new Claim(ClaimTypes.Name, "test@example.com"),

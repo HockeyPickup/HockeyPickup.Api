@@ -3,7 +3,6 @@ using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Data.GraphQL;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Models.Responses;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 

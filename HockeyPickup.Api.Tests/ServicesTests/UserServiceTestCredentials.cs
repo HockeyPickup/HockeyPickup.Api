@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
 using FluentAssertions;
@@ -33,7 +32,7 @@ public partial class UserServiceTest
 
         _mockSignInManager
             .Setup(x => x.CheckPasswordSignInAsync(aspNetUser, password, false))
-            .ReturnsAsync(SignInResult.Success);
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
         _mockUserManager.Setup(x => x.IsEmailConfirmedAsync(aspNetUser))
             .ReturnsAsync(true);
@@ -106,7 +105,7 @@ public partial class UserServiceTest
 
         _mockSignInManager
             .Setup(x => x.CheckPasswordSignInAsync(aspNetUser, password, false))
-            .ReturnsAsync(SignInResult.Failed);
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
 
         // Act
         var result = await _service.ValidateCredentialsAsync(username, password);
@@ -133,7 +132,7 @@ public partial class UserServiceTest
 
         _mockSignInManager
             .Setup(x => x.CheckPasswordSignInAsync(aspNetUser, password, false))
-            .ReturnsAsync(SignInResult.Success);
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
 
         _mockUserManager.Setup(x => x.IsEmailConfirmedAsync(aspNetUser))
             .ReturnsAsync(false);

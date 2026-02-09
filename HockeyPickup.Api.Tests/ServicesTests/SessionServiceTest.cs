@@ -8,8 +8,6 @@ using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using HockeyPickup.Api.Tests.DataRepositoryTests;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

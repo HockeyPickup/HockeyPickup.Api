@@ -1,11 +1,8 @@
-using Microsoft.AspNetCore.Identity;
+using Azure;
+using Azure.Storage.Blobs.Models;
 using Moq;
 using FluentAssertions;
 using HockeyPickup.Api.Data.Entities;
-using Microsoft.AspNetCore.Http;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Azure;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -27,60 +24,48 @@ public partial class UserServiceTest
     {
         var mockContainerClient = new Mock<BlobContainerClient>();
         var mockBlobClient = new Mock<BlobClient>();
-        var mockResponse = new Mock<Response>();
 
         // Setup blob client
         mockBlobClient.Setup(b => b.Uri).Returns(new Uri(blobUri));
 
         // Setup blob upload
-        var mockBlobContentInfo = new Mock<BlobContentInfo>();
-        var mockBlobContentResponse = new Mock<Response<BlobContentInfo>>();
-        mockBlobContentResponse.Setup(r => r.Value).Returns(mockBlobContentInfo.Object);
-        mockBlobContentResponse.Setup(r => r.GetRawResponse()).Returns(mockResponse.Object);
+        var rawResponse = default(Azure.Response);
+        var blobContentResponse = Response.FromValue(BlobsModelFactory.BlobContentInfo(default(ETag), default(DateTimeOffset), Array.Empty<byte>(), "", 0), rawResponse);
 
         mockBlobClient.Setup(b => b.UploadAsync(
             It.IsAny<Stream>(),
             It.IsAny<bool>(),
             It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult(mockBlobContentResponse.Object));
+            .Returns(Task.FromResult(blobContentResponse));
 
         // Setup blob delete
-        var mockDeleteResponse = new Mock<Response<bool>>();
-        mockDeleteResponse.Setup(r => r.Value).Returns(true);
-        mockDeleteResponse.Setup(r => r.GetRawResponse()).Returns(mockResponse.Object);
-
+        var deleteRawResponse = default(Azure.Response);
+        var deleteResponse = Response.FromValue(true, deleteRawResponse);
         mockBlobClient.Setup(b => b.DeleteIfExistsAsync(
             DeleteSnapshotsOption.None,
             It.IsAny<BlobRequestConditions>(),
             It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult(mockDeleteResponse.Object));
+            .ReturnsAsync(deleteResponse);
 
         // Setup container
         mockContainerClient.Setup(c => c.GetBlobClient(It.IsAny<string>()))
             .Returns(mockBlobClient.Object);
 
-        var mockBlobContainerInfo = new Mock<BlobContainerInfo>();
-        var mockContainerResponse = new Mock<Response<BlobContainerInfo>>();
-        mockContainerResponse.Setup(r => r.Value).Returns(mockBlobContainerInfo.Object);
-        mockContainerResponse.Setup(r => r.GetRawResponse()).Returns(mockResponse.Object);
-
+        var containerRawResponse = default(Azure.Response);
+        var containerResponse = Response.FromValue(BlobsModelFactory.BlobContainerInfo(default(ETag), default(DateTimeOffset)), containerRawResponse);
         mockContainerClient.Setup(c => c.CreateIfNotExistsAsync(
             PublicAccessType.Blob,
             It.IsAny<IDictionary<string, string>>(),
             default,
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockContainerResponse.Object);
-
-        var mockAccessPolicyResponse = new Mock<Response<BlobContainerInfo>>();
-        mockAccessPolicyResponse.Setup(r => r.Value).Returns(mockBlobContainerInfo.Object);
-        mockAccessPolicyResponse.Setup(r => r.GetRawResponse()).Returns(mockResponse.Object);
+            .ReturnsAsync(containerResponse);
 
         mockContainerClient.Setup(c => c.SetAccessPolicyAsync(
             PublicAccessType.Blob,
             It.IsAny<IEnumerable<BlobSignedIdentifier>>(),
             It.IsAny<BlobRequestConditions>(),
             It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockAccessPolicyResponse.Object);
+            .ReturnsAsync(containerResponse);
 
         return mockContainerClient;
     }

@@ -1,4 +1,4 @@
-using Azure.Storage.Blobs;
+using Azure;
 using Azure.Storage.Blobs.Models;
 using FluentAssertions;
 using HockeyPickup.Api.Data.Repositories;
@@ -7,7 +7,6 @@ using HockeyPickup.Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Azure;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;
 
@@ -48,10 +47,11 @@ public class CalendarServiceTests
             .Setup(x => x.Uri)
             .Returns(new Uri("https://test.storage.com/calendars/hockey_pickup.ics"));
 
-        var mockResponse = new Mock<Response<BlobContainerInfo>>();
+        var rawResponse = default(Azure.Response);
+        var containerResponse = Response.FromValue(BlobsModelFactory.BlobContainerInfo(default(ETag), default(DateTimeOffset)), rawResponse);
         _mockContainerClient
             .Setup(x => x.CreateIfNotExistsAsync(It.IsAny<PublicAccessType>(), It.IsAny<Dictionary<string, string>>(), It.IsAny<BlobContainerEncryptionScopeOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockResponse.Object);
+            .Returns(Task.FromResult(containerResponse));
 
         _calendarService = new CalendarService(
             _mockSessionRepository.Object,
@@ -81,8 +81,9 @@ public class CalendarServiceTests
             .Setup(x => x.GetBasicSessionsAsync())
             .ReturnsAsync(sessions);
 
-        Stream capturedStream = null;
-        var mockUploadResponse = new Mock<Response<BlobContentInfo>>();
+        Stream? capturedStream = null;
+        var rawResponse = default(Azure.Response);
+        var uploadResponse = Response.FromValue(BlobsModelFactory.BlobContentInfo(default(ETag), default(DateTimeOffset), Array.Empty<byte>(), "", 0), rawResponse);
         _mockBlobClient
             .Setup(x => x.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
             .Callback<Stream, bool, CancellationToken>((stream, overwrite, token) =>
@@ -92,7 +93,7 @@ public class CalendarServiceTests
                 stream.CopyTo(ms);
                 capturedStream = ms;
             })
-            .ReturnsAsync(mockUploadResponse.Object);
+            .Returns(Task.FromResult(uploadResponse));
 
         // Act
         var result = await _calendarService.RebuildCalendarAsync();
@@ -143,10 +144,11 @@ public class CalendarServiceTests
             .Setup(x => x.GetBasicSessionsAsync())
             .ReturnsAsync(sessions);
 
-        var mockUploadResponse = new Mock<Response<BlobContentInfo>>();
+        var rawResponse = default(Azure.Response);
+        var uploadResponse = Response.FromValue(BlobsModelFactory.BlobContentInfo(default(ETag), default(DateTimeOffset), Array.Empty<byte>(), "", 0), rawResponse);
         _mockBlobClient
             .Setup(x => x.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockUploadResponse.Object);
+            .Returns(Task.FromResult(uploadResponse));
 
         // Act
         var result = await _calendarService.RebuildCalendarAsync();
@@ -195,10 +197,11 @@ public class CalendarServiceTests
             .Setup(x => x.GetBasicSessionsAsync())
             .ReturnsAsync(new List<SessionBasicResponse>());
 
-        var mockUploadResponse = new Mock<Response<BlobContentInfo>>();
+        var rawResponse = default(Azure.Response);
+        var uploadResponse = Response.FromValue(BlobsModelFactory.BlobContentInfo(default(ETag), default(DateTimeOffset), Array.Empty<byte>(), "", 0), rawResponse);
         _mockBlobClient
             .Setup(x => x.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockUploadResponse.Object);
+            .Returns(Task.FromResult(uploadResponse));
 
         // Act
         var result = await _calendarService.RebuildCalendarAsync();
@@ -298,8 +301,9 @@ public class CalendarServiceTests
             .Setup(x => x.GetBasicSessionsAsync())
             .ReturnsAsync(sessions);
 
-        Stream capturedStream = null;
-        var mockUploadResponse = new Mock<Response<BlobContentInfo>>();
+        Stream? capturedStream = null;
+        var rawResponse = default(Azure.Response);
+        var uploadResponse = Response.FromValue(BlobsModelFactory.BlobContentInfo(default(ETag), default(DateTimeOffset), Array.Empty<byte>(), "", 0), rawResponse);
         _mockBlobClient
             .Setup(x => x.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
             .Callback<Stream, bool, CancellationToken>((stream, overwrite, token) =>
@@ -309,7 +313,7 @@ public class CalendarServiceTests
                 stream.CopyTo(ms);
                 capturedStream = ms;
             })
-            .ReturnsAsync(mockUploadResponse.Object);
+            .Returns(Task.FromResult(uploadResponse));
 
         // Act
         var result = await _calendarService.RebuildCalendarAsync();
@@ -342,8 +346,9 @@ public class CalendarServiceTests
             .Setup(x => x.GetBasicSessionsAsync())
             .ReturnsAsync(sessions);
 
-        Stream capturedStream = null;
-        var mockUploadResponse = new Mock<Response<BlobContentInfo>>();
+        Stream? capturedStream = null;
+        var rawResponse = default(Azure.Response);
+        var uploadResponse = Response.FromValue(BlobsModelFactory.BlobContentInfo(default(ETag), default(DateTimeOffset), Array.Empty<byte>(), "", 0), rawResponse);
         _mockBlobClient
             .Setup(x => x.UploadAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()))
             .Callback<Stream, bool, CancellationToken>((stream, overwrite, token) =>
@@ -353,7 +358,7 @@ public class CalendarServiceTests
                 stream.CopyTo(ms);
                 capturedStream = ms;
             })
-            .ReturnsAsync(mockUploadResponse.Object);
+            .Returns(Task.FromResult(uploadResponse));
 
         // Act
         var result = await _calendarService.RebuildCalendarAsync();

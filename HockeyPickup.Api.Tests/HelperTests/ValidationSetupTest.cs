@@ -1,11 +1,6 @@
 using HockeyPickup.Api.Helpers;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Routing;
 using FluentAssertions;
 
 namespace HockeyPickup.Api.Tests.HelperTests;

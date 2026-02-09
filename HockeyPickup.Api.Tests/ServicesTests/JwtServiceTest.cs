@@ -3,8 +3,6 @@ using FluentAssertions;
 using System.Security.Claims;
 using HockeyPickup.Api.Services;
 using Microsoft.Extensions.Configuration;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 namespace HockeyPickup.Api.Tests.ServicesTests;

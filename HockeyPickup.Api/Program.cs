@@ -16,9 +16,9 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
@@ -127,19 +127,10 @@ public class Program
                 BearerFormat = "JWT",
                 Scheme = "Bearer"
             });
-            o.AddSecurityRequirement(new OpenApiSecurityRequirement
+            o.AddSecurityRequirement(document =>
             {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    new string[] { }
-                }
+                var schemeRef = new OpenApiSecuritySchemeReference("Bearer", document, "");
+                return new OpenApiSecurityRequirement { [schemeRef] = [] };
             });
             o.OperationFilter<AuthorizeCheckOperationFilter>();
         });

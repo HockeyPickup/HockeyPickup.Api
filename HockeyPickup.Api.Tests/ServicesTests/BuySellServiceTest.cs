@@ -7,7 +7,6 @@ using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

@@ -1,7 +1,6 @@
 using FluentAssertions;
 using HockeyPickup.Api.Data.Entities;
 using HockeyPickup.Api.Helpers;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace HockeyPickup.Api.Tests.ExtensionTests;

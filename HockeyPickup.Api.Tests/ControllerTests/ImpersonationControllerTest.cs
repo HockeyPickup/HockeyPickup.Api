@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using Moq;
 using FluentAssertions;
 using HockeyPickup.Api.Controllers;
@@ -6,7 +5,6 @@ using HockeyPickup.Api.Services;
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Models.Requests;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
 using HockeyPickup.Api.Helpers;
 
 namespace HockeyPickup.Api.Tests.ControllerTests;

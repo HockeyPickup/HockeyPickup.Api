@@ -6,7 +6,6 @@ using HockeyPickup.Api.Models.Responses;
 using Microsoft.Extensions.Logging;
 using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Data.Context;
-using Microsoft.AspNetCore.Identity;
 using System.Reflection;
 
 namespace HockeyPickup.Api.Tests.DataRepositoryTests;
@@ -151,14 +150,13 @@ public partial class UserRepositoryTest
     private readonly Mock<ILogger<UserRepository>> _mockLogger;
     private readonly HockeyPickupContext _context;
     private readonly UserRepository _repository;
-    private static int _dbCounter;
 
     public UserRepositoryTest()
     {
         _mockLogger = new Mock<ILogger<UserRepository>>();
 
         var optionsBuilder = new DbContextOptionsBuilder<HockeyPickupContext>();
-        optionsBuilder.UseInMemoryDatabase($"HockeyPickupTest_{Interlocked.Increment(ref _dbCounter)}");
+        optionsBuilder.UseInMemoryDatabase($"UserTest_{Guid.NewGuid()}");
 
         _context = new UserTestHockeyPickupContext(optionsBuilder.Options);
         _context.Users.AddRange(new[]

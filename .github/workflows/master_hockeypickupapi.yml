@@ -9,7 +9,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: HockeyPickupApi
   AZURE_WEBAPP_PACKAGE_PATH: HockeyPickup.Api\publish
-  DOTNET_CORE_VERSION: 9.x
+  DOTNET_CORE_VERSION: 10.x
   WORKING_DIRECTORY: HockeyPickup.Api
 
 jobs:
