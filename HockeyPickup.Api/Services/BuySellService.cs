@@ -5,6 +5,7 @@ using HockeyPickup.Api.Models.Domain;
 using HockeyPickup.Api.Models.Requests;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.AspNetCore.Identity;
+using System.Collections.Concurrent;
 
 namespace HockeyPickup.Api.Services;
 
@@ -35,6 +36,10 @@ public class BuySellService : IBuySellService
     private readonly ILogger<BuySellService> _logger;
     private readonly ISubscriptionHandler _subscriptionHandler;
     private readonly IUserRepository _userRepository;
+    private static readonly ConcurrentDictionary<int, SemaphoreSlim> _sessionBuySellLocks = new();
+
+    private static SemaphoreSlim GetSessionBuySellLock(int sessionId)
+        => _sessionBuySellLocks.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
 
     public BuySellService(
         UserManager<AspNetUser> userManager,
@@ -77,75 +82,98 @@ public class BuySellService : IBuySellService
             // - User exists and is allowed to buy
             // - Buy window is open
             // - No conflicting BuySells exist
-            var session = await _sessionRepository.GetSessionAsync(request.SessionId);
-            var buyer = await _userManager.FindByIdAsync(userId);
 
-            // Look for matching sell BuySells
-            var matchingSell = await _buySellRepository.FindMatchingSellBuySellAsync(request.SessionId);
-
-            BuySell buySell, result;
-            string message;
-
-            if (matchingSell != null)
+            // Acquire a per-session lock so concurrent buy requests cannot simultaneously claim
+            // the same pending sell record, which would corrupt roster state.
+            var sessionLock = GetSessionBuySellLock(request.SessionId);
+            await sessionLock.WaitAsync();
+            try
             {
-                // Get seller's details for team assignment
-                var seller = await _userManager.FindByIdAsync(matchingSell.SellerUserId);
-                if (seller == null)
-                    return ServiceResult<BuySellResponse>.CreateFailure("Seller not found");
+                var session = await _sessionRepository.GetSessionAsync(request.SessionId);
+                var buyer = await _userManager.FindByIdAsync(userId);
 
-                // Get seller's current roster entry to determine team
-                var sellerRoster = session.CurrentRosters?.FirstOrDefault(r => r.UserId == seller.Id);
-                if (sellerRoster == null)
-                    return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
+                // Re-validate state-dependent conditions inside the lock to close the TOCTOU gap:
+                // two concurrent requests from the same user can both pass CanBuyAsync before either
+                // writes anything, then enter here sequentially and both create records.
+                var userBuySellsReCheck = await _buySellRepository.GetUserBuySellsAsync(request.SessionId, userId);
+                if (userBuySellsReCheck.Any(t => t.BuyerUserId == userId && t.SellerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You already have an active Buy for this session");
+                if (userBuySellsReCheck.Any(t => t.SellerUserId == userId && t.BuyerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You have an active Sell for this session");
+                if (session.CurrentRosters?.Any(r => r.UserId == userId && r.IsPlaying) == true)
+                    return ServiceResult<BuySellResponse>.CreateFailure("You are already on the roster for this session");
 
-                // Matched with existing sell BuySell
-                buySell = matchingSell;
-                buySell.BuyerUserId = userId;
-                buySell.UpdateByUserId = userId;
-                buySell.UpdateDateTime = DateTime.UtcNow;
-                buySell.BuyerNote = request.Note;
+                // Look for matching sell BuySells
+                var matchingSell = await _buySellRepository.FindMatchingSellBuySellAsync(request.SessionId);
 
-                message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}. Team Assignment: {matchingSell.TeamAssignment}";
+                BuySell buySell, result;
+                string message;
 
-                result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
-
-                // Add buyer as playing to SessionRoster
-                session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buyer.PositionPreference, buySell.BuySellId);
-
-                // Send a message to Service Bus that a player bought their spot from a seller
-                await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller, matchingSell.TeamAssignment);
-            }
-            else
-            {
-                // Create new buy BuySell
-                buySell = new BuySell
+                if (matchingSell != null)
                 {
-                    SessionId = request.SessionId,
-                    BuyerUserId = userId,
-                    TeamAssignment = TeamAssignment.TBD,
-                    CreateByUserId = userId,
-                    UpdateByUserId = userId,
-                    CreateDateTime = DateTime.UtcNow,
-                    UpdateDateTime = DateTime.UtcNow,
-                    BuyerNote = request.Note,
-                    Price = session.Cost,
-                    Buyer = buyer,
-                    PaymentSent = false,
-                    PaymentReceived = false,
-                    SellerNoteFlagged = false,
-                    BuyerNoteFlagged = false,
-                    PaymentMethod = null
-                };
+                    // Get seller's details for team assignment
+                    var seller = await _userManager.FindByIdAsync(matchingSell.SellerUserId);
+                    if (seller == null)
+                        return ServiceResult<BuySellResponse>.CreateFailure("Seller not found");
 
-                message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
+                    // Get seller's current roster entry to determine team
+                    var sellerRoster = session.CurrentRosters?.FirstOrDefault(r => r.UserId == seller.Id);
+                    if (sellerRoster == null)
+                        return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
 
-                result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+                    // Matched with existing sell BuySell
+                    buySell = matchingSell;
+                    buySell.BuyerUserId = userId;
+                    buySell.UpdateByUserId = userId;
+                    buySell.UpdateDateTime = DateTime.UtcNow;
+                    buySell.BuyerNote = request.Note;
 
-                // Send a message to Service Bus that a player added themselves to buyer queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", session.SessionId, session.SessionDate, buyer, null, null);
+                    message = $"{buyer.FirstName} {buyer.LastName} BOUGHT spot from seller: {matchingSell.Seller.FirstName} {matchingSell.Seller.LastName}. Team Assignment: {matchingSell.TeamAssignment}";
+
+                    result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+                    // Add buyer as playing to SessionRoster
+                    session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buyer.PositionPreference, buySell.BuySellId);
+
+                    // Send a message to Service Bus that a player bought their spot from a seller
+                    await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller, matchingSell.TeamAssignment);
+                }
+                else
+                {
+                    // Create new buy BuySell
+                    buySell = new BuySell
+                    {
+                        SessionId = request.SessionId,
+                        BuyerUserId = userId,
+                        TeamAssignment = TeamAssignment.TBD,
+                        CreateByUserId = userId,
+                        UpdateByUserId = userId,
+                        CreateDateTime = DateTime.UtcNow,
+                        UpdateDateTime = DateTime.UtcNow,
+                        BuyerNote = request.Note,
+                        Price = session.Cost,
+                        Buyer = buyer,
+                        PaymentSent = false,
+                        PaymentReceived = false,
+                        SellerNoteFlagged = false,
+                        BuyerNoteFlagged = false,
+                        PaymentMethod = null
+                    };
+
+                    message = $"{buyer.FirstName} {buyer.LastName} added to BUYING queue";
+
+                    result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+
+                    // Send a message to Service Bus that a player added themselves to buyer queue
+                    await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", session.SessionId, session.SessionDate, buyer, null, null);
+                }
+
+                return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
             }
-
-            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
+            finally
+            {
+                sessionLock.Release();
+            }
         }
         catch (Exception ex)
         {
@@ -175,79 +203,100 @@ public class BuySellService : IBuySellService
             // - Session exists and is valid
             // - User exists and is on the roster
             // - No conflicting BuySells exist
-            var session = await _sessionRepository.GetSessionAsync(request.SessionId);
-            var seller = await _userManager.FindByIdAsync(userId);
 
-            // Get seller's current roster entry to determine team
-            var sellerRoster = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
-            if (sellerRoster == null)
+            // Acquire a per-session lock so concurrent sell requests cannot simultaneously claim
+            // the same pending buy record, which would corrupt roster state.
+            var sessionLock = GetSessionBuySellLock(request.SessionId);
+            await sessionLock.WaitAsync();
+            try
             {
-                return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
-            }
+                var session = await _sessionRepository.GetSessionAsync(request.SessionId);
+                var seller = await _userManager.FindByIdAsync(userId);
 
-            // Look for matching buy BuySells
-            var matchingBuy = await _buySellRepository.FindMatchingBuyBuySellAsync(request.SessionId);
-
-            BuySell buySell, result;
-            string message;
-
-            if (matchingBuy != null)
-            {
-                // Matched with existing buy BuySell
-                buySell = matchingBuy;
-                buySell.SellerUserId = userId;
-                buySell.UpdateByUserId = userId;
-                buySell.UpdateDateTime = DateTime.UtcNow;
-                buySell.TeamAssignment = sellerRoster.TeamAssignment;
-                buySell.SellerNote = request.Note;
-
-                message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}. Team Assignment: {matchingBuy.TeamAssignment}";
-
-                result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
-
-                // Update SessionRoster to mark seller as not playing
-                session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
-
-                // Add buyer as playing to SessionRoster
-                session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buySell.Buyer.PositionPreference, buySell.BuySellId);
-
-                // Send a message to Service Bus that a player sold their spot to a buyer
-                await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller, matchingBuy.TeamAssignment);
-            }
-            else
-            {
-                // Create new sell BuySell
-                buySell = new BuySell
+                // Get seller's current roster entry to determine team
+                var sellerRoster = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
+                if (sellerRoster == null)
                 {
-                    SessionId = request.SessionId,
-                    SellerUserId = userId,
-                    CreateByUserId = userId,
-                    UpdateByUserId = userId,
-                    CreateDateTime = DateTime.UtcNow,
-                    UpdateDateTime = DateTime.UtcNow,
-                    SellerNote = request.Note,
-                    Price = session.Cost,
-                    TeamAssignment = sellerRoster.TeamAssignment,
-                    Seller = seller,
-                    PaymentSent = false,
-                    PaymentReceived = false,
-                    SellerNoteFlagged = false,
-                    BuyerNoteFlagged = false,
-                    PaymentMethod = null
-                };
+                    return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
+                }
 
-                message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
+                // Re-validate state-dependent conditions inside the lock to close the TOCTOU gap:
+                // two concurrent requests from the same user can both pass CanSellAsync before either
+                // writes anything, then enter here sequentially and both create records.
+                var userBuySellsReCheck = await _buySellRepository.GetUserBuySellsAsync(request.SessionId, userId);
+                if (userBuySellsReCheck.Any(t => t.BuyerUserId == userId && t.SellerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You have an active Buy for this session");
+                if (userBuySellsReCheck.Any(t => t.SellerUserId == userId && t.BuyerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You already have an active Sell for this session");
 
-                result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+                // Look for matching buy BuySells
+                var matchingBuy = await _buySellRepository.FindMatchingBuyBuySellAsync(request.SessionId);
 
-                // Update SessionRoster to mark seller as not playing
-                session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
+                BuySell buySell, result;
+                string message;
 
-                // Send a message to Service Bus that a player added themselves to selling queue
-                await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller, null);
+                if (matchingBuy != null)
+                {
+                    // Matched with existing buy BuySell
+                    buySell = matchingBuy;
+                    buySell.SellerUserId = userId;
+                    buySell.UpdateByUserId = userId;
+                    buySell.UpdateDateTime = DateTime.UtcNow;
+                    buySell.TeamAssignment = sellerRoster.TeamAssignment;
+                    buySell.SellerNote = request.Note;
+
+                    message = $"{seller.FirstName} {seller.LastName} SOLD spot to buyer: {matchingBuy.Buyer.FirstName} {matchingBuy.Buyer.LastName}. Team Assignment: {matchingBuy.TeamAssignment}";
+
+                    result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+                    // Update SessionRoster to mark seller as not playing
+                    session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
+
+                    // Add buyer as playing to SessionRoster
+                    session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buySell.Buyer.PositionPreference, buySell.BuySellId);
+
+                    // Send a message to Service Bus that a player sold their spot to a buyer
+                    await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller, matchingBuy.TeamAssignment);
+                }
+                else
+                {
+                    // Create new sell BuySell
+                    buySell = new BuySell
+                    {
+                        SessionId = request.SessionId,
+                        SellerUserId = userId,
+                        CreateByUserId = userId,
+                        UpdateByUserId = userId,
+                        CreateDateTime = DateTime.UtcNow,
+                        UpdateDateTime = DateTime.UtcNow,
+                        SellerNote = request.Note,
+                        Price = session.Cost,
+                        TeamAssignment = sellerRoster.TeamAssignment,
+                        Seller = seller,
+                        PaymentSent = false,
+                        PaymentReceived = false,
+                        SellerNoteFlagged = false,
+                        BuyerNoteFlagged = false,
+                        PaymentMethod = null
+                    };
+
+                    message = $"{seller.FirstName} {seller.LastName} added to SELLING queue";
+
+                    result = await _buySellRepository.CreateBuySellAsync(buySell, message);
+
+                    // Update SessionRoster to mark seller as not playing
+                    session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
+
+                    // Send a message to Service Bus that a player added themselves to selling queue
+                    await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller, null);
+                }
+
+                return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
             }
-
-            return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
+            finally
+            {
+                sessionLock.Release();
+            }
         }
         catch (Exception ex)
         {
