@@ -92,6 +92,17 @@ public class BuySellService : IBuySellService
                 var session = await _sessionRepository.GetSessionAsync(request.SessionId);
                 var buyer = await _userManager.FindByIdAsync(userId);
 
+                // Re-validate state-dependent conditions inside the lock to close the TOCTOU gap:
+                // two concurrent requests from the same user can both pass CanBuyAsync before either
+                // writes anything, then enter here sequentially and both create records.
+                var userBuySellsReCheck = await _buySellRepository.GetUserBuySellsAsync(request.SessionId, userId);
+                if (userBuySellsReCheck.Any(t => t.BuyerUserId == userId && t.SellerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You already have an active Buy for this session");
+                if (userBuySellsReCheck.Any(t => t.SellerUserId == userId && t.BuyerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You have an active Sell for this session");
+                if (session.CurrentRosters?.Any(r => r.UserId == userId && r.IsPlaying) == true)
+                    return ServiceResult<BuySellResponse>.CreateFailure("You are already on the roster for this session");
+
                 // Look for matching sell BuySells
                 var matchingSell = await _buySellRepository.FindMatchingSellBuySellAsync(request.SessionId);
 
@@ -208,6 +219,15 @@ public class BuySellService : IBuySellService
                 {
                     return ServiceResult<BuySellResponse>.CreateFailure("Seller not found in session roster");
                 }
+
+                // Re-validate state-dependent conditions inside the lock to close the TOCTOU gap:
+                // two concurrent requests from the same user can both pass CanSellAsync before either
+                // writes anything, then enter here sequentially and both create records.
+                var userBuySellsReCheck = await _buySellRepository.GetUserBuySellsAsync(request.SessionId, userId);
+                if (userBuySellsReCheck.Any(t => t.BuyerUserId == userId && t.SellerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You have an active Buy for this session");
+                if (userBuySellsReCheck.Any(t => t.SellerUserId == userId && t.BuyerUserId == null))
+                    return ServiceResult<BuySellResponse>.CreateFailure("You already have an active Sell for this session");
 
                 // Look for matching buy BuySells
                 var matchingBuy = await _buySellRepository.FindMatchingBuyBuySellAsync(request.SessionId);

@@ -3058,5 +3058,201 @@ public class BuySellServiceTests
         _mockBuySellRepository.Verify(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
         _mockBuySellRepository.Verify(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
     }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_TocTouReCheck_Fails_WhenActiveBuyFoundInsideLock()
+    {
+        // Arrange — unique session ID avoids static-lock contention with other tests
+        var sessionId = 104;
+        var userId = "tocTouBuyer1";
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse(sessionId);
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+
+        // First call (CanBuyAsync pre-check) returns empty → allowed; second call (inside lock) finds duplicate → rejected
+        var activeBuy = new BuySell
+        {
+            BuySellId = 300, SessionId = sessionId, BuyerUserId = userId, SellerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Buyer = user, Session = CreateTestSession(sessionId),
+            CreateByUserId = userId, UpdateByUserId = userId
+        };
+        _mockBuySellRepository.SetupSequence(x => x.GetUserBuySellsAsync(sessionId, userId))
+            .ReturnsAsync(new List<BuySell>())
+            .ReturnsAsync(new List<BuySell> { activeBuy });
+
+        // Act
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, new BuyRequest { SessionId = sessionId, Note = "test" });
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("You already have an active Buy for this session");
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_TocTouReCheck_Fails_WhenActiveSellFoundInsideLock()
+    {
+        var sessionId = 105;
+        var userId = "tocTouBuyer2";
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse(sessionId);
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+
+        // Include a non-matching element first so the lambda evaluates SellerUserId != userId (false branch of &&)
+        var otherUserSell = new BuySell
+        {
+            BuySellId = 400, SessionId = sessionId, SellerUserId = "anotherUser", BuyerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Session = CreateTestSession(sessionId),
+            CreateByUserId = "anotherUser", UpdateByUserId = "anotherUser"
+        };
+        var activeSell = new BuySell
+        {
+            BuySellId = 301, SessionId = sessionId, SellerUserId = userId, BuyerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Seller = user, Session = CreateTestSession(sessionId),
+            CreateByUserId = userId, UpdateByUserId = userId
+        };
+        _mockBuySellRepository.SetupSequence(x => x.GetUserBuySellsAsync(sessionId, userId))
+            .ReturnsAsync(new List<BuySell>())
+            .ReturnsAsync(new List<BuySell> { otherUserSell, activeSell });
+
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, new BuyRequest { SessionId = sessionId, Note = "test" });
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("You have an active Sell for this session");
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_TocTouReCheck_Fails_WhenUserAppearsOnRosterInsideLock()
+    {
+        var sessionId = 106;
+        var userId = "tocTouBuyer3";
+        var user = CreateTestUser(userId);
+
+        // First GetSessionAsync call (CanBuyAsync): user not on roster → pre-check passes
+        var sessionEmptyRoster = CreateTestSessionDetailedResponse(sessionId);
+        // Second GetSessionAsync call (inside lock): user now on roster → re-check triggers
+        var sessionWithRoster = CreateTestSessionDetailedResponse(sessionId);
+        sessionWithRoster.CurrentRosters = new List<RosterPlayer>
+        {
+            new RosterPlayer
+            {
+                UserId = userId, TeamAssignment = TeamAssignment.Light, IsPlaying = true,
+                FirstName = "Test", LastName = "User", Email = "test@example.com",
+                Rating = 1.0m, Position = PositionPreference.Forward,
+                PlayerStatus = PlayerStatus.Regular, PhotoUrl = null!, IsRegular = true,
+                SessionId = sessionId, SessionRosterId = 1, JoinedDateTime = DateTime.UtcNow,
+                CurrentPosition = "Forward", LastBuySellId = null, Preferred = false, PreferredPlus = false
+            }
+        };
+
+        _mockSessionRepository.SetupSequence(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(sessionEmptyRoster)
+            .ReturnsAsync(sessionWithRoster);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(sessionId, userId))
+            .ReturnsAsync(new List<BuySell>());
+
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, new BuyRequest { SessionId = sessionId, Note = "test" });
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("You are already on the roster for this session");
+    }
+
+    [Fact]
+    public async Task ProcessSellRequestAsync_TocTouReCheck_Fails_WhenActiveBuyFoundInsideLock()
+    {
+        var sessionId = 107;
+        var userId = "tocTouSeller1";
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse(sessionId);
+        session.CurrentRosters = new List<RosterPlayer>
+        {
+            new RosterPlayer
+            {
+                UserId = userId, TeamAssignment = TeamAssignment.Light, IsPlaying = true,
+                FirstName = "Test", LastName = "User", Email = "test@example.com",
+                Rating = 1.0m, Position = PositionPreference.Forward,
+                PlayerStatus = PlayerStatus.Regular, PhotoUrl = null!, IsRegular = true,
+                SessionId = sessionId, SessionRosterId = 1, JoinedDateTime = DateTime.UtcNow,
+                CurrentPosition = "Forward", LastBuySellId = null, Preferred = false, PreferredPlus = false
+            }
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+
+        var activeBuy = new BuySell
+        {
+            BuySellId = 302, SessionId = sessionId, BuyerUserId = userId, SellerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Buyer = user, Session = CreateTestSession(sessionId),
+            CreateByUserId = userId, UpdateByUserId = userId
+        };
+        _mockBuySellRepository.SetupSequence(x => x.GetUserBuySellsAsync(sessionId, userId))
+            .ReturnsAsync(new List<BuySell>())
+            .ReturnsAsync(new List<BuySell> { activeBuy });
+
+        var result = await _buySellService.ProcessSellRequestAsync(userId, new SellRequest { SessionId = sessionId, Note = "test" });
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("You have an active Buy for this session");
+    }
+
+    [Fact]
+    public async Task ProcessSellRequestAsync_TocTouReCheck_Fails_WhenActiveSellFoundInsideLock()
+    {
+        var sessionId = 108;
+        var userId = "tocTouSeller2";
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse(sessionId);
+        session.CurrentRosters = new List<RosterPlayer>
+        {
+            new RosterPlayer
+            {
+                UserId = userId, TeamAssignment = TeamAssignment.Light, IsPlaying = true,
+                FirstName = "Test", LastName = "User", Email = "test@example.com",
+                Rating = 1.0m, Position = PositionPreference.Forward,
+                PlayerStatus = PlayerStatus.Regular, PhotoUrl = null!, IsRegular = true,
+                SessionId = sessionId, SessionRosterId = 1, JoinedDateTime = DateTime.UtcNow,
+                CurrentPosition = "Forward", LastBuySellId = null, Preferred = false, PreferredPlus = false
+            }
+        };
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+
+        // Include a non-matching element first so the lambda evaluates SellerUserId != userId (false branch of &&)
+        var otherUserSell = new BuySell
+        {
+            BuySellId = 401, SessionId = sessionId, SellerUserId = "anotherUser", BuyerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Session = CreateTestSession(sessionId),
+            CreateByUserId = "anotherUser", UpdateByUserId = "anotherUser"
+        };
+        var activeSell = new BuySell
+        {
+            BuySellId = 303, SessionId = sessionId, SellerUserId = userId, BuyerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Seller = user, Session = CreateTestSession(sessionId),
+            CreateByUserId = userId, UpdateByUserId = userId
+        };
+        _mockBuySellRepository.SetupSequence(x => x.GetUserBuySellsAsync(sessionId, userId))
+            .ReturnsAsync(new List<BuySell>())
+            .ReturnsAsync(new List<BuySell> { otherUserSell, activeSell });
+
+        var result = await _buySellService.ProcessSellRequestAsync(userId, new SellRequest { SessionId = sessionId, Note = "test" });
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("You already have an active Sell for this session");
+    }
 }
 #pragma warning restore IDE0045 // Convert to conditional expression
