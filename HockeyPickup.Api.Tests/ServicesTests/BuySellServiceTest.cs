@@ -2850,5 +2850,213 @@ public class BuySellServiceTests
             result.Data.Reason.Should().Be("You must be on the roster to sell your spot");
         }
     }
+    [Fact]
+    public async Task ProcessBuyRequestAsync_ConcurrentBuyers_OnlyOneClaimsTheSell()
+    {
+        // Arrange — unique session ID avoids static-lock contention with other tests
+        var sessionId = 97;
+        var buyer1Id = "concBuyer1";
+        var buyer2Id = "concBuyer2";
+        var sellerId = "concSeller1";
+
+        var buyer1 = CreateTestUser(buyer1Id);
+        var buyer2 = CreateTestUser(buyer2Id);
+        var seller = CreateTestUser(sellerId);
+        var buyer1Response = CreateTestUserResponse(buyer1Id);
+        var buyer2Response = CreateTestUserResponse(buyer2Id);
+        var sellerResponse = CreateTestUserResponse(sellerId);
+
+        var session = CreateTestSessionDetailedResponse(sessionId);
+        session.CurrentRosters = new List<RosterPlayer>
+        {
+            new RosterPlayer
+            {
+                UserId = sellerId, TeamAssignment = TeamAssignment.Light, IsPlaying = true,
+                FirstName = "Test", LastName = "Seller", Email = "seller@test.com",
+                Rating = 1.0m, Position = PositionPreference.Forward,
+                PlayerStatus = PlayerStatus.Regular, PhotoUrl = null!, IsRegular = true,
+                SessionId = sessionId, SessionRosterId = 1, JoinedDateTime = DateTime.UtcNow,
+                CurrentPosition = "Forward", LastBuySellId = null, Preferred = false, PreferredPlus = false
+            }
+        };
+
+        var existingSell = new BuySell
+        {
+            BuySellId = 100, SessionId = sessionId, SellerUserId = sellerId, BuyerUserId = null,
+            TeamAssignment = TeamAssignment.Light, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Seller = seller, Session = CreateTestSession(sessionId),
+            CreateByUserId = sellerId, UpdateByUserId = sellerId
+        };
+        var matchedBuySell = new BuySell
+        {
+            BuySellId = 100, SessionId = sessionId, SellerUserId = sellerId, BuyerUserId = buyer1Id,
+            TeamAssignment = TeamAssignment.Light, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Seller = seller, Buyer = buyer1,
+            Session = CreateTestSession(sessionId), CreateByUserId = buyer1Id, UpdateByUserId = buyer1Id
+        };
+        var queuedBuySell = new BuySell
+        {
+            BuySellId = 101, SessionId = sessionId, BuyerUserId = buyer2Id, SellerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Buyer = buyer2, Session = CreateTestSession(sessionId),
+            CreateByUserId = buyer2Id, UpdateByUserId = buyer2Id
+        };
+
+        // The key: first lock-holder finds the sell, second finds nothing (sell already claimed)
+        _mockBuySellRepository.SetupSequence(x => x.FindMatchingSellBuySellAsync(sessionId))
+            .ReturnsAsync(existingSell)
+            .ReturnsAsync((BuySell?) null);
+
+        _userManager.Setup(x => x.FindByIdAsync(buyer1Id)).ReturnsAsync(buyer1);
+        _userManager.Setup(x => x.FindByIdAsync(buyer2Id)).ReturnsAsync(buyer2);
+        _userManager.Setup(x => x.FindByIdAsync(sellerId)).ReturnsAsync(seller);
+        _userManager.Setup(x => x.IsInRoleAsync(It.IsAny<AspNetUser>(), "Admin")).ReturnsAsync(false);
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.AddOrUpdatePlayerToRosterAsync(
+            sessionId, It.IsAny<string>(), It.IsAny<TeamAssignment>(),
+            It.IsAny<PositionPreference>(), It.IsAny<int>()))
+            .ReturnsAsync(session);
+
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(sessionId, buyer1Id)).ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(sessionId, buyer2Id)).ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(matchedBuySell);
+        _mockBuySellRepository.Setup(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(queuedBuySell);
+        _mockBuySellRepository.Setup(x => x.GetQueuePositionAsync(It.IsAny<int>())).ReturnsAsync(1);
+
+        _mockUserRepository.Setup(x => x.GetUserAsync(buyer1Id)).ReturnsAsync(buyer1Response);
+        _mockUserRepository.Setup(x => x.GetUserAsync(buyer2Id)).ReturnsAsync(buyer2Response);
+        _mockUserRepository.Setup(x => x.GetUserAsync(sellerId)).ReturnsAsync(sellerResponse);
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .ReturnsAsync(new List<UserDetailedResponse> { buyer1Response, buyer2Response });
+
+        _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
+        _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act — two buyers race to claim the one available sell spot
+        var task1 = _buySellService.ProcessBuyRequestAsync(buyer1Id, new BuyRequest { SessionId = sessionId, Note = "Concurrent buy 1" });
+        var task2 = _buySellService.ProcessBuyRequestAsync(buyer2Id, new BuyRequest { SessionId = sessionId, Note = "Concurrent buy 2" });
+        var results = await Task.WhenAll(task1, task2);
+
+        // Assert — both succeed; the lock ensured only one claimed the sell and one was queued
+        results[0].IsSuccess.Should().BeTrue();
+        results[1].IsSuccess.Should().BeTrue();
+        _mockBuySellRepository.Verify(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
+        _mockBuySellRepository.Verify(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessSellRequestAsync_ConcurrentSellers_OnlyOneClaimsTheBuy()
+    {
+        // Arrange — unique session ID avoids static-lock contention with other tests
+        var sessionId = 98;
+        var seller1Id = "concSeller2";
+        var seller2Id = "concSeller3";
+        var buyerId = "concBuyer3";
+
+        var seller1 = CreateTestUser(seller1Id);
+        var seller2 = CreateTestUser(seller2Id);
+        var buyer = CreateTestUser(buyerId);
+        var seller1Response = CreateTestUserResponse(seller1Id);
+        var seller2Response = CreateTestUserResponse(seller2Id);
+        var buyerResponse = CreateTestUserResponse(buyerId);
+
+        var session = CreateTestSessionDetailedResponse(sessionId);
+        session.CurrentRosters = new List<RosterPlayer>
+        {
+            new RosterPlayer
+            {
+                UserId = seller1Id, TeamAssignment = TeamAssignment.Light, IsPlaying = true,
+                FirstName = "Test", LastName = "Seller1", Email = "seller1@test.com",
+                Rating = 1.0m, Position = PositionPreference.Forward,
+                PlayerStatus = PlayerStatus.Regular, PhotoUrl = null!, IsRegular = true,
+                SessionId = sessionId, SessionRosterId = 1, JoinedDateTime = DateTime.UtcNow,
+                CurrentPosition = "Forward", LastBuySellId = null, Preferred = false, PreferredPlus = false
+            },
+            new RosterPlayer
+            {
+                UserId = seller2Id, TeamAssignment = TeamAssignment.Dark, IsPlaying = true,
+                FirstName = "Test", LastName = "Seller2", Email = "seller2@test.com",
+                Rating = 1.0m, Position = PositionPreference.Forward,
+                PlayerStatus = PlayerStatus.Regular, PhotoUrl = null!, IsRegular = true,
+                SessionId = sessionId, SessionRosterId = 2, JoinedDateTime = DateTime.UtcNow,
+                CurrentPosition = "Forward", LastBuySellId = null, Preferred = false, PreferredPlus = false
+            }
+        };
+
+        var existingBuy = new BuySell
+        {
+            BuySellId = 200, SessionId = sessionId, BuyerUserId = buyerId, SellerUserId = null,
+            TeamAssignment = TeamAssignment.TBD, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Buyer = buyer, Session = CreateTestSession(sessionId),
+            CreateByUserId = buyerId, UpdateByUserId = buyerId
+        };
+        var matchedSellBuySell = new BuySell
+        {
+            BuySellId = 200, SessionId = sessionId, BuyerUserId = buyerId, SellerUserId = seller1Id,
+            TeamAssignment = TeamAssignment.Light, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Buyer = buyer, Seller = seller1,
+            Session = CreateTestSession(sessionId), CreateByUserId = seller1Id, UpdateByUserId = seller1Id
+        };
+        var queuedSellBuySell = new BuySell
+        {
+            BuySellId = 201, SessionId = sessionId, SellerUserId = seller2Id, BuyerUserId = null,
+            TeamAssignment = TeamAssignment.Dark, CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow, Seller = seller2, Session = CreateTestSession(sessionId),
+            CreateByUserId = seller2Id, UpdateByUserId = seller2Id
+        };
+
+        // The key: first lock-holder finds the buy, second finds nothing (buy already claimed)
+        _mockBuySellRepository.SetupSequence(x => x.FindMatchingBuyBuySellAsync(sessionId))
+            .ReturnsAsync(existingBuy)
+            .ReturnsAsync((BuySell?) null);
+
+        _userManager.Setup(x => x.FindByIdAsync(seller1Id)).ReturnsAsync(seller1);
+        _userManager.Setup(x => x.FindByIdAsync(seller2Id)).ReturnsAsync(seller2);
+        _userManager.Setup(x => x.FindByIdAsync(buyerId)).ReturnsAsync(buyer);
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(sessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.UpdatePlayerStatusAsync(
+            sessionId, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<DateTime>(), It.IsAny<int>()))
+            .ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.AddOrUpdatePlayerToRosterAsync(
+            sessionId, It.IsAny<string>(), It.IsAny<TeamAssignment>(),
+            It.IsAny<PositionPreference>(), It.IsAny<int>()))
+            .ReturnsAsync(session);
+
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(sessionId, seller1Id)).ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(sessionId, seller2Id)).ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(matchedSellBuySell);
+        _mockBuySellRepository.Setup(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(queuedSellBuySell);
+        _mockBuySellRepository.Setup(x => x.GetQueuePositionAsync(It.IsAny<int>())).ReturnsAsync(1);
+
+        _mockUserRepository.Setup(x => x.GetUserAsync(seller1Id)).ReturnsAsync(seller1Response);
+        _mockUserRepository.Setup(x => x.GetUserAsync(seller2Id)).ReturnsAsync(seller2Response);
+        _mockUserRepository.Setup(x => x.GetUserAsync(buyerId)).ReturnsAsync(buyerResponse);
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync())
+            .ReturnsAsync(new List<UserDetailedResponse> { seller1Response, seller2Response });
+
+        _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
+        _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act — two sellers race to claim the one available buy spot
+        var task1 = _buySellService.ProcessSellRequestAsync(seller1Id, new SellRequest { SessionId = sessionId, Note = "Concurrent sell 1" });
+        var task2 = _buySellService.ProcessSellRequestAsync(seller2Id, new SellRequest { SessionId = sessionId, Note = "Concurrent sell 2" });
+        var results = await Task.WhenAll(task1, task2);
+
+        // Assert — both succeed; the lock ensured only one claimed the buy and one was queued
+        results[0].IsSuccess.Should().BeTrue();
+        results[1].IsSuccess.Should().BeTrue();
+        _mockBuySellRepository.Verify(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
+        _mockBuySellRepository.Verify(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
+    }
 }
 #pragma warning restore IDE0045 // Convert to conditional expression
