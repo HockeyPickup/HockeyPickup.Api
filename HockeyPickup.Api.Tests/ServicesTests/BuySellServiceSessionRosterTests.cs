@@ -53,6 +53,7 @@ public class BuySellServiceSessionRosterTests
     private readonly Mock<ILogger<BuySellService>> _mockLogger;
     private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<IHumanVerificationService> _mockHumanVerificationService;
     private readonly BuySellService _buySellService;
 
     public BuySellServiceSessionRosterTests()
@@ -77,6 +78,16 @@ public class BuySellServiceSessionRosterTests
         _mockLogger = new Mock<ILogger<BuySellService>>();
         _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockHumanVerificationService = new Mock<IHumanVerificationService>();
+        _mockHumanVerificationService
+            .Setup(x => x.VerifyBuySpotAsync(
+                It.IsAny<string?>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult<HumanVerificationResult>.CreateSuccess(new HumanVerificationResult { IsRequired = false }));
 
         _buySellService = new BuySellService(
             _userManager.Object,
@@ -86,7 +97,8 @@ public class BuySellServiceSessionRosterTests
             _mockConfiguration.Object,
             _mockLogger.Object,
             _mockSubscriptionHandler.Object,
-            _mockUserRepository.Object);
+            _mockUserRepository.Object,
+            _mockHumanVerificationService.Object);
 
         // Common ServiceBus setup
         _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");

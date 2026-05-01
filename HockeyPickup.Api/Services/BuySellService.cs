@@ -28,6 +28,8 @@ public interface IBuySellService
 
 public class BuySellService : IBuySellService
 {
+    private const string AdminCanBuyReason = "Admins can buy spots regardless of time window";
+
     private readonly UserManager<AspNetUser> _userManager;
     private readonly ISessionRepository _sessionRepository;
     private readonly IBuySellRepository _buySellRepository;
@@ -36,6 +38,7 @@ public class BuySellService : IBuySellService
     private readonly ILogger<BuySellService> _logger;
     private readonly ISubscriptionHandler _subscriptionHandler;
     private readonly IUserRepository _userRepository;
+    private readonly IHumanVerificationService _humanVerificationService;
     private static readonly ConcurrentDictionary<int, SemaphoreSlim> _sessionBuySellLocks = new();
 
     private static SemaphoreSlim GetSessionBuySellLock(int sessionId)
@@ -49,7 +52,8 @@ public class BuySellService : IBuySellService
         IConfiguration configuration,
         ILogger<BuySellService> logger,
         ISubscriptionHandler subscriptionHandler,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IHumanVerificationService humanVerificationService)
     {
         _userManager = userManager;
         _sessionRepository = sessionRepository;
@@ -59,6 +63,7 @@ public class BuySellService : IBuySellService
         _logger = logger;
         _subscriptionHandler = subscriptionHandler;
         _userRepository = userRepository;
+        _humanVerificationService = humanVerificationService;
     }
 
     public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request)
@@ -83,14 +88,38 @@ public class BuySellService : IBuySellService
             // - Buy window is open
             // - No conflicting BuySells exist
 
+            var session = await _sessionRepository.GetSessionAsync(request.SessionId);
+            if (session == null)
+            {
+                return ServiceResult<BuySellResponse>.CreateFailure("Session not found");
+            }
+
+            var buyer = await _userManager.FindByIdAsync(userId);
+            if (buyer == null)
+            {
+                return ServiceResult<BuySellResponse>.CreateFailure("User not found");
+            }
+
+            var buyWindow = GetApplicableBuyWindow(session, buyer);
+            var enforceBuyWindowFreshness = canBuyResult.Data.Reason != AdminCanBuyReason;
+            var humanVerificationResult = await _humanVerificationService.VerifyBuySpotAsync(
+                request.HumanVerificationToken,
+                userId,
+                request.SessionId,
+                buyWindow,
+                enforceBuyWindowFreshness);
+            if (!humanVerificationResult.IsSuccess)
+            {
+                return ServiceResult<BuySellResponse>.CreateFailure(humanVerificationResult.Message);
+            }
+
             // Acquire a per-session lock so concurrent buy requests cannot simultaneously claim
             // the same pending sell record, which would corrupt roster state.
             var sessionLock = GetSessionBuySellLock(request.SessionId);
             await sessionLock.WaitAsync();
             try
             {
-                var session = await _sessionRepository.GetSessionAsync(request.SessionId);
-                var buyer = await _userManager.FindByIdAsync(userId);
+                session = await _sessionRepository.GetSessionAsync(request.SessionId);
 
                 // Re-validate state-dependent conditions inside the lock to close the TOCTOU gap:
                 // two concurrent requests from the same user can both pass CanBuyAsync before either
@@ -638,29 +667,19 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = true,
-                    Reason = "Admins can buy spots regardless of time window"
+                    Reason = AdminCanBuyReason
                 });
             }
 
             // Check buy window based on user status
-            var user = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
-            DateTime buyWindow;
             string windowType;
+            var buyWindow = GetApplicableBuyWindow(session, buyer);
             if (buyer.PreferredPlus)
-            {
-                buyWindow = session.BuyWindowPreferredPlus;
                 windowType = "Preferred Plus";
-            }
             else if (buyer.Preferred)
-            {
-                buyWindow = session.BuyWindowPreferred;
                 windowType = "Preferred";
-            }
             else
-            {
-                buyWindow = session.BuyWindow;
                 windowType = "Regular";
-            }
 
             if (currentPacificTime < buyWindow)
             {
@@ -685,6 +704,17 @@ public class BuySellService : IBuySellService
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellStatusResponse>.CreateFailure(msg);
         }
+    }
+
+    private static DateTime GetApplicableBuyWindow(SessionDetailedResponse session, AspNetUser buyer)
+    {
+        if (buyer.PreferredPlus)
+            return session.BuyWindowPreferredPlus;
+
+        if (buyer.Preferred)
+            return session.BuyWindowPreferred;
+
+        return session.BuyWindow;
     }
 
     public async Task<ServiceResult<BuySellStatusResponse>> CanSellAsync(string userId, int sessionId)

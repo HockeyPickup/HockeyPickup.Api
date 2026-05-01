@@ -25,6 +25,7 @@ public class BuySellServiceTests
     private readonly Mock<ILogger<BuySellService>> _mockLogger;
     private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<IHumanVerificationService> _mockHumanVerificationService;
     private readonly BuySellService _buySellService;
 
     public BuySellServiceTests()
@@ -49,6 +50,16 @@ public class BuySellServiceTests
         _mockLogger = new Mock<ILogger<BuySellService>>();
         _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockHumanVerificationService = new Mock<IHumanVerificationService>();
+        _mockHumanVerificationService
+            .Setup(x => x.VerifyBuySpotAsync(
+                It.IsAny<string?>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult<HumanVerificationResult>.CreateSuccess(new HumanVerificationResult { IsRequired = false }));
 
         _buySellService = new BuySellService(
             _userManager.Object,
@@ -58,7 +69,8 @@ public class BuySellServiceTests
             _mockConfiguration.Object,
             _mockLogger.Object,
             _mockSubscriptionHandler.Object,
-            _mockUserRepository.Object);
+            _mockUserRepository.Object,
+            _mockHumanVerificationService.Object);
     }
 
     private static AspNetUser CreateTestUser(string userId = "testUser", bool isActive = true)
@@ -257,6 +269,198 @@ public class BuySellServiceTests
         result.Data.Should().NotBeNull();
         result.Data.BuyerUserId.Should().Be(userId);
         _mockBuySellRepository.Verify(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_Fails_WhenHumanVerificationFails()
+    {
+        // Arrange
+        var userId = "testUser";
+        var request = new BuyRequest { SessionId = 1, Note = "Test buy", HumanVerificationToken = "bad-token" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId))
+            .ReturnsAsync(new List<BuySell>());
+        _mockHumanVerificationService
+            .Setup(x => x.VerifyBuySpotAsync(
+                request.HumanVerificationToken,
+                userId,
+                request.SessionId,
+                It.IsAny<DateTime>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult<HumanVerificationResult>.CreateFailure("Human verification failed"));
+
+        // Act
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Human verification failed");
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_DoesNotCreateBuySell_WhenHumanVerificationFails()
+    {
+        // Arrange
+        var userId = "testUser";
+        var request = new BuyRequest { SessionId = 1, Note = "Test buy", HumanVerificationToken = "bad-token" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId))
+            .ReturnsAsync(new List<BuySell>());
+        _mockHumanVerificationService
+            .Setup(x => x.VerifyBuySpotAsync(
+                request.HumanVerificationToken,
+                userId,
+                request.SessionId,
+                It.IsAny<DateTime>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ServiceResult<HumanVerificationResult>.CreateFailure("Human verification failed"));
+
+        // Act
+        await _buySellService.ProcessBuyRequestAsync(userId, request);
+
+        // Assert
+        _mockBuySellRepository.Verify(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Never);
+        _mockBuySellRepository.Verify(x => x.UpdateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_VerifiesHumanToken_BeforeCreatingBuy()
+    {
+        // Arrange
+        var userId = "testUser";
+        var request = new BuyRequest { SessionId = 1, Note = "Test buy", HumanVerificationToken = "fresh-token" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+        var userResponse = CreateTestUserResponse(userId);
+        var callOrder = new List<string>();
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId))
+            .ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.FindMatchingSellBuySellAsync(request.SessionId))
+            .ReturnsAsync((BuySell?)null);
+        _mockUserRepository.Setup(x => x.GetUserAsync(userId)).ReturnsAsync(userResponse);
+        _mockBuySellRepository.Setup(x => x.GetQueuePositionAsync(It.IsAny<int>())).ReturnsAsync(1);
+        _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
+        _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _mockHumanVerificationService
+            .Setup(x => x.VerifyBuySpotAsync(
+                request.HumanVerificationToken,
+                userId,
+                request.SessionId,
+                It.IsAny<DateTime>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .Callback(() => callOrder.Add("verify"))
+            .ReturnsAsync(ServiceResult<HumanVerificationResult>.CreateSuccess(new HumanVerificationResult { IsRequired = true }));
+
+        var mockBuySell = CreateTestBuySell(buyerId: userId);
+        _mockBuySellRepository.Setup(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()))
+            .Callback(() => callOrder.Add("create"))
+            .ReturnsAsync(mockBuySell);
+
+        // Act
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        callOrder.Should().ContainInOrder("verify", "create");
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_PassesHumanVerificationTokenToVerifier()
+    {
+        // Arrange
+        var userId = "testUser";
+        var request = new BuyRequest { SessionId = 1, Note = "Test buy", HumanVerificationToken = "fresh-token" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId))
+            .ReturnsAsync(new List<BuySell>());
+
+        // Act
+        await _buySellService.ProcessBuyRequestAsync(userId, request);
+
+        // Assert
+        _mockHumanVerificationService.Verify(x => x.VerifyBuySpotAsync(
+            "fresh-token",
+            userId,
+            request.SessionId,
+            session.BuyWindow,
+            true,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessSellRequestAsync_DoesNotRequireHumanVerification()
+    {
+        // Arrange
+        var userId = "testUser";
+        var request = new SellRequest { SessionId = 1, Note = "Test sell" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+        var userResponse = CreateTestUserResponse(userId);
+        session.CurrentRosters = CreateFullRosterPlayer(userId);
+
+        _userManager.Setup(x => x.FindByIdAsync(It.Is<string>(id => id == userId))).ReturnsAsync(user);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _mockSessionRepository.Setup(x => x.UpdatePlayerStatusAsync(request.SessionId, userId, It.IsAny<bool>(), It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync(session);
+        _mockBuySellRepository.Setup(x => x.FindMatchingBuyBuySellAsync(request.SessionId)).ReturnsAsync((BuySell?)null);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId))
+            .ReturnsAsync(new List<BuySell>());
+        _mockUserRepository.Setup(x => x.GetUserAsync(userId)).ReturnsAsync(userResponse);
+        _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
+        _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
+        _mockServiceBus.Setup(x => x.SendAsync(
+            It.IsAny<ServiceBusCommsMessage>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockBuySell = CreateTestBuySell(sellerId: userId);
+        _mockBuySellRepository.Setup(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>()))
+            .ReturnsAsync(mockBuySell);
+
+        // Act
+        var result = await _buySellService.ProcessSellRequestAsync(userId, request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _mockHumanVerificationService.Verify(x => x.VerifyBuySpotAsync(
+            It.IsAny<string?>(),
+            It.IsAny<string>(),
+            It.IsAny<int>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<bool>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -3136,9 +3340,10 @@ public class BuySellServiceTests
         var userId = "tocTouBuyer3";
         var user = CreateTestUser(userId);
 
-        // First GetSessionAsync call (CanBuyAsync): user not on roster → pre-check passes
+        // First two GetSessionAsync calls (CanBuyAsync and human verification setup):
+        // user not on roster → pre-check and verification pass.
         var sessionEmptyRoster = CreateTestSessionDetailedResponse(sessionId);
-        // Second GetSessionAsync call (inside lock): user now on roster → re-check triggers
+        // Third GetSessionAsync call (inside lock): user now on roster → re-check triggers.
         var sessionWithRoster = CreateTestSessionDetailedResponse(sessionId);
         sessionWithRoster.CurrentRosters = new List<RosterPlayer>
         {
@@ -3154,6 +3359,7 @@ public class BuySellServiceTests
         };
 
         _mockSessionRepository.SetupSequence(x => x.GetSessionAsync(sessionId))
+            .ReturnsAsync(sessionEmptyRoster)
             .ReturnsAsync(sessionEmptyRoster)
             .ReturnsAsync(sessionWithRoster);
         _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);

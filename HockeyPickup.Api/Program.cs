@@ -148,6 +148,7 @@ public class Program
         builder.Services.AddSingleton(typeof(ILogger), typeof(Logger<Program>));
 
         builder.Services.AddHttpContextAccessor();
+        builder.Services.Configure<BotProtectionOptions>(builder.Configuration.GetSection("BotProtection"));
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<ISessionRepository, SessionRepository>();
@@ -160,6 +161,7 @@ public class Program
         builder.Services.AddScoped<ICalendarService, CalendarService>();
         builder.Services.AddScoped<IBuySellService, BuySellService>();
         builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+        builder.Services.AddHttpClient<IHumanVerificationService, TurnstileHumanVerificationService>();
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();

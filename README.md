@@ -62,6 +62,15 @@ Create a new file at the root of the HockeyPickup.Api project named `appsettings
   "JwtAudience": "https://api.hockeypickup.com/api/",
   "ServiceBusCommsQueueName": "comms-dev",
   "ServiceBusHealthCheckQueueName": "health-dev",
+  "BotProtection": {
+    "Enabled": false,
+    "Provider": "Turnstile",
+    "SecretKey": "",
+    "ExpectedAction": "buy_spot",
+    "ExpectedHostnames": ["app.hockeypickup.com"],
+    "MaxTokenAgeSeconds": 30,
+    "AllowBeforeBuyWindow": false
+  },
   "RegistrationInviteCode": "<InviteCode>",
   "SessionBuyPrice": "27.00",
   "SiteTitle": "Hockey Pickup",
@@ -83,6 +92,28 @@ You'll see output in the console showing the various local URL access points.
 Swagger root [`https://localhost:7042/index.html`](https://localhost:7042/swagger/index.html)
 
 GraphQL root [`https://localhost:7042/api/graphql`](https://localhost:7042/api/graphql)
+
+### Human verification
+
+`POST /BuySell/buy` supports Cloudflare Turnstile verification when `BotProtection:Enabled` is `true`. Keep this disabled until the app deployment is live with `VITE_TURNSTILE_SITE_KEY` configured.
+
+Production Turnstile setup:
+
+```json
+{
+  "BotProtection": {
+    "Enabled": true,
+    "Provider": "Turnstile",
+    "SecretKey": "<Cloudflare Turnstile secret key>",
+    "ExpectedAction": "buy_spot",
+    "ExpectedHostnames": ["app.hockeypickup.com"],
+    "MaxTokenAgeSeconds": 30,
+    "AllowBeforeBuyWindow": false
+  }
+}
+```
+
+Create the Turnstile widget in the Cloudflare dashboard, add `app.hockeypickup.com` plus any staging hostnames, store the site key with the app, and store the secret key with the API.
 
 ## 🧪 Unit Testing
 

@@ -81,6 +81,24 @@ public class BuySellControllerTests
     }
 
     [Fact]
+    public async Task Buy_ValidRequest_PassesHumanVerificationTokenToService()
+    {
+        // Arrange
+        var buyRequest = new BuyRequest { SessionId = 1, Note = "Test buy", HumanVerificationToken = "fresh-token" };
+        var expected = CreateTestBuySellResponse();
+        _mockBuySellService.Setup(s => s.ProcessBuyRequestAsync(TestUserId, buyRequest))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateSuccess(expected));
+
+        // Act
+        await _controller.Buy(buyRequest);
+
+        // Assert
+        _mockBuySellService.Verify(s => s.ProcessBuyRequestAsync(
+            TestUserId,
+            It.Is<BuyRequest>(r => r.HumanVerificationToken == "fresh-token")), Times.Once);
+    }
+
+    [Fact]
     public async Task Buy_InvalidRequest_ReturnsBadRequest()
     {
         // Arrange

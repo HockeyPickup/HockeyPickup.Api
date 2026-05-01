@@ -24,6 +24,14 @@ public class BuyRequest
     [GraphQLName("Note")]
     [GraphQLDescription("Buyer's note for the BuySell")]
     public string? Note { get; set; }
+
+    [Description("Human verification token for protected buy requests")]
+    [MaxLength(2048)]
+    [JsonPropertyName("HumanVerificationToken")]
+    [JsonProperty(nameof(HumanVerificationToken))]
+    [GraphQLName("HumanVerificationToken")]
+    [GraphQLDescription("Human verification token for protected buy requests")]
+    public string? HumanVerificationToken { get; set; }
 }
 
 [GraphQLName("SellRequest")]
