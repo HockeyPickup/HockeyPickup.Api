@@ -161,7 +161,8 @@ public class Program
         builder.Services.AddScoped<ICalendarService, CalendarService>();
         builder.Services.AddScoped<IBuySellService, BuySellService>();
         builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
-        builder.Services.AddHttpClient<IHumanVerificationService, TurnstileHumanVerificationService>();
+        builder.Services.AddHttpClient<IHumanVerificationService, TurnstileHumanVerificationService>(
+            client => client.Timeout = TimeSpan.FromSeconds(10));
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();

@@ -88,6 +88,10 @@ public class BuySellService : IBuySellService
             // - Buy window is open
             // - No conflicting BuySells exist
 
+            // CanBuyAsync above already loaded the session and buyer to validate state.
+            // We reload them here to own the snapshot used to compute the applicable
+            // buy window passed to the human-verification service. The third reload
+            // inside the per-session lock below is the TOCTOU re-check and must remain.
             var session = await _sessionRepository.GetSessionAsync(request.SessionId);
             if (session == null)
             {
