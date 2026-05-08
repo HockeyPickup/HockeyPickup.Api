@@ -125,6 +125,8 @@ public class UserTestHockeyPickupContext : HockeyPickupContext
         modelBuilder.Ignore<IdentityUserToken<string>>();
         modelBuilder.Ignore<IdentityRoleClaim<string>>();
         modelBuilder.Ignore<AspNetRole>();
+        modelBuilder.Ignore<IdentityUserPasskey<string>>();
+        modelBuilder.Ignore<IdentityPasskeyData>();
 
         // Add to OnModelCreating in UserTestHockeyPickupContext
         modelBuilder.Entity<UserPaymentMethod>(entity =>

@@ -24,27 +24,27 @@
     <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.19.0" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
-    <PackageReference Include="HotChocolate.AspNetCore" Version="15.1.12" />
-    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.12" />
-    <PackageReference Include="HotChocolate.Data" Version="15.1.12" />
-    <PackageReference Include="HotChocolate.Types" Version="15.1.12" />
+    <PackageReference Include="HotChocolate.AspNetCore" Version="16.0.0" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="16.0.0" />
+    <PackageReference Include="HotChocolate.Data" Version="16.0.0" />
+    <PackageReference Include="HotChocolate.Types" Version="16.0.0" />
     <PackageReference Include="Ical.Net" Version="5.2.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.OpenApi" Version="3.5.0" />
-    <PackageReference Include="NSwag.AspNetCore" Version="14.6.3" />
+    <PackageReference Include="Microsoft.OpenApi" Version="3.5.3" />
+    <PackageReference Include="NSwag.AspNetCore" Version="14.7.1" />
     <PackageReference Include="Polly" Version="8.6.6" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.7" />

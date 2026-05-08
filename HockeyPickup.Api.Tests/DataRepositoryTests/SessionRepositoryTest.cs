@@ -56,6 +56,8 @@ public class SimpleTestHockeyPickupContext : HockeyPickupContext
         modelBuilder.Ignore<IdentityUserLogin<string>>();
         modelBuilder.Ignore<IdentityUserToken<string>>();
         modelBuilder.Ignore<IdentityRoleClaim<string>>();
+        modelBuilder.Ignore<IdentityUserPasskey<string>>();
+        modelBuilder.Ignore<IdentityPasskeyData>();
     }
 }
 
@@ -166,6 +168,8 @@ public class DetailedSessionTestContext : HockeyPickupContext
         modelBuilder.Ignore<IdentityRoleClaim<string>>();
         modelBuilder.Ignore<AspNetRole>();
         modelBuilder.Ignore<IdentityRole>();
+        modelBuilder.Ignore<IdentityUserPasskey<string>>();
+        modelBuilder.Ignore<IdentityPasskeyData>();
     }
 }
 

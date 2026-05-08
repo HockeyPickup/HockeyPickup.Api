@@ -56,23 +56,10 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     {
         base.OnModelCreating(modelBuilder);
 
-        // Identity 10 introduced passkey entities; we don't currently use passkeys.
-        // In tests (EFCore InMemory), this entity can fail validation unless it's configured.
-        // To keep runtime + tests stable, ignore it if the Identity model includes it.
-        var passkeyDataEntityTypeNames = modelBuilder.Model
-            .GetEntityTypes()
-            .Where(t =>
-                string.Equals(t.Name, "IdentityPasskeyData", StringComparison.Ordinal) ||
-                t.Name.EndsWith(".IdentityPasskeyData", StringComparison.Ordinal) ||
-                string.Equals(t.ClrType?.Name, "IdentityPasskeyData", StringComparison.Ordinal))
-            .Select(t => t.Name)
-            .Distinct()
-            .ToArray();
-
-        foreach (var passkeyDataEntityName in passkeyDataEntityTypeNames)
-        {
-            modelBuilder.Ignore(passkeyDataEntityName);
-        }
+        // Identity 10 introduced passkey support. We don't use passkeys, so remove these
+        // entity types to avoid "requires a primary key" validation errors in tests.
+        modelBuilder.Ignore<IdentityUserPasskey<string>>();
+        modelBuilder.Ignore<IdentityPasskeyData>();
 
         modelBuilder.Entity<AspNetUser>(entity =>
         {

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(dotnet list *)",
+      "PowerShell($xmlPath = \"C:\\\\Users\\\\b\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.2\\\\lib\\\\net10.0\\\\Microsoft.Extensions.Identity.Core.xml\"; if \\(Test-Path $xmlPath\\) { Select-String -Path $xmlPath -Pattern \"PasskeyData|UserPasskey|IdentityPasskey\" | Select-Object -First 30 | ForEach-Object { $_.Line.Trim\\(\\) } } else { ls \"C:\\\\Users\\\\b\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.2\\\\lib\\\\\" })",
+      "PowerShell($xmlPath = \"C:\\\\Users\\\\b\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.stores\\\\10.0.2\\\\lib\\\\net10.0\\\\Microsoft.Extensions.Identity.Stores.xml\"; if \\(Test-Path $xmlPath\\) { Select-String -Path $xmlPath -Pattern \"IdentityPasskeyData|IdentityUserPasskey\" | Select-Object -First 30 | ForEach-Object { $_.Line.Trim\\(\\) } } else { ls \"C:\\\\Users\\\\b\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.stores\\\\\" })"
     ]
   }
 }

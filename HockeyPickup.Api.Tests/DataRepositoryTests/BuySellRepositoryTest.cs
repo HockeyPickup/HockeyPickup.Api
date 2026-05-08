@@ -160,6 +160,8 @@ public class BuySellTestHockeyPickupContext : HockeyPickupContext
         modelBuilder.Ignore<IdentityUserToken<string>>();
         modelBuilder.Ignore<IdentityRoleClaim<string>>();
         modelBuilder.Ignore<AspNetRole>();
+        modelBuilder.Ignore<IdentityUserPasskey<string>>();
+        modelBuilder.Ignore<IdentityPasskeyData>();
     }
 }
 
