@@ -1,5 +1,6 @@
 using HockeyPickup.Api.Data.Context;
 using HockeyPickup.Api.Data.Entities;
+using HockeyPickup.Api.Helpers;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -295,7 +296,7 @@ public static class UserMappingExtensions
             Preferred = user.Preferred,
             PreferredPlus = user.PreferredPlus,
             Active = user.Active,
-            Rating = user.Rating,
+            Rating = user.GetSecureRating(),
             LockerRoom13 = user.LockerRoom13,
             EmergencyName = user.EmergencyName,
             EmergencyPhone = user.EmergencyPhone,

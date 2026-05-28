@@ -156,7 +156,7 @@ public class RegularRepositoryTests : IDisposable
         firstRegular.User.Should().NotBeNull();
         firstRegular.User!.FirstName.Should().Be("John");
         firstRegular.User.LastName.Should().Be("Doe");
-        firstRegular.User.Rating.Should().Be(4.5m);
+        firstRegular.User.Rating.Should().Be(0m); // secured: no admin context in tests
         firstRegular.User.Preferred.Should().BeTrue();
         firstRegular.User.PreferredPlus.Should().BeFalse();
         firstRegular.User.Active.Should().BeTrue();
