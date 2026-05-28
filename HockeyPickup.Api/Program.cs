@@ -168,7 +168,9 @@ public class Program
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
-            .AddAuthorizationCore();
+            .AddAuthorizationCore()
+            .AllowIntrospection(true)
+            .ModifyRequestOptions(opts => opts.IncludeExceptionDetails = builder.Environment.IsDevelopment());
 
         builder.Services.AddSingleton(x => new BlobServiceClient(builder.Configuration.GetConnectionString("AzureStorage")));
 
