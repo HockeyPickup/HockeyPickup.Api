@@ -10,11 +10,11 @@
 
 HockeyPickup.Api is the core backend for [HockeyPickup](https://hockeypickup.com).
 
-The main technology stack platform is [.NET Core](https://dotnet.microsoft.com/) 9.0.
+The main technology stack platform is [.NET Core](https://dotnet.microsoft.com/) 10.0.
 
 ## 🛠 Prerequisites
 
-* Install Visual Studio 2022 (preview) or later, or Visual Studio Code. Ensure that `$ dotnet --version` is at least 9.0.
+* Install Visual Studio 2026 or later, or Visual Studio Code. Ensure that `$ dotnet --version` is at least 10.0.
 
 ## ⌨️ Install, Build, and Serve the Site
 
