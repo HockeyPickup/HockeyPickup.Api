@@ -306,9 +306,9 @@ public class Program
         app.UseWebSockets();
         app.UseMiddleware<WebSocketMiddleware>();
 
+        app.UseMiddleware<IntrospectionMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseMiddleware<IntrospectionMiddleware>();
         app.UseMiddleware<TokenRenewalMiddleware>();
         app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -522,31 +522,22 @@ public class IntrospectionMiddleware
     {
         if (context.Request.Path.StartsWithSegments("/api/graphql") && context.Request.Method == "POST")
         {
-            var originalBody = context.Request.Body;
-            using (var memoryStream = new MemoryStream())
+            context.Request.EnableBuffering();
+            using (var reader = new StreamReader(context.Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true))
             {
-                await context.Request.Body.CopyToAsync(memoryStream);
-                memoryStream.Position = 0;
+                var body = await reader.ReadToEndAsync();
+                context.Request.Body.Position = 0;
 
-                using (var reader = new StreamReader(memoryStream))
+                if (body.Contains("__schema") || body.Contains("__type"))
                 {
-                    var body = await reader.ReadToEndAsync();
-                    if (body.Contains("__schema") || body.Contains("__type"))
-                    {
-                        var claimsPrincipal = new System.Security.Claims.ClaimsPrincipal(
-                            new System.Security.Claims.ClaimsIdentity(new[]
-                            {
-                                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "introspection")
-                            }));
-                        context.User = claimsPrincipal;
-                    }
+                    var claimsPrincipal = new System.Security.Claims.ClaimsPrincipal(
+                        new System.Security.Claims.ClaimsIdentity(new[]
+                        {
+                            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "introspection")
+                        }, "Bearer"));
+                    context.User = claimsPrincipal;
                 }
-
-                memoryStream.Position = 0;
-                context.Request.Body = memoryStream;
             }
-
-            context.Request.Body = originalBody;
         }
 
         await _next(context);
