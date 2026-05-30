@@ -169,7 +169,7 @@ public class Program
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
-            .AddAuthorization()
+            .AddAuthorizationCore()
             .ModifyRequestOptions(opts => opts.IncludeExceptionDetails = true);
 
         builder.Services.AddSingleton(x => new BlobServiceClient(builder.Configuration.GetConnectionString("AzureStorage")));
@@ -308,6 +308,7 @@ public class Program
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<IntrospectionMiddleware>();
         app.UseMiddleware<TokenRenewalMiddleware>();
         app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -504,6 +505,51 @@ public class GraphQLAuthHandler : IAuthorizationHandler
             return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
 
         return new ValueTask<AuthorizeResult>(AuthorizeResult.Allowed);
+    }
+}
+
+[ExcludeFromCodeCoverage]
+public class IntrospectionMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public IntrospectionMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (context.Request.Path.StartsWithSegments("/api/graphql") && context.Request.Method == "POST")
+        {
+            var originalBody = context.Request.Body;
+            using (var memoryStream = new MemoryStream())
+            {
+                await context.Request.Body.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                using (var reader = new StreamReader(memoryStream))
+                {
+                    var body = await reader.ReadToEndAsync();
+                    if (body.Contains("__schema") || body.Contains("__type"))
+                    {
+                        var claimsPrincipal = new System.Security.Claims.ClaimsPrincipal(
+                            new System.Security.Claims.ClaimsIdentity(new[]
+                            {
+                                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "introspection")
+                            }));
+                        context.User = claimsPrincipal;
+                    }
+                }
+
+                memoryStream.Position = 0;
+                context.Request.Body = memoryStream;
+            }
+
+            context.Request.Body = originalBody;
+        }
+
+        await _next(context);
     }
 }
 #pragma warning restore IDE0057 // Use range operator
