@@ -11,6 +11,7 @@ using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Services;
 using HotChocolate.Authorization;
 using HotChocolate.Resolvers;
+using HotChocolate.Validation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -168,8 +169,8 @@ public class Program
         builder.Services.AddSingleton<IAuthorizationHandler, GraphQLAuthHandler>();
         builder.Services.AddGraphQLServer()
             .AddQueryType<Query>()
-            .AddAuthorizationCore()
-            .ModifyRequestOptions(opts => opts.IncludeExceptionDetails = builder.Environment.IsDevelopment());
+            .AddAuthorization()
+            .ModifyRequestOptions(opts => opts.IncludeExceptionDetails = true);
 
         builder.Services.AddSingleton(x => new BlobServiceClient(builder.Configuration.GetConnectionString("AzureStorage")));
 
