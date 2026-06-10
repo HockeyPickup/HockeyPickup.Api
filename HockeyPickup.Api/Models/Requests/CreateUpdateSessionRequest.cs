@@ -41,6 +41,17 @@ public class CreateSessionRequest
     [JsonPropertyName("Cost")]
     [JsonProperty(nameof(Cost), Required = Required.Always)]
     public required decimal Cost { get; set; }
+
+    [Description("Whether the lottery is enabled for this session")]
+    [JsonPropertyName("LotteryEnabled")]
+    [JsonProperty(nameof(LotteryEnabled), Required = Required.Default)]
+    public bool LotteryEnabled { get; set; } = true;
+
+    [Description("Duration in minutes of each tier's lottery entry window")]
+    [Range(1, 1440)]
+    [JsonPropertyName("LotteryEntryWindowMinutes")]
+    [JsonProperty(nameof(LotteryEntryWindowMinutes), Required = Required.Default)]
+    public int LotteryEntryWindowMinutes { get; set; } = 30;
 }
 
 public class UpdateSessionRequest : CreateSessionRequest

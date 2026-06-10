@@ -15,4 +15,4 @@
 - **Time**: `TimeZoneUtils.GetCurrentPacificTime()` everywhere; windows are computed properties, never stored.
 
 ## Tests
-xUnit + Moq + FluentAssertions in the test project. Arrange/Act/Assert with comments, one behavior per test, mock `UserManager`, repositories, and `IServiceBus` exactly as `BuySellServiceTest.cs` does. New logic requires tests for happy path, denial reasons, boundary times, and race/idempotency behavior. All existing tests must pass unmodified. Code coverage must be 100% on all code, new and existing.
+xUnit + Moq + FluentAssertions in the test project. Arrange/Act/Assert with comments, one behavior per test, mock `UserManager`, repositories, and `IServiceBus` exactly as `BuySellServiceTest.cs` does. New logic requires tests for happy path, denial reasons, boundary times, and race/idempotency behavior. All existing tests must pass unmodified. Code coverage must be 100% on all code, new and existing - 100% branch AND 100% line coverage.

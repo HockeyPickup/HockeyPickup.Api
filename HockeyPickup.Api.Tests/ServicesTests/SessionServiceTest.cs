@@ -29,6 +29,7 @@ public partial class SessionServiceTests
     private readonly SessionService _sessionService;
     private readonly Mock<IHttpContextAccessor> _mockContextAccessor;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<ILotteryService> _mockLotteryService;
 
     public SessionServiceTests()
     {
@@ -52,6 +53,7 @@ public partial class SessionServiceTests
         _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
         _mockContextAccessor = new Mock<IHttpContextAccessor>();
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockLotteryService = new Mock<ILotteryService>();
 
         var mockHttpContext = new Mock<HttpContext>();
         var mockUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -69,7 +71,8 @@ public partial class SessionServiceTests
             _mockLogger.Object,
             _mockSubscriptionHandler.Object,
             _mockContextAccessor.Object,
-            _mockUserRepository.Object);
+            _mockUserRepository.Object,
+            _mockLotteryService.Object);
     }
 
     private static SessionDetailedResponse CreateTestSession(string userId, int position, int team, bool isPlaying = true)
@@ -403,7 +406,7 @@ public partial class SessionServiceTests
                 It.IsAny<string>(),
                 It.Is<string>(s => s == "testqueue"),
                 default))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, subject, corrId, queue, token) =>
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, subject, corrId, queue, token, scheduled) =>
             {
                 serviceBusMessageCalled = true;
                 capturedMessage = msg;
@@ -819,7 +822,7 @@ public partial class SessionServiceTests
                     It.IsAny<string>(),
                     It.Is<string>(s => s == "testqueue"),
                     default))
-                .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, subject, corrId, queue, token) =>
+                .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, subject, corrId, queue, token, scheduled) =>
                 {
                     serviceBusMessageCalled = true;
                     capturedMessage = msg;
@@ -1092,7 +1095,7 @@ public partial class SessionServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 default))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, _, _, _, _, _) =>
             {
                 capturedMessage = msg;
             })
@@ -1238,7 +1241,7 @@ public partial class SessionServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 default))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, _, _, _, _, _) =>
             {
                 capturedMessage = msg;
             })
@@ -1434,7 +1437,7 @@ public partial class SessionServiceTests
                 It.IsAny<string>(),
                 It.Is<string>(s => s == "testqueue"),
                 default))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, subject, corrId, queue, token) =>
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, subject, corrId, queue, token, scheduled) =>
             {
                 capturedMessage = msg;
             })
@@ -1605,7 +1608,7 @@ public partial class SessionServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 default))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, _, _, _, _, _) =>
             {
                 capturedMessage = msg;
             })
@@ -1758,7 +1761,7 @@ public partial class SessionServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 default))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>((msg, _, _, _, _) =>
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((msg, _, _, _, _, _) =>
             {
                 capturedMessage = msg;
             })

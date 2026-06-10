@@ -117,3 +117,79 @@ public enum ShootPreference
     [Display(Name = @"Right")]
     Right = 2
 }
+
+// Lottery tier - mirrors the existing BuyWindow naming (PreferredPlus > Preferred > Standard)
+public enum LotteryClass
+{
+    [GraphQLName("PreferredPlus")]
+    [Display(Name = @"PreferredPlus")]
+    [Description("Preferred Plus tier lottery")]
+    PreferredPlus = 1,
+
+    [GraphQLName("Preferred")]
+    [Display(Name = @"Preferred")]
+    [Description("Preferred tier lottery")]
+    Preferred = 2,
+
+    [GraphQLName("Standard")]
+    [Display(Name = @"Standard")]
+    [Description("Standard tier lottery")]
+    Standard = 3
+}
+
+public enum LotteryEntrantStatus
+{
+    [GraphQLName("Entered")]
+    [Display(Name = @"Entered")]
+    [Description("Entrant is entered and awaiting the draw")]
+    Entered = 1,
+
+    [GraphQLName("Withdrawn")]
+    [Display(Name = @"Withdrawn")]
+    [Description("Entrant withdrew before the draw")]
+    Withdrawn = 2,
+
+    [GraphQLName("Drawing")]
+    [Display(Name = @"Drawing")]
+    [Description("Entrant is claimed by an in-progress draw")]
+    Drawing = 3,
+
+    [GraphQLName("Drawn")]
+    [Display(Name = @"Drawn")]
+    [Description("Entrant was drawn and their buy processed")]
+    Drawn = 4,
+
+    [GraphQLName("Failed")]
+    [Display(Name = @"Failed")]
+    [Description("Entrant was drawn but their buy failed")]
+    Failed = 5
+}
+
+// Drives the front end as a pure switch - populated on every CanBuy path
+public enum BuyActionState
+{
+    [GraphQLName("NotEligible")]
+    [Display(Name = @"NotEligible")]
+    [Description("User cannot buy or enter a lottery for this session")]
+    NotEligible = 0,
+
+    [GraphQLName("WindowNotOpen")]
+    [Display(Name = @"WindowNotOpen")]
+    [Description("The user's buy/entry window has not opened yet")]
+    WindowNotOpen = 1,
+
+    [GraphQLName("EnterLottery")]
+    [Display(Name = @"EnterLottery")]
+    [Description("The user may enter the applicable lottery")]
+    EnterLottery = 2,
+
+    [GraphQLName("InLottery")]
+    [Display(Name = @"InLottery")]
+    [Description("The user is already entered in the applicable lottery")]
+    InLottery = 3,
+
+    [GraphQLName("BuyNow")]
+    [Display(Name = @"BuyNow")]
+    [Description("The user may buy a spot directly")]
+    BuyNow = 4
+}

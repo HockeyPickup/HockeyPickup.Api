@@ -153,6 +153,7 @@ public class Program
         builder.Services.AddScoped<ISessionRepository, SessionRepository>();
         builder.Services.AddScoped<IRegularRepository, RegularRepository>();
         builder.Services.AddScoped<IBuySellRepository, BuySellRepository>();
+        builder.Services.AddScoped<ILotteryRepository, LotteryRepository>();
 
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<ISessionService, SessionService>();
@@ -160,6 +161,10 @@ public class Program
         builder.Services.AddScoped<ICalendarService, CalendarService>();
         builder.Services.AddScoped<IBuySellService, BuySellService>();
         builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+        builder.Services.AddScoped<ILotteryEligibilityService, LotteryEligibilityService>();
+        builder.Services.AddScoped<ILotteryService, LotteryService>();
+        builder.Services.AddSingleton<IRandomShuffler, CryptoRandomShuffler>();
+        builder.Services.AddHostedService<LotteryDrawProcessorService>();
 
         builder.Services.AddSingleton<ConcurrentDictionary<string, WebSocketConnection>>();
         builder.Services.AddSingleton<ISubscriptionHandler, SessionSubscriptionHandler>();

@@ -10,7 +10,7 @@ namespace HockeyPickup.Api.Services;
 
 public interface IServiceBus
 {
-    Task SendAsync<T>(T message, string? subject = null, string? correlationId = null, string? queueName = null, CancellationToken cancellationToken = default) where T : class;
+    Task SendAsync<T>(T message, string? subject = null, string? correlationId = null, string? queueName = null, CancellationToken cancellationToken = default, DateTimeOffset? scheduledEnqueueTimeUtc = null) where T : class;
     Channel<FailedMessage> GetRetryChannel();
 }
 
@@ -120,7 +120,7 @@ public class ResilientServiceBus : IServiceBus
                 });
     }
 
-    public async Task SendAsync<T>(T message, string? subject = null, string? correlationId = null, string? queueName = null, CancellationToken cancellationToken = default) where T : class
+    public async Task SendAsync<T>(T message, string? subject = null, string? correlationId = null, string? queueName = null, CancellationToken cancellationToken = default, DateTimeOffset? scheduledEnqueueTimeUtc = null) where T : class
     {
         try
         {
@@ -141,6 +141,11 @@ public class ResilientServiceBus : IServiceBus
                 Subject = subject,
                 CorrelationId = correlationId,
             };
+
+            if (scheduledEnqueueTimeUtc.HasValue)
+            {
+                serviceBusMessage.ScheduledEnqueueTime = scheduledEnqueueTimeUtc.Value;
+            }
 
             // If no cancellation token provided, create one with default timeout
             using var timeoutCts = new CancellationTokenSource();

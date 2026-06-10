@@ -11,7 +11,7 @@ namespace HockeyPickup.Api.Services;
 
 public interface IBuySellService
 {
-    Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request);
+    Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false);
     Task<ServiceResult<BuySellResponse>> ProcessSellRequestAsync(string userId, SellRequest request);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentSentAsync(string userId, int buySellId, PaymentMethodType paymentMethod);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentReceivedAsync(string userId, int buySellId);
@@ -22,7 +22,7 @@ public interface IBuySellService
     Task<ServiceResult<IEnumerable<BuySellResponse>>> GetUserBuySellsAsync(string userId);
     Task<ServiceResult<bool>> CancelBuyAsync(string userId, int buySellId);
     Task<ServiceResult<bool>> CancelSellAsync(string userId, int buySellId);
-    Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId);
+    Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId, bool bypassLotteryGate = false);
     Task<ServiceResult<BuySellStatusResponse>> CanSellAsync(string userId, int sessionId);
 }
 
@@ -36,6 +36,8 @@ public class BuySellService : IBuySellService
     private readonly ILogger<BuySellService> _logger;
     private readonly ISubscriptionHandler _subscriptionHandler;
     private readonly IUserRepository _userRepository;
+    private readonly ILotteryRepository _lotteryRepository;
+    private readonly ILotteryEligibilityService _lotteryEligibility;
     private static readonly ConcurrentDictionary<int, SemaphoreSlim> _sessionBuySellLocks = new();
 
     private static SemaphoreSlim GetSessionBuySellLock(int sessionId)
@@ -49,7 +51,9 @@ public class BuySellService : IBuySellService
         IConfiguration configuration,
         ILogger<BuySellService> logger,
         ISubscriptionHandler subscriptionHandler,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ILotteryRepository lotteryRepository,
+        ILotteryEligibilityService lotteryEligibility)
     {
         _userManager = userManager;
         _sessionRepository = sessionRepository;
@@ -59,14 +63,16 @@ public class BuySellService : IBuySellService
         _logger = logger;
         _subscriptionHandler = subscriptionHandler;
         _userRepository = userRepository;
+        _lotteryRepository = lotteryRepository;
+        _lotteryEligibility = lotteryEligibility;
     }
 
-    public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request)
+    public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false)
     {
         try
         {
             // First check if the user can buy
-            var canBuyResult = await CanBuyAsync(userId, request.SessionId);
+            var canBuyResult = await CanBuyAsync(userId, request.SessionId, bypassLotteryGate);
             if (!canBuyResult.IsSuccess)
             {
                 return ServiceResult<BuySellResponse>.CreateFailure(canBuyResult.Message);
@@ -555,7 +561,7 @@ public class BuySellService : IBuySellService
         }
     }
 
-    public async Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId)
+    public async Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId, bool bypassLotteryGate = false)
     {
         try
         {
@@ -565,7 +571,8 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "Session not found"
+                    Reason = "Session not found",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
@@ -575,7 +582,8 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "User not found"
+                    Reason = "User not found",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
@@ -584,7 +592,8 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "User is not active"
+                    Reason = "User is not active",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
@@ -595,7 +604,8 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "Cannot buy for a session that has already started"
+                    Reason = "Cannot buy for a session that has already started",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
@@ -605,7 +615,8 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "You are already on the roster for this session"
+                    Reason = "You are already on the roster for this session",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
@@ -617,7 +628,8 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "You already have an active Buy for this session"
+                    Reason = "You already have an active Buy for this session",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
@@ -628,22 +640,56 @@ public class BuySellService : IBuySellService
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = false,
-                    Reason = "You have an active Sell for this session"
+                    Reason = "You have an active Sell for this session",
+                    BuyActionState = BuyActionState.NotEligible
                 });
             }
 
-            // If Admin you can buy regardless of other conditions
+            // If Admin you can buy regardless of other conditions (Admins bypass the lottery entirely)
             if (await _userManager.IsInRoleAsync(buyer, "Admin"))
             {
                 return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                 {
                     IsAllowed = true,
-                    Reason = "Admins can buy spots regardless of time window"
+                    Reason = "Admins can buy spots regardless of time window",
+                    BuyActionState = BuyActionState.BuyNow
                 });
             }
 
+            // Lottery gate: placed after the Admin early-return and after the roster/active checks.
+            // The draw executor calls Buy with bypassLotteryGate = true so it can buy on a drawn entrant's behalf.
+            if (!bypassLotteryGate && session.LotteryEnabled)
+            {
+                var entrant = await _lotteryRepository.GetEntrantAsync(sessionId, userId);
+                var eligibility = _lotteryEligibility.Resolve(session, buyer, entrant, currentPacificTime);
+
+                if (eligibility.State == BuyActionState.EnterLottery || eligibility.State == BuyActionState.InLottery)
+                {
+                    return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                    {
+                        IsAllowed = false,
+                        Reason = eligibility.Reason,
+                        BuyActionState = eligibility.State,
+                        LotteryClass = eligibility.ChosenClass,
+                        TimeUntilDraw = eligibility.TimeUntilDraw
+                    });
+                }
+
+                if (eligibility.State == BuyActionState.WindowNotOpen)
+                {
+                    return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                    {
+                        IsAllowed = false,
+                        Reason = eligibility.Reason,
+                        BuyActionState = BuyActionState.WindowNotOpen,
+                        TimeUntilAllowed = eligibility.TimeUntilDraw
+                    });
+                }
+
+                // BuyNow / AllowDirectBuy falls through to the legacy window check below.
+            }
+
             // Check buy window based on user status
-            var user = session.CurrentRosters?.FirstOrDefault(r => r.UserId == userId);
             DateTime buyWindow;
             string windowType;
             if (buyer.PreferredPlus)
@@ -669,14 +715,16 @@ public class BuySellService : IBuySellService
                 {
                     IsAllowed = false,
                     Reason = $"{windowType} buy window is not open yet",
-                    TimeUntilAllowed = timeUntilOpen
+                    TimeUntilAllowed = timeUntilOpen,
+                    BuyActionState = BuyActionState.WindowNotOpen
                 });
             }
 
             return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
             {
                 IsAllowed = true,
-                Reason = "You can buy a spot for this session"
+                Reason = "You can buy a spot for this session",
+                BuyActionState = BuyActionState.BuyNow
             });
         }
         catch (Exception ex)

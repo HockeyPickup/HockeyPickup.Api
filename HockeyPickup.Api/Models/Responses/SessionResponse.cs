@@ -103,6 +103,70 @@ public class SessionDetailedResponse : SessionBasicResponse
     [GraphQLDescription("Buy window for preferred plus users")]
     public DateTime BuyWindowPreferredPlus => SessionDate.AddDays(-BuyDayMinimum.GetValueOrDefault() - 1).AddHours(2).AddMinutes(-5);
 
+    [Required]
+    [Description("Whether the lottery is enabled for this session")]
+    [JsonPropertyName("LotteryEnabled")]
+    [JsonProperty(nameof(LotteryEnabled), Required = Required.Always)]
+    [GraphQLName("LotteryEnabled")]
+    [GraphQLDescription("Whether the lottery is enabled for this session")]
+    public bool LotteryEnabled { get; set; } = true;
+
+    [Required]
+    [Description("Duration in minutes of each tier's lottery entry window")]
+    [JsonPropertyName("LotteryEntryWindowMinutes")]
+    [JsonProperty(nameof(LotteryEntryWindowMinutes), Required = Required.Always)]
+    [GraphQLName("LotteryEntryWindowMinutes")]
+    [GraphQLDescription("Duration in minutes of each tier's lottery entry window")]
+    public int LotteryEntryWindowMinutes { get; set; } = 30;
+
+    [Description("Lottery entry window opens for the session (standard tier)")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryEntryOpenStandard")]
+    [JsonProperty(nameof(LotteryEntryOpenStandard))]
+    [GraphQLName("LotteryEntryOpenStandard")]
+    [GraphQLDescription("Lottery entry window opens for the session (standard tier)")]
+    public DateTime LotteryEntryOpenStandard => BuyWindow;
+
+    [Description("Lottery entry window opens for preferred users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryEntryOpenPreferred")]
+    [JsonProperty(nameof(LotteryEntryOpenPreferred))]
+    [GraphQLName("LotteryEntryOpenPreferred")]
+    [GraphQLDescription("Lottery entry window opens for preferred users")]
+    public DateTime LotteryEntryOpenPreferred => BuyWindowPreferred;
+
+    [Description("Lottery entry window opens for preferred plus users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryEntryOpenPreferredPlus")]
+    [JsonProperty(nameof(LotteryEntryOpenPreferredPlus))]
+    [GraphQLName("LotteryEntryOpenPreferredPlus")]
+    [GraphQLDescription("Lottery entry window opens for preferred plus users")]
+    public DateTime LotteryEntryOpenPreferredPlus => BuyWindowPreferredPlus;
+
+    [Description("Lottery draw time for the session (standard tier)")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryDrawStandard")]
+    [JsonProperty(nameof(LotteryDrawStandard))]
+    [GraphQLName("LotteryDrawStandard")]
+    [GraphQLDescription("Lottery draw time for the session (standard tier)")]
+    public DateTime LotteryDrawStandard => BuyWindow.AddMinutes(LotteryEntryWindowMinutes);
+
+    [Description("Lottery draw time for preferred users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryDrawPreferred")]
+    [JsonProperty(nameof(LotteryDrawPreferred))]
+    [GraphQLName("LotteryDrawPreferred")]
+    [GraphQLDescription("Lottery draw time for preferred users")]
+    public DateTime LotteryDrawPreferred => BuyWindowPreferred.AddMinutes(LotteryEntryWindowMinutes);
+
+    [Description("Lottery draw time for preferred plus users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryDrawPreferredPlus")]
+    [JsonProperty(nameof(LotteryDrawPreferredPlus))]
+    [GraphQLName("LotteryDrawPreferredPlus")]
+    [GraphQLDescription("Lottery draw time for preferred plus users")]
+    public DateTime LotteryDrawPreferredPlus => BuyWindowPreferredPlus.AddMinutes(LotteryEntryWindowMinutes);
+
     [Description("Buy/sell transactions associated with the session")]
     [JsonPropertyName("BuySells")]
     [JsonProperty(nameof(BuySells))]

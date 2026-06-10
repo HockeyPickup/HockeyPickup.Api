@@ -25,6 +25,8 @@ public class BuySellServiceTests
     private readonly Mock<ILogger<BuySellService>> _mockLogger;
     private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<ILotteryRepository> _mockLotteryRepository;
+    private readonly Mock<ILotteryEligibilityService> _mockLotteryEligibility;
     private readonly BuySellService _buySellService;
 
     public BuySellServiceTests()
@@ -49,6 +51,8 @@ public class BuySellServiceTests
         _mockLogger = new Mock<ILogger<BuySellService>>();
         _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockLotteryRepository = new Mock<ILotteryRepository>();
+        _mockLotteryEligibility = new Mock<ILotteryEligibilityService>();
 
         _buySellService = new BuySellService(
             _userManager.Object,
@@ -58,7 +62,9 @@ public class BuySellServiceTests
             _mockConfiguration.Object,
             _mockLogger.Object,
             _mockSubscriptionHandler.Object,
-            _mockUserRepository.Object);
+            _mockUserRepository.Object,
+            _mockLotteryRepository.Object,
+            _mockLotteryEligibility.Object);
     }
 
     private static AspNetUser CreateTestUser(string userId = "testUser", bool isActive = true)
@@ -90,6 +96,7 @@ public class BuySellServiceTests
             SessionDate = currentPacificTime,
             BuyDayMinimum = 6,
             Cost = 20.00m,
+            LotteryEnabled = false,
             CurrentRosters = new List<RosterPlayer>(),
             CreateDateTime = DateTime.UtcNow,
             UpdateDateTime = DateTime.UtcNow,
@@ -2207,7 +2214,7 @@ public class BuySellServiceTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken?>((msg, _, _, _, _) => capturedMessage = msg)
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken?, DateTimeOffset?>((msg, _, _, _, _, _) => capturedMessage = msg)
             .Returns(Task.CompletedTask);
 
         var buySell = CreateTestBuySell(1, userId);
@@ -2459,7 +2466,7 @@ public class BuySellServiceTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken?>((msg, _, _, _, _) => capturedMessage = msg)
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken?, DateTimeOffset?>((msg, _, _, _, _, _) => capturedMessage = msg)
             .Returns(Task.CompletedTask);
 
         // Act
@@ -2609,7 +2616,7 @@ public class BuySellServiceTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken?>((msg, _, _, _, _) => capturedMessage = msg)
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken?, DateTimeOffset?>((msg, _, _, _, _, _) => capturedMessage = msg)
             .Returns(Task.CompletedTask);
 
         var mockBuySell = CreateTestBuySell(buyerId: userId);

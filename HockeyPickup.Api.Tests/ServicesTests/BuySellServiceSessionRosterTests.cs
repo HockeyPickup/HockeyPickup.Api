@@ -53,6 +53,8 @@ public class BuySellServiceSessionRosterTests
     private readonly Mock<ILogger<BuySellService>> _mockLogger;
     private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<ILotteryRepository> _mockLotteryRepository;
+    private readonly Mock<ILotteryEligibilityService> _mockLotteryEligibility;
     private readonly BuySellService _buySellService;
 
     public BuySellServiceSessionRosterTests()
@@ -77,6 +79,8 @@ public class BuySellServiceSessionRosterTests
         _mockLogger = new Mock<ILogger<BuySellService>>();
         _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockLotteryRepository = new Mock<ILotteryRepository>();
+        _mockLotteryEligibility = new Mock<ILotteryEligibilityService>();
 
         _buySellService = new BuySellService(
             _userManager.Object,
@@ -86,7 +90,9 @@ public class BuySellServiceSessionRosterTests
             _mockConfiguration.Object,
             _mockLogger.Object,
             _mockSubscriptionHandler.Object,
-            _mockUserRepository.Object);
+            _mockUserRepository.Object,
+            _mockLotteryRepository.Object,
+            _mockLotteryEligibility.Object);
 
         // Common ServiceBus setup
         _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
@@ -145,6 +151,7 @@ public class BuySellServiceSessionRosterTests
             SessionDate = DateTime.UtcNow.AddDays(1),
             BuyDayMinimum = 6,
             Cost = 20.00m,
+            LotteryEnabled = false,
             CreateDateTime = DateTime.UtcNow,
             UpdateDateTime = DateTime.UtcNow,
             Note = "Test Session",

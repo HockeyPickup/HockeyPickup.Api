@@ -46,6 +46,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
     public DbSet<CurrentSessionRoster>? CurrentSessionRosters { get; set; }
     public DbSet<BuyingQueue>? SessionBuyingQueues { get; set; }
     public DbSet<UserPaymentMethod> UserPaymentMethods { get; set; }
+    public DbSet<SessionLotteryEntrant> SessionLotteryEntrants { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -251,6 +252,16 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .HasColumnType("datetime")
                 .HasDefaultValue("1900-01-01T00:00:00.000");
 
+            entity.Property(e => e.LotteryEnabled)
+                .HasColumnType("bit")
+                .HasDefaultValue(true)
+                .IsRequired();
+
+            entity.Property(e => e.LotteryEntryWindowMinutes)
+                .HasColumnType("int")
+                .HasDefaultValue(30)
+                .IsRequired();
+
             entity.HasOne(e => e.RegularSet)
                 .WithMany(r => r.Sessions)
                 .HasForeignKey(e => e.RegularSetId)
@@ -266,9 +277,44 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .HasForeignKey(q => q.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasMany(s => s.LotteryEntrants)
+                .WithOne(e => e.Session)
+                .HasForeignKey(e => e.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.Property(s => s.SessionId)
                 .UseIdentityColumn()
                 .ValueGeneratedOnAdd();
+        });
+
+        // Configure SessionLotteryEntrants
+        modelBuilder.Entity<SessionLotteryEntrant>(entity =>
+        {
+            entity.ToTable("SessionLotteryEntrants", tb => tb.UseSqlOutputClause(false));
+            entity.HasKey(e => e.LotteryEntrantId).HasName("PK_dbo.SessionLotteryEntrants");
+
+            entity.Property(e => e.LotteryEntrantId)
+                .UseIdentityColumn()
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.UserId).HasColumnType("nvarchar(128)").IsRequired();
+            entity.Property(e => e.LotteryClass).HasColumnType("int").HasConversion<int>().IsRequired();
+            entity.Property(e => e.Status).HasColumnType("int").HasConversion<int>().IsRequired();
+            entity.Property(e => e.Weight).HasColumnType("decimal(5,2)").HasDefaultValue(1.0m).IsRequired();
+            entity.Property(e => e.DrawOrder).HasColumnType("int").IsRequired(false);
+            entity.Property(e => e.DrawDateTime).HasColumnType("datetime2").IsRequired(false);
+            entity.Property(e => e.FailureReason).HasColumnType("nvarchar(512)").IsRequired(false);
+            entity.Property(e => e.CreateDateTime).HasColumnType("datetime2").IsRequired();
+            entity.Property(e => e.UpdateDateTime).HasColumnType("datetime2").IsRequired();
+
+            entity.HasIndex(e => new { e.SessionId, e.UserId })
+                .IsUnique()
+                .HasDatabaseName("UX_SessionLotteryEntrants_Session_User");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configure BuySells

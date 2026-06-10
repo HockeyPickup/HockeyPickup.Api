@@ -77,6 +77,8 @@ public class SessionRepository : ISessionRepository
         existingSession.RegularSetId = session.RegularSetId;
         existingSession.BuyDayMinimum = session.BuyDayMinimum;
         existingSession.Cost = session.Cost;
+        existingSession.LotteryEnabled = session.LotteryEnabled;
+        existingSession.LotteryEntryWindowMinutes = session.LotteryEntryWindowMinutes;
         existingSession.UpdateDateTime = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -295,6 +297,8 @@ public class SessionRepository : ISessionRepository
             RegularSetId = session.RegularSetId,
             BuyDayMinimum = session.BuyDayMinimum,
             Cost = session.Cost != 0 ? session.Cost : cost,
+            LotteryEnabled = session.LotteryEnabled,
+            LotteryEntryWindowMinutes = session.LotteryEntryWindowMinutes,
             BuySells = MapBuySells(session.BuySells),
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
             RegularSet = MapRegularSet(session.RegularSet),

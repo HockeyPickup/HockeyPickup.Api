@@ -29,8 +29,9 @@ public class SessionService : ISessionService
     private readonly ISubscriptionHandler _subscriptionHandler;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUserRepository _userRepository;
+    private readonly ILotteryService _lotteryService;
 
-    public SessionService(UserManager<AspNetUser> userManager, ISessionRepository sessionRepository, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, ISubscriptionHandler subscriptionHandler, IHttpContextAccessor httpContextAccessor, IUserRepository userRepository)
+    public SessionService(UserManager<AspNetUser> userManager, ISessionRepository sessionRepository, IServiceBus serviceBus, IConfiguration configuration, ILogger<UserService> logger, ISubscriptionHandler subscriptionHandler, IHttpContextAccessor httpContextAccessor, IUserRepository userRepository, ILotteryService lotteryService)
     {
         _userManager = userManager;
         _sessionRepository = sessionRepository;
@@ -40,6 +41,7 @@ public class SessionService : ISessionService
         _subscriptionHandler = subscriptionHandler;
         _httpContextAccessor = httpContextAccessor;
         _userRepository = userRepository;
+        _lotteryService = lotteryService;
     }
 
     public async Task<ServiceResult<SessionDetailedResponse>> CreateSession(CreateSessionRequest request)
@@ -53,6 +55,8 @@ public class SessionService : ISessionService
                 RegularSetId = request.RegularSetId,
                 BuyDayMinimum = request.BuyDayMinimum,
                 Cost = request.Cost,
+                LotteryEnabled = request.LotteryEnabled,
+                LotteryEntryWindowMinutes = request.LotteryEntryWindowMinutes,
                 CreateDateTime = DateTime.UtcNow,
                 UpdateDateTime = DateTime.UtcNow
             };
@@ -72,6 +76,10 @@ public class SessionService : ISessionService
                 { "Note", session.Note },
                 { "CreatedByName", $"{user.FirstName} {user.LastName}" }
             }, session.SessionId, session.SessionDate, user, true);
+
+            // Schedule the per-tier lottery draws when the lottery is enabled
+            if (updatedSession.LotteryEnabled)
+                await _lotteryService.EnqueueDrawMessagesAsync(updatedSession);
 
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
@@ -100,14 +108,27 @@ public class SessionService : ISessionService
                 RegularSetId = request.RegularSetId,
                 BuyDayMinimum = request.BuyDayMinimum,
                 Cost = request.Cost,
+                LotteryEnabled = request.LotteryEnabled,
+                LotteryEntryWindowMinutes = request.LotteryEntryWindowMinutes,
                 UpdateDateTime = DateTime.UtcNow
             };
+
+            // Re-enqueue lottery draws only when something that moves the draw times changed.
+            var lotteryScheduleChanged =
+                existingSession.SessionDate != request.SessionDate ||
+                existingSession.BuyDayMinimum != request.BuyDayMinimum ||
+                existingSession.LotteryEnabled != request.LotteryEnabled ||
+                existingSession.LotteryEntryWindowMinutes != request.LotteryEntryWindowMinutes;
 
             var updatedSession = await _sessionRepository.UpdateSessionAsync(session);
             var msg = $"Edited Session";
 
             updatedSession = await _sessionRepository.AddActivityAsync(updatedSession.SessionId, msg);
             await _subscriptionHandler.HandleUpdate(updatedSession);
+
+            if (updatedSession.LotteryEnabled && lotteryScheduleChanged)
+                await _lotteryService.EnqueueDrawMessagesAsync(updatedSession);
+
             return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
         }
         catch (Exception ex)
