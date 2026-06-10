@@ -659,7 +659,7 @@ public class BuySellService : IBuySellService
             else
             {
                 buyWindow = session.BuyWindow;
-                windowType = "Regular";
+                windowType = "Standard";
             }
 
             if (currentPacificTime < buyWindow)
