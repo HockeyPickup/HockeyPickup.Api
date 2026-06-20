@@ -281,8 +281,17 @@ public class LotteryService : ILotteryService
     private async Task ProcessInOrderAsync(SessionDetailedResponse session, LotteryClass lotteryClass, List<SessionLotteryEntrant> entrants)
     {
         var ordered = entrants.OrderBy(e => e.DrawOrder).ToList();
-        var drawnNames = new List<string>();
-        var entrantEmails = new List<string>();
+        // Names/emails come from the already-loaded entrants, so they're known before any buy is processed.
+        var drawnNames = ordered.Select(e => $"{e.User?.FirstName} {e.User?.LastName}".Trim()).ToList();
+        var entrantEmails = ordered
+            .Where(e => e.User != null && !string.IsNullOrEmpty(e.User.Email))
+            .Select(e => e.User!.Email!)
+            .ToList();
+
+        // Log the draw results BEFORE adding entrants to the queue so the activity feed reads naturally:
+        // the draw produced this order, then each entrant joins the queue.
+        var activity = $"Lottery Draw Results ({lotteryClass}): {string.Join(", ", drawnNames)}";
+        await _sessionRepository.AddActivityAsync(session.SessionId, activity);
 
         foreach (var entrant in ordered)
         {
@@ -296,15 +305,7 @@ public class LotteryService : ILotteryService
                 await _lotteryRepository.MarkFailedAsync(entrant.LotteryEntrantId, result.Message);
                 _logger.LogWarning($"Lottery entrant {entrant.UserId} buy failed in {lotteryClass} draw for session {session.SessionId}: {result.Message}");
             }
-
-            var fullName = $"{entrant.User?.FirstName} {entrant.User?.LastName}".Trim();
-            drawnNames.Add(fullName);
-            if (entrant.User != null && !string.IsNullOrEmpty(entrant.User.Email))
-                entrantEmails.Add(entrant.User.Email);
         }
-
-        var activity = $"Lottery Draw Results ({lotteryClass}): {string.Join(", ", drawnNames)}";
-        await _sessionRepository.AddActivityAsync(session.SessionId, activity);
 
         await SendLotteryDrawCompletedServiceBusMessageAsync(session, lotteryClass, drawnNames, entrantEmails);
     }
