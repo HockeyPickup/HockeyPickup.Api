@@ -1181,8 +1181,8 @@ public partial class DetailedSessionRepositoryTests : IDisposable
                 BindingFlags.NonPublic | BindingFlags.Static);
         var entrants = new List<SessionLotteryEntrant>
         {
-            new() { LotteryEntrantId = 1, SessionId = 1, UserId = "u1", LotteryClass = LotteryClass.Preferred, Status = LotteryEntrantStatus.Entered },
-            new() { LotteryEntrantId = 2, SessionId = 1, UserId = "u2", LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Drawn },
+            new() { LotteryEntrantId = 1, SessionId = 1, UserId = "u1", LotteryClass = LotteryClass.Preferred, Status = LotteryEntrantStatus.Entered, User = new AspNetUser { Id = "u1", FirstName = "Jane", LastName = "Doe" } },
+            new() { LotteryEntrantId = 2, SessionId = 1, UserId = "u2", LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Drawn, User = null }, // no user loaded -> null names
         };
 
         // Act
@@ -1192,8 +1192,13 @@ public partial class DetailedSessionRepositoryTests : IDisposable
         result.Should().HaveCount(2);
         result[0].LotteryClass.Should().Be(LotteryClass.Preferred);
         result[0].Status.Should().Be(LotteryEntrantStatus.Entered);
+        result[0].UserId.Should().Be("u1");
+        result[0].FirstName.Should().Be("Jane");
+        result[0].LastName.Should().Be("Doe");
         result[1].LotteryEntrantId.Should().Be(2);
         result[1].Status.Should().Be(LotteryEntrantStatus.Drawn);
+        result[1].FirstName.Should().BeNull();
+        result[1].LastName.Should().BeNull();
     }
 
     [Fact]

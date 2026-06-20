@@ -450,6 +450,28 @@ public class LotteryEntrantResponse
     [GraphQLDescription("Unique identifier for the lottery entrant")]
     public required int LotteryEntrantId { get; set; }
 
+    [Description("User Id of the entrant")]
+    [MaxLength(128)]
+    [JsonPropertyName("UserId")]
+    [JsonProperty(nameof(UserId))]
+    [GraphQLName("UserId")]
+    [GraphQLDescription("User Id of the entrant")]
+    public string? UserId { get; set; }
+
+    [Description("First name of the entrant")]
+    [JsonPropertyName("FirstName")]
+    [JsonProperty(nameof(FirstName))]
+    [GraphQLName("FirstName")]
+    [GraphQLDescription("First name of the entrant")]
+    public string? FirstName { get; set; }
+
+    [Description("Last name of the entrant")]
+    [JsonPropertyName("LastName")]
+    [JsonProperty(nameof(LastName))]
+    [GraphQLName("LastName")]
+    [GraphQLDescription("Last name of the entrant")]
+    public string? LastName { get; set; }
+
     [Required]
     [Description("Lottery tier the entrant is entered in")]
     [JsonPropertyName("LotteryClass")]

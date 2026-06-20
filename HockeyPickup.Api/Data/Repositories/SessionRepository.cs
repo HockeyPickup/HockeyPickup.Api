@@ -250,6 +250,7 @@ public class SessionRepository : ISessionRepository
             .Include(s => s.CurrentSessionRoster.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
             .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
             .Include(s => s.LotteryEntrants)
+                .ThenInclude(e => e.User)
             .AsSplitQuery() // Added this as without it, it's very slow
             .OrderByDescending(s => s.SessionDate).ToListAsync();
 
@@ -281,6 +282,7 @@ public class SessionRepository : ISessionRepository
                 .ThenInclude(q => q.Seller)
                 .ThenInclude(s => s.PaymentMethods)
             .Include(s => s.LotteryEntrants)
+                .ThenInclude(e => e.User)
              .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
@@ -425,6 +427,9 @@ public class SessionRepository : ISessionRepository
         return lotteryEntrants.Select(e => new LotteryEntrantResponse
         {
             LotteryEntrantId = e.LotteryEntrantId,
+            UserId = e.UserId,
+            FirstName = e.User?.FirstName,
+            LastName = e.User?.LastName,
             LotteryClass = e.LotteryClass,
             Status = e.Status
         }).ToList();
