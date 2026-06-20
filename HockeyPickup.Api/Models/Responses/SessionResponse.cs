@@ -414,6 +414,20 @@ public class ActivityLogResponse
     [GraphQLDescription("User Id associated with the activity")]
     public string? UserId { get; set; }
 
+    [Description("First name of the user associated with the activity (null for system actions)")]
+    [JsonPropertyName("FirstName")]
+    [JsonProperty(nameof(FirstName))]
+    [GraphQLName("FirstName")]
+    [GraphQLDescription("First name of the user associated with the activity (null for system actions)")]
+    public string? FirstName { get; set; }
+
+    [Description("Last name of the user associated with the activity (null for system actions)")]
+    [JsonPropertyName("LastName")]
+    [JsonProperty(nameof(LastName))]
+    [GraphQLName("LastName")]
+    [GraphQLDescription("Last name of the user associated with the activity (null for system actions)")]
+    public string? LastName { get; set; }
+
     [Required]
     [Description("Date and time of the activity")]
     [DataType(DataType.DateTime)]

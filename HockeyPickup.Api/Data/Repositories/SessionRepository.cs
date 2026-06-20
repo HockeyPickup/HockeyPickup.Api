@@ -414,6 +414,8 @@ public class SessionRepository : ISessionRepository
         {
             ActivityLogId = a.ActivityLogId,
             UserId = a.UserId,
+            FirstName = a.User?.FirstName,
+            LastName = a.User?.LastName,
             CreateDateTime = a.CreateDateTime,
             Activity = a.Activity,
             User = MapToUserDetailedResponse(a.User)
