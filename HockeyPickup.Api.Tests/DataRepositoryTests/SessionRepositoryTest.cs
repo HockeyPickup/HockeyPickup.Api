@@ -1157,6 +1157,46 @@ public partial class DetailedSessionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void MapLotteryEntrants_WithNullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapLotteryEntrants",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<LotteryEntrantResponse>());
+    }
+
+    [Fact]
+    public void MapLotteryEntrants_WithEntrants_MapsClassAndStatus()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapLotteryEntrants",
+                BindingFlags.NonPublic | BindingFlags.Static);
+        var entrants = new List<SessionLotteryEntrant>
+        {
+            new() { LotteryEntrantId = 1, SessionId = 1, UserId = "u1", LotteryClass = LotteryClass.Preferred, Status = LotteryEntrantStatus.Entered },
+            new() { LotteryEntrantId = 2, SessionId = 1, UserId = "u2", LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Drawn },
+        };
+
+        // Act
+        var result = (List<LotteryEntrantResponse>) mapMethod!.Invoke(null, new object[] { entrants })!;
+
+        // Assert
+        result.Should().HaveCount(2);
+        result[0].LotteryClass.Should().Be(LotteryClass.Preferred);
+        result[0].Status.Should().Be(LotteryEntrantStatus.Entered);
+        result[1].LotteryEntrantId.Should().Be(2);
+        result[1].Status.Should().Be(LotteryEntrantStatus.Drawn);
+    }
+
+    [Fact]
     public void MapRegulars_WithNullCollection_ReturnsEmptyList()
     {
         // Arrange

@@ -181,6 +181,13 @@ public class SessionDetailedResponse : SessionBasicResponse
     [GraphQLDescription("Activity logs associated with the session")]
     public ICollection<ActivityLogResponse>? ActivityLogs { get; set; }
 
+    [Description("Lottery entrants associated with the session")]
+    [JsonPropertyName("LotteryEntrants")]
+    [JsonProperty(nameof(LotteryEntrants))]
+    [GraphQLName("LotteryEntrants")]
+    [GraphQLDescription("Lottery entrants associated with the session")]
+    public ICollection<LotteryEntrantResponse>? LotteryEntrants { get; set; }
+
     [Description("Regular set details for the session")]
     [JsonPropertyName("RegularSet")]
     [JsonProperty(nameof(RegularSet))]
@@ -430,6 +437,34 @@ public class ActivityLogResponse
     [GraphQLName("User")]
     [GraphQLDescription("User details")]
     public UserDetailedResponse? User { get; set; }
+}
+
+[GraphQLName("LotteryEntrant")]
+public class LotteryEntrantResponse
+{
+    [Required]
+    [Description("Unique identifier for the lottery entrant")]
+    [JsonPropertyName("LotteryEntrantId")]
+    [JsonProperty(nameof(LotteryEntrantId), Required = Required.Always)]
+    [GraphQLName("LotteryEntrantId")]
+    [GraphQLDescription("Unique identifier for the lottery entrant")]
+    public required int LotteryEntrantId { get; set; }
+
+    [Required]
+    [Description("Lottery tier the entrant is entered in")]
+    [JsonPropertyName("LotteryClass")]
+    [JsonProperty(nameof(LotteryClass), Required = Required.Always)]
+    [GraphQLName("LotteryClass")]
+    [GraphQLDescription("Lottery tier the entrant is entered in")]
+    public required LotteryClass LotteryClass { get; set; }
+
+    [Required]
+    [Description("Status of the lottery entrant")]
+    [JsonPropertyName("Status")]
+    [JsonProperty(nameof(Status), Required = Required.Always)]
+    [GraphQLName("Status")]
+    [GraphQLDescription("Status of the lottery entrant")]
+    public required LotteryEntrantStatus Status { get; set; }
 }
 
 [GraphQLName("RegularSet")]

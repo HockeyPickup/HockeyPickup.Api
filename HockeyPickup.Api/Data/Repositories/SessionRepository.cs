@@ -249,6 +249,7 @@ public class SessionRepository : ISessionRepository
             // Views are already denormalized, so include directly
             .Include(s => s.CurrentSessionRoster.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
             .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
+            .Include(s => s.LotteryEntrants)
             .AsSplitQuery() // Added this as without it, it's very slow
             .OrderByDescending(s => s.SessionDate).ToListAsync();
 
@@ -279,6 +280,7 @@ public class SessionRepository : ISessionRepository
             .Include(s => s.BuyingQueues)
                 .ThenInclude(q => q.Seller)
                 .ThenInclude(s => s.PaymentMethods)
+            .Include(s => s.LotteryEntrants)
              .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
@@ -303,6 +305,7 @@ public class SessionRepository : ISessionRepository
             LotteryEntryWindowMinutes = session.LotteryEntryWindowMinutes,
             BuySells = MapBuySells(session.BuySells),
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
+            LotteryEntrants = MapLotteryEntrants(session.LotteryEntrants),
             RegularSet = MapRegularSet(session.RegularSet),
             CurrentRosters = MapCurrentRoster(session.CurrentSessionRoster),
             BuyingQueues = MapBuyingQueue(session.BuyingQueues)
@@ -413,6 +416,18 @@ public class SessionRepository : ISessionRepository
             Activity = a.Activity,
             User = MapToUserDetailedResponse(a.User)
         }).OrderByDescending(a => a.CreateDateTime).ToList();
+    }
+
+    private static List<LotteryEntrantResponse> MapLotteryEntrants(ICollection<SessionLotteryEntrant> lotteryEntrants)
+    {
+        if (lotteryEntrants == null) return new List<LotteryEntrantResponse>();
+
+        return lotteryEntrants.Select(e => new LotteryEntrantResponse
+        {
+            LotteryEntrantId = e.LotteryEntrantId,
+            LotteryClass = e.LotteryClass,
+            Status = e.Status
+        }).ToList();
     }
 
     private static RegularSetResponse MapRegularSet(RegularSet regularSet)
