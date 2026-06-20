@@ -1,10 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace HockeyPickup.Api.Migrations.V2
 {
     /// <inheritdoc />
+    [ExcludeFromCodeCoverage]
     public partial class ActivityLogUserIdOptional : Migration
     {
         /// <inheritdoc />
