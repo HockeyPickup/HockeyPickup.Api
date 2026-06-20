@@ -663,7 +663,7 @@ public class BuySellService : IBuySellService
                 var entrant = await _lotteryRepository.GetEntrantAsync(sessionId, userId);
                 var eligibility = _lotteryEligibility.Resolve(session, buyer, entrant, currentPacificTime);
 
-                if (eligibility.State == BuyActionState.EnterLottery || eligibility.State == BuyActionState.InLottery)
+                if (eligibility.State is BuyActionState.EnterLottery or BuyActionState.InLottery)
                 {
                     return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
                     {
