@@ -360,7 +360,7 @@ public class LotteryService : ILotteryService
         // Results go to every entrant of this draw plus everyone subscribed to all alerts (deduped).
         var users = await _userRepository.GetDetailedUsersAsync();
         var allAlertEmails = users.Where(u => u.Active && u.NotificationPreference == NotificationPreference.All)
-            .Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email));
+            .Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email)).Select(email => email!);
         var recipients = entrantEmails.Concat(allAlertEmails).Distinct().ToList();
 
         var commsMessage = new ServiceBusCommsMessage

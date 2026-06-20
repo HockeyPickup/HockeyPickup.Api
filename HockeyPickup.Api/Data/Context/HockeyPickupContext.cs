@@ -422,7 +422,10 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
             entity.HasKey(e => e.ActivityLogId).HasName("PK_dbo.ActivityLogs");
             entity.Property(e => e.CreateDateTime).HasColumnType("datetime");
             entity.Property(e => e.Activity).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.UserId).HasMaxLength(128).IsRequired(); // Make sure UserId is required
+            // UserId is optional: system actions (e.g. the lottery draw executor running with no HTTP context)
+            // write activity logs with a null UserId. A required relationship would make Include emit an INNER
+            // JOIN that silently drops those rows from session queries.
+            entity.Property(e => e.UserId).HasMaxLength(128).IsRequired(false);
 
             entity.HasOne(e => e.Session)
                 .WithMany(s => s.ActivityLogs)
@@ -434,7 +437,7 @@ public partial class HockeyPickupContext : IdentityDbContext<AspNetUser, AspNetR
                 .WithMany(u => u.ActivityLogs)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict) // Prevent cascade delete
-                .IsRequired() // This enforces the foreign key constraint
+                .IsRequired(false) // Optional: system actions have no acting user
                 .HasConstraintName("FK_dbo.ActivityLogs_dbo.AspNetUsers_UserId");
         });
 
