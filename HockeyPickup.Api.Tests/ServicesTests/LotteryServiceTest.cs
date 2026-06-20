@@ -138,7 +138,7 @@ public class LotteryServiceTests
     [Fact]
     public async Task HandleDraw_SessionNull_NoOp()
     {
-        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync((SessionDetailedResponse?) null);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync((SessionDetailedResponse) null!);
 
         var result = await _service.HandleDrawMessageAsync(new LotteryDrawMessage { SessionId = 1, LotteryClass = LotteryClass.Standard, ExpectedDrawDateTimePacific = DateTime.Now });
 
@@ -539,7 +539,7 @@ public class LotteryServiceTests
     public async Task ExecuteDue_DueTier_SessionMissing_Skipped()
     {
         _mockLotteryRepository.Setup(x => x.GetDueUndrawnTiersAsync(It.IsAny<DateTime>())).ReturnsAsync(new List<(int, LotteryClass)> { (1, LotteryClass.Standard) });
-        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync((SessionDetailedResponse?) null);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync((SessionDetailedResponse) null!);
         _mockLotteryRepository.Setup(x => x.GetStuckDrawingAsync(It.IsAny<DateTime>())).ReturnsAsync(new List<SessionLotteryEntrant>());
 
         var result = await _service.ExecuteDueAsync();
@@ -604,7 +604,7 @@ public class LotteryServiceTests
     {
         _mockLotteryRepository.Setup(x => x.GetDueUndrawnTiersAsync(It.IsAny<DateTime>())).ReturnsAsync(new List<(int, LotteryClass)>());
         _mockLotteryRepository.Setup(x => x.GetStuckDrawingAsync(It.IsAny<DateTime>())).ReturnsAsync(new List<SessionLotteryEntrant> { CreateEntrant(10, "userA", drawOrder: 1) });
-        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync((SessionDetailedResponse?) null);
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync((SessionDetailedResponse) null!);
 
         var result = await _service.ExecuteDueAsync();
 
