@@ -1929,17 +1929,37 @@ public partial class DetailedSessionRepositoryTests
     }
 
     [Fact]
-    public async Task AddActivityAsync_NoUserContext_ThrowsUnauthorizedException()
+    public async Task AddActivityAsync_NoUserContext_CreatesActivityLogWithNullUserId()
     {
-        // Arrange
+        // Arrange - no HTTP context (e.g. the lottery draw executor running in a BackgroundService).
         var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext) null!);
 
-        var repository = new SessionRepository(_context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var context = new DetailedSessionTestContext(options);
+        context.Sessions!.Add(new Session
+        {
+            SessionId = 1,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session"
+        });
+        await context.SaveChangesAsync();
 
-        // Act & Assert
-        await repository.Invoking(r => r.AddActivityAsync(1, "Test activity"))
-            .Should().ThrowAsync<UnauthorizedAccessException>();
+        var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
+
+        // Act - system action attributes the activity to no specific user instead of throwing.
+        var result = await repository.AddActivityAsync(1, "Test activity");
+
+        // Assert
+        result.Should().NotBeNull();
+        var activityLog = await context.ActivityLogs!.FirstOrDefaultAsync();
+        activityLog.Should().NotBeNull();
+        activityLog!.UserId.Should().BeNull();
+        activityLog.Activity.Should().Be("Test activity");
     }
 
     [Fact]

@@ -240,6 +240,37 @@ public class LotteryServiceTests
     }
 
     [Fact]
+    public async Task HandleDraw_DrawCompleted_NotifiesEntrantsAndAllAlertSubscribers()
+    {
+        var session = CreateSession();
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync(session);
+        _mockLotteryRepository.Setup(x => x.ClaimForDrawingAsync(1, LotteryClass.Standard)).ReturnsAsync(1);
+        _mockLotteryRepository.Setup(x => x.GetEntrantsAsync(1, LotteryClass.Standard, LotteryEntrantStatus.Drawing))
+            .ReturnsAsync(new List<SessionLotteryEntrant> { CreateEntrant(10, "userA") }); // email userA@example.com
+        _mockLotteryRepository.Setup(x => x.PersistDrawOrderAsync(It.IsAny<int>(), It.IsAny<LotteryClass>(), It.IsAny<IReadOnlyList<(int, int)>>(), It.IsAny<DateTime>())).Returns(Task.CompletedTask);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(1, It.IsAny<string>())).ReturnsAsync(session);
+        SetupBuySuccess();
+        _mockUserRepository.Setup(x => x.GetDetailedUsersAsync()).ReturnsAsync(new List<UserDetailedResponse>
+        {
+            User("sub", active: true, NotificationPreference.All, "alerts@example.com"),    // included
+            User("userA", active: true, NotificationPreference.All, "userA@example.com"),   // duplicate of entrant -> deduped
+            User("off", active: true, NotificationPreference.OnlyMyBuySell, "off@example.com"), // wrong preference
+            User("inactive", active: false, NotificationPreference.All, "inactive@example.com"), // inactive
+            User("noemail", active: true, NotificationPreference.All, ""),                  // empty email filtered
+        });
+
+        ICollection<string>? recipients = null;
+        _mockServiceBus.Setup(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), "LotteryDrawCompleted", It.IsAny<string>(), "comms", It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()))
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>((m, _, _, _, _, _) => recipients = m.NotificationEmails)
+            .Returns(Task.CompletedTask);
+
+        var result = await _service.HandleDrawMessageAsync(new LotteryDrawMessage { SessionId = 1, LotteryClass = LotteryClass.Standard, ExpectedDrawDateTimePacific = session.LotteryDrawStandard });
+
+        result.Should().Be(LotteryDrawOutcome.Completed);
+        recipients.Should().BeEquivalentTo(new[] { "userA@example.com", "alerts@example.com" });
+    }
+
+    [Fact]
     public async Task HandleDraw_OneEntrantFails_RemainderProcessed()
     {
         var session = CreateSession();

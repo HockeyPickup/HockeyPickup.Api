@@ -32,6 +32,14 @@ public static class HttpContextExtensions
 
         return userId;
     }
+
+    // Returns the current user id, or null when there is no HTTP context (e.g. background/system actions such as
+    // the lottery draw executor). Use for activity-log attribution where a missing acting user is acceptable.
+    public static string? GetUserIdOrNull(this IHttpContextAccessor httpContextAccessor)
+    {
+        var userId = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return string.IsNullOrEmpty(userId) ? null : userId;
+    }
 }
 
 public static class StringExtensions

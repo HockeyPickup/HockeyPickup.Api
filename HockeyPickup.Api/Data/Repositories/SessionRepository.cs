@@ -30,7 +30,9 @@ public class SessionRepository : ISessionRepository
         var activityLog = new ActivityLog
         {
             SessionId = sessionId,
-            UserId = _httpContextAccessor.GetUserId(),
+            // Null-safe: the lottery draw executor runs in a BackgroundService with no HTTP context, so attribute
+            // the activity to no specific user (system action) rather than throwing.
+            UserId = _httpContextAccessor.GetUserIdOrNull(),
             CreateDateTime = DateTime.UtcNow,
             Activity = activity
         };

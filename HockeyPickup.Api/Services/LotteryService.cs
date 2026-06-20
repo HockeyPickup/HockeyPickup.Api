@@ -357,6 +357,12 @@ public class LotteryService : ILotteryService
         var baseUrl = _configuration["BaseUrl"];
         var sessionUrl = $"{baseUrl?.TrimEnd('/')}/session/{session.SessionId}";
 
+        // Results go to every entrant of this draw plus everyone subscribed to all alerts (deduped).
+        var users = await _userRepository.GetDetailedUsersAsync();
+        var allAlertEmails = users.Where(u => u.Active && u.NotificationPreference == NotificationPreference.All)
+            .Select(u => u.Email).Where(email => !string.IsNullOrEmpty(email));
+        var recipients = entrantEmails.Concat(allAlertEmails).Distinct().ToList();
+
         var commsMessage = new ServiceBusCommsMessage
         {
             Metadata = new Dictionary<string, string>
@@ -379,7 +385,7 @@ public class LotteryService : ILotteryService
                 { "LotteryClass", lotteryClass.ToString() },
                 { "DrawOrderNames", string.Join("\n", drawnNames) }
             },
-            NotificationEmails = entrantEmails,
+            NotificationEmails = recipients,
             NotificationDeviceIds = null
         };
 
