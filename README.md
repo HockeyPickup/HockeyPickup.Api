@@ -12,6 +12,10 @@ HockeyPickup.Api is the core backend for [HockeyPickup](https://hockeypickup.com
 
 The main technology stack platform is [.NET Core](https://dotnet.microsoft.com/) 10.0.
 
+## 🎟️ Lottery Queuing
+
+Sessions can fill spots by lottery instead of first-come buying. When a tier's buy window opens, an entry window collects entrants; at the draw time they are shuffled into a random order and the normal buy flow runs for each in turn. Draws are scheduled per tier via Service Bus and executed by a background consumer, with a daily safety-net sweep (`POST /api/lottery/execute-due`) to recover any missed draw. Each session toggles this with `LotteryEnabled`; when off, buying is first-come.
+
 ## 🛠 Prerequisites
 
 * Install Visual Studio 2026 or later, or Visual Studio Code. Ensure that `$ dotnet --version` is at least 10.0.
