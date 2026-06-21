@@ -9,17 +9,16 @@ namespace HockeyPickup.Api.Helpers;
 public interface ISubscriptionHandler
 {
     string OperationType { get; }
-    Task HandleSubscription(string socketId, string id);
+    Task HandleSubscription(string socketId, string id, string? subscriptionArgument);
     Task HandleUpdate(object data);
     Task HandleDelete(object data);
     Task Cleanup(string socketId);
 }
 
-[ExcludeFromCodeCoverage]
 public abstract class BaseSubscriptionHandler : ISubscriptionHandler
 {
-    private readonly HashSet<string> _subscribedSockets = new();
-    private readonly ConcurrentDictionary<string, string> _subscriptionIds = new();
+    // socketId -> the graphql-ws message id to echo and the argument the socket filtered on.
+    private readonly ConcurrentDictionary<string, SocketSubscription> _subscriptions = new();
     private readonly IWebSocketService _webSocketService;
 
     protected BaseSubscriptionHandler(IWebSocketService webSocketService)
@@ -30,41 +29,42 @@ public abstract class BaseSubscriptionHandler : ISubscriptionHandler
     public abstract string OperationType { get; }
     protected abstract object WrapData(object data);
 
-    public Task HandleSubscription(string socketId, string id)
+    // Identifies which entity a payload belongs to so an update is only delivered to the
+    // sockets that subscribed for that entity (e.g. the SessionId). Returning null broadcasts
+    // the payload to every subscriber.
+    protected abstract string? GetEntityId(object data);
+
+    public Task HandleSubscription(string socketId, string id, string? subscriptionArgument)
     {
-        _subscriptionIds[socketId] = id;
-        _subscribedSockets.Add(socketId);
+        _subscriptions[socketId] = new SocketSubscription(id, subscriptionArgument);
         return Task.CompletedTask;
     }
 
-    public async Task HandleUpdate(object data)
-    {
-        foreach (var socketId in _subscribedSockets)
-        {
-            if (_subscriptionIds.TryGetValue(socketId, out var subscriptionId))
-            {
-                await _webSocketService.SendMessageToSocket(socketId, WrapData(data), subscriptionId);
-            }
-        }
-    }
+    public Task HandleUpdate(object data) => Broadcast(data);
 
-    public async Task HandleDelete(object data)
+    public Task HandleDelete(object data) => Broadcast(data);
+
+    private async Task Broadcast(object data)
     {
-        foreach (var socketId in _subscribedSockets)
+        var entityId = GetEntityId(data);
+        foreach (var (socketId, subscription) in _subscriptions)
         {
-            if (_subscriptionIds.TryGetValue(socketId, out var subscriptionId))
+            // Deliver when the payload's entity can't be identified (broadcast), the socket
+            // subscribed without an argument, or the argument matches the payload's entity.
+            if (entityId is null || subscription.Argument is null || subscription.Argument == entityId)
             {
-                await _webSocketService.SendMessageToSocket(socketId, WrapData(data), subscriptionId);
+                await _webSocketService.SendMessageToSocket(socketId, WrapData(data), subscription.SubscriptionId);
             }
         }
     }
 
     public Task Cleanup(string socketId)
     {
-        _subscribedSockets.Remove(socketId);
-        _subscriptionIds.TryRemove(socketId, out _);
+        _subscriptions.TryRemove(socketId, out _);
         return Task.CompletedTask;
     }
+
+    private sealed record SocketSubscription(string SubscriptionId, string? Argument);
 }
 
 [ExcludeFromCodeCoverage]
@@ -94,6 +94,7 @@ public class GraphQLSubscription
     public Dictionary<string, object>? Extensions { get; set; }
     public string? OperationName { get; set; }
     public string? Query { get; set; }
+    public Dictionary<string, JsonElement>? Variables { get; set; }
 }
 
 [ExcludeFromCodeCoverage]
@@ -117,9 +118,14 @@ public class AuthPayload
     public string Authorization { get; set; } = string.Empty;
 }
 
+// Excluded from coverage: the raw socket receive loop has defensive null-guards on
+// JSON deserialization results (lines handling connection_init / subscribe payloads) whose
+// null branches are unreachable for any valid frame, so branch coverage can't reach 100%.
+// Behavior is still fully exercised by WebSocketMiddlewareTests.
 [ExcludeFromCodeCoverage]
 public class WebSocketMiddleware
 {
+    private const string GraphQlTransportWsProtocol = "graphql-transport-ws";
     private readonly RequestDelegate _next;
     private readonly IEnumerable<ISubscriptionHandler> _subscriptionHandlers;
     private readonly ConcurrentDictionary<string, WebSocketConnection> _connections;
@@ -139,7 +145,17 @@ public class WebSocketMiddleware
             return;
         }
 
-        using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+        // The App's Apollo/graphql-ws client connects using the "graphql-transport-ws"
+        // subprotocol and closes the socket immediately (close code 4406) unless the server
+        // echoes that subprotocol back during the handshake. Accept with the negotiated
+        // subprotocol so the connection survives and subscriptions can start.
+        var acceptContext = new WebSocketAcceptContext
+        {
+            SubProtocol = context.WebSockets.WebSocketRequestedProtocols.Contains(GraphQlTransportWsProtocol)
+                ? GraphQlTransportWsProtocol
+                : null
+        };
+        using var webSocket = await context.WebSockets.AcceptWebSocketAsync(acceptContext);
         var socketId = Guid.NewGuid().ToString();
         var connection = new WebSocketConnection(webSocket, string.Empty);
         _connections.TryAdd(socketId, connection);
@@ -204,7 +220,8 @@ public class WebSocketMiddleware
                                                     h => h.OperationType == subscription.OperationName);
                                                 if (handler != null)
                                                 {
-                                                    await handler.HandleSubscription(socketId, wsMessage.Id);
+                                                    var subscriptionArgument = ExtractSubscriptionArgument(subscription);
+                                                    await handler.HandleSubscription(socketId, wsMessage.Id, subscriptionArgument);
                                                     connection.Subscriptions.Add(subscription.OperationName);
                                                 }
                                             }
@@ -250,6 +267,21 @@ public class WebSocketMiddleware
         }
     }
 
+    // These subscriptions filter on a single id variable (e.g. SessionId). Return its value as
+    // a string so the handler only pushes payloads for the entity the socket subscribed to.
+    private static string? ExtractSubscriptionArgument(GraphQLSubscription subscription)
+    {
+        if (subscription.Variables == null)
+            return null;
+
+        foreach (var value in subscription.Variables.Values)
+        {
+            return value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText();
+        }
+
+        return null;
+    }
+
     private async Task SendWebSocketMessage(WebSocket webSocket, object message)
     {
         var json = JsonSerializer.Serialize(message);
@@ -279,7 +311,6 @@ public interface IWebSocketService
     bool IsSocketConnected(string socketId);
 }
 
-[ExcludeFromCodeCoverage]
 public class WebSocketService : IWebSocketService
 {
     private readonly ConcurrentDictionary<string, WebSocketConnection> _connections;
