@@ -1157,6 +1157,51 @@ public partial class DetailedSessionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void MapLotteryEntrants_WithNullCollection_ReturnsEmptyList()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapLotteryEntrants",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        // Act
+        var result = mapMethod!.Invoke(null, new object[] { null! });
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(new List<LotteryEntrantResponse>());
+    }
+
+    [Fact]
+    public void MapLotteryEntrants_WithEntrants_MapsClassAndStatus()
+    {
+        // Arrange
+        var mapMethod = typeof(SessionRepository)
+            .GetMethod("MapLotteryEntrants",
+                BindingFlags.NonPublic | BindingFlags.Static);
+        var entrants = new List<SessionLotteryEntrant>
+        {
+            new() { LotteryEntrantId = 1, SessionId = 1, UserId = "u1", LotteryClass = LotteryClass.Preferred, Status = LotteryEntrantStatus.Entered, User = new AspNetUser { Id = "u1", FirstName = "Jane", LastName = "Doe" } },
+            new() { LotteryEntrantId = 2, SessionId = 1, UserId = "u2", LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Drawn, User = null }, // no user loaded -> null names
+        };
+
+        // Act
+        var result = (List<LotteryEntrantResponse>) mapMethod!.Invoke(null, new object[] { entrants })!;
+
+        // Assert
+        result.Should().HaveCount(2);
+        result[0].LotteryClass.Should().Be(LotteryClass.Preferred);
+        result[0].Status.Should().Be(LotteryEntrantStatus.Entered);
+        result[0].UserId.Should().Be("u1");
+        result[0].FirstName.Should().Be("Jane");
+        result[0].LastName.Should().Be("Doe");
+        result[1].LotteryEntrantId.Should().Be(2);
+        result[1].Status.Should().Be(LotteryEntrantStatus.Drawn);
+        result[1].FirstName.Should().BeNull();
+        result[1].LastName.Should().BeNull();
+    }
+
+    [Fact]
     public void MapRegulars_WithNullCollection_ReturnsEmptyList()
     {
         // Arrange
@@ -1929,17 +1974,37 @@ public partial class DetailedSessionRepositoryTests
     }
 
     [Fact]
-    public async Task AddActivityAsync_NoUserContext_ThrowsUnauthorizedException()
+    public async Task AddActivityAsync_NoUserContext_CreatesActivityLogWithNullUserId()
     {
-        // Arrange
+        // Arrange - no HTTP context (e.g. the lottery draw executor running in a BackgroundService).
         var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext) null!);
 
-        var repository = new SessionRepository(_context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
+        var options = new DbContextOptionsBuilder<HockeyPickupContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var context = new DetailedSessionTestContext(options);
+        context.Sessions!.Add(new Session
+        {
+            SessionId = 1,
+            CreateDateTime = DateTime.UtcNow,
+            UpdateDateTime = DateTime.UtcNow,
+            SessionDate = DateTime.UtcNow.AddDays(1),
+            Note = "Test session"
+        });
+        await context.SaveChangesAsync();
 
-        // Act & Assert
-        await repository.Invoking(r => r.AddActivityAsync(1, "Test activity"))
-            .Should().ThrowAsync<UnauthorizedAccessException>();
+        var repository = new SessionRepository(context, _mockLogger.Object, mockHttpContextAccessor.Object, _mockConfiguration.Object);
+
+        // Act - system action attributes the activity to no specific user instead of throwing.
+        var result = await repository.AddActivityAsync(1, "Test activity");
+
+        // Assert
+        result.Should().NotBeNull();
+        var activityLog = await context.ActivityLogs!.FirstOrDefaultAsync();
+        activityLog.Should().NotBeNull();
+        activityLog!.UserId.Should().BeNull();
+        activityLog.Activity.Should().Be("Test activity");
     }
 
     [Fact]

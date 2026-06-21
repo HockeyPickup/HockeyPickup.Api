@@ -1165,8 +1165,8 @@ public partial class UserServiceTest
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()))
-            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken>(
-                (message, _, _, _, _) => capturedUrl = message.MessageData["ResetUrl"])
+            .Callback<ServiceBusCommsMessage, string, string, string, CancellationToken, DateTimeOffset?>(
+                (message, _, _, _, _, _) => capturedUrl = message.MessageData["ResetUrl"])
             .Returns(Task.CompletedTask);
 
         // Act

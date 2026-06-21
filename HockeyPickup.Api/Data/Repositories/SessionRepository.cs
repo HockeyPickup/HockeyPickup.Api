@@ -30,7 +30,9 @@ public class SessionRepository : ISessionRepository
         var activityLog = new ActivityLog
         {
             SessionId = sessionId,
-            UserId = _httpContextAccessor.GetUserId(),
+            // Null-safe: the lottery draw executor runs in a BackgroundService with no HTTP context, so attribute
+            // the activity to no specific user (system action) rather than throwing.
+            UserId = _httpContextAccessor.GetUserIdOrNull(),
             CreateDateTime = DateTime.UtcNow,
             Activity = activity
         };
@@ -77,6 +79,8 @@ public class SessionRepository : ISessionRepository
         existingSession.RegularSetId = session.RegularSetId;
         existingSession.BuyDayMinimum = session.BuyDayMinimum;
         existingSession.Cost = session.Cost;
+        existingSession.LotteryEnabled = session.LotteryEnabled;
+        existingSession.LotteryEntryWindowMinutes = session.LotteryEntryWindowMinutes;
         existingSession.UpdateDateTime = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -245,6 +249,8 @@ public class SessionRepository : ISessionRepository
             // Views are already denormalized, so include directly
             .Include(s => s.CurrentSessionRoster.OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName))
             .Include(s => s.BuyingQueues.OrderBy(q => q.BuySellId))
+            .Include(s => s.LotteryEntrants)
+                .ThenInclude(e => e.User)
             .AsSplitQuery() // Added this as without it, it's very slow
             .OrderByDescending(s => s.SessionDate).ToListAsync();
 
@@ -275,6 +281,8 @@ public class SessionRepository : ISessionRepository
             .Include(s => s.BuyingQueues)
                 .ThenInclude(q => q.Seller)
                 .ThenInclude(s => s.PaymentMethods)
+            .Include(s => s.LotteryEntrants)
+                .ThenInclude(e => e.User)
              .AsSplitQuery() // Added this as without it, it's very slow
             .FirstOrDefaultAsync();
 
@@ -295,8 +303,11 @@ public class SessionRepository : ISessionRepository
             RegularSetId = session.RegularSetId,
             BuyDayMinimum = session.BuyDayMinimum,
             Cost = session.Cost != 0 ? session.Cost : cost,
+            LotteryEnabled = session.LotteryEnabled,
+            LotteryEntryWindowMinutes = session.LotteryEntryWindowMinutes,
             BuySells = MapBuySells(session.BuySells),
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
+            LotteryEntrants = MapLotteryEntrants(session.LotteryEntrants),
             RegularSet = MapRegularSet(session.RegularSet),
             CurrentRosters = MapCurrentRoster(session.CurrentSessionRoster),
             BuyingQueues = MapBuyingQueue(session.BuyingQueues)
@@ -403,10 +414,27 @@ public class SessionRepository : ISessionRepository
         {
             ActivityLogId = a.ActivityLogId,
             UserId = a.UserId,
+            FirstName = a.User?.FirstName,
+            LastName = a.User?.LastName,
             CreateDateTime = a.CreateDateTime,
             Activity = a.Activity,
             User = MapToUserDetailedResponse(a.User)
         }).OrderByDescending(a => a.CreateDateTime).ToList();
+    }
+
+    private static List<LotteryEntrantResponse> MapLotteryEntrants(ICollection<SessionLotteryEntrant> lotteryEntrants)
+    {
+        if (lotteryEntrants == null) return new List<LotteryEntrantResponse>();
+
+        return lotteryEntrants.Select(e => new LotteryEntrantResponse
+        {
+            LotteryEntrantId = e.LotteryEntrantId,
+            UserId = e.UserId,
+            FirstName = e.User?.FirstName,
+            LastName = e.User?.LastName,
+            LotteryClass = e.LotteryClass,
+            Status = e.Status
+        }).ToList();
     }
 
     private static RegularSetResponse MapRegularSet(RegularSet regularSet)

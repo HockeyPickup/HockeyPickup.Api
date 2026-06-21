@@ -103,6 +103,70 @@ public class SessionDetailedResponse : SessionBasicResponse
     [GraphQLDescription("Buy window for preferred plus users")]
     public DateTime BuyWindowPreferredPlus => SessionDate.AddDays(-BuyDayMinimum.GetValueOrDefault() - 1).AddHours(2).AddMinutes(-5);
 
+    [Required]
+    [Description("Whether the lottery is enabled for this session")]
+    [JsonPropertyName("LotteryEnabled")]
+    [JsonProperty(nameof(LotteryEnabled), Required = Required.Always)]
+    [GraphQLName("LotteryEnabled")]
+    [GraphQLDescription("Whether the lottery is enabled for this session")]
+    public bool LotteryEnabled { get; set; } = true;
+
+    [Required]
+    [Description("Duration in minutes of each tier's lottery entry window")]
+    [JsonPropertyName("LotteryEntryWindowMinutes")]
+    [JsonProperty(nameof(LotteryEntryWindowMinutes), Required = Required.Always)]
+    [GraphQLName("LotteryEntryWindowMinutes")]
+    [GraphQLDescription("Duration in minutes of each tier's lottery entry window")]
+    public int LotteryEntryWindowMinutes { get; set; } = 30;
+
+    [Description("Lottery entry window opens for the session (standard tier)")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryEntryOpenStandard")]
+    [JsonProperty(nameof(LotteryEntryOpenStandard))]
+    [GraphQLName("LotteryEntryOpenStandard")]
+    [GraphQLDescription("Lottery entry window opens for the session (standard tier)")]
+    public DateTime LotteryEntryOpenStandard => BuyWindow;
+
+    [Description("Lottery entry window opens for preferred users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryEntryOpenPreferred")]
+    [JsonProperty(nameof(LotteryEntryOpenPreferred))]
+    [GraphQLName("LotteryEntryOpenPreferred")]
+    [GraphQLDescription("Lottery entry window opens for preferred users")]
+    public DateTime LotteryEntryOpenPreferred => BuyWindowPreferred;
+
+    [Description("Lottery entry window opens for preferred plus users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryEntryOpenPreferredPlus")]
+    [JsonProperty(nameof(LotteryEntryOpenPreferredPlus))]
+    [GraphQLName("LotteryEntryOpenPreferredPlus")]
+    [GraphQLDescription("Lottery entry window opens for preferred plus users")]
+    public DateTime LotteryEntryOpenPreferredPlus => BuyWindowPreferredPlus;
+
+    [Description("Lottery draw time for the session (standard tier)")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryDrawStandard")]
+    [JsonProperty(nameof(LotteryDrawStandard))]
+    [GraphQLName("LotteryDrawStandard")]
+    [GraphQLDescription("Lottery draw time for the session (standard tier)")]
+    public DateTime LotteryDrawStandard => BuyWindow.AddMinutes(LotteryEntryWindowMinutes);
+
+    [Description("Lottery draw time for preferred users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryDrawPreferred")]
+    [JsonProperty(nameof(LotteryDrawPreferred))]
+    [GraphQLName("LotteryDrawPreferred")]
+    [GraphQLDescription("Lottery draw time for preferred users")]
+    public DateTime LotteryDrawPreferred => BuyWindowPreferred.AddMinutes(LotteryEntryWindowMinutes);
+
+    [Description("Lottery draw time for preferred plus users")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("LotteryDrawPreferredPlus")]
+    [JsonProperty(nameof(LotteryDrawPreferredPlus))]
+    [GraphQLName("LotteryDrawPreferredPlus")]
+    [GraphQLDescription("Lottery draw time for preferred plus users")]
+    public DateTime LotteryDrawPreferredPlus => BuyWindowPreferredPlus.AddMinutes(LotteryEntryWindowMinutes);
+
     [Description("Buy/sell transactions associated with the session")]
     [JsonPropertyName("BuySells")]
     [JsonProperty(nameof(BuySells))]
@@ -116,6 +180,13 @@ public class SessionDetailedResponse : SessionBasicResponse
     [GraphQLName("ActivityLogs")]
     [GraphQLDescription("Activity logs associated with the session")]
     public ICollection<ActivityLogResponse>? ActivityLogs { get; set; }
+
+    [Description("Lottery entrants associated with the session")]
+    [JsonPropertyName("LotteryEntrants")]
+    [JsonProperty(nameof(LotteryEntrants))]
+    [GraphQLName("LotteryEntrants")]
+    [GraphQLDescription("Lottery entrants associated with the session")]
+    public ICollection<LotteryEntrantResponse>? LotteryEntrants { get; set; }
 
     [Description("Regular set details for the session")]
     [JsonPropertyName("RegularSet")]
@@ -343,6 +414,20 @@ public class ActivityLogResponse
     [GraphQLDescription("User Id associated with the activity")]
     public string? UserId { get; set; }
 
+    [Description("First name of the user associated with the activity (null for system actions)")]
+    [JsonPropertyName("FirstName")]
+    [JsonProperty(nameof(FirstName))]
+    [GraphQLName("FirstName")]
+    [GraphQLDescription("First name of the user associated with the activity (null for system actions)")]
+    public string? FirstName { get; set; }
+
+    [Description("Last name of the user associated with the activity (null for system actions)")]
+    [JsonPropertyName("LastName")]
+    [JsonProperty(nameof(LastName))]
+    [GraphQLName("LastName")]
+    [GraphQLDescription("Last name of the user associated with the activity (null for system actions)")]
+    public string? LastName { get; set; }
+
     [Required]
     [Description("Date and time of the activity")]
     [DataType(DataType.DateTime)]
@@ -366,6 +451,56 @@ public class ActivityLogResponse
     [GraphQLName("User")]
     [GraphQLDescription("User details")]
     public UserDetailedResponse? User { get; set; }
+}
+
+[GraphQLName("LotteryEntrant")]
+public class LotteryEntrantResponse
+{
+    [Required]
+    [Description("Unique identifier for the lottery entrant")]
+    [JsonPropertyName("LotteryEntrantId")]
+    [JsonProperty(nameof(LotteryEntrantId), Required = Required.Always)]
+    [GraphQLName("LotteryEntrantId")]
+    [GraphQLDescription("Unique identifier for the lottery entrant")]
+    public required int LotteryEntrantId { get; set; }
+
+    [Description("User Id of the entrant")]
+    [MaxLength(128)]
+    [JsonPropertyName("UserId")]
+    [JsonProperty(nameof(UserId))]
+    [GraphQLName("UserId")]
+    [GraphQLDescription("User Id of the entrant")]
+    public string? UserId { get; set; }
+
+    [Description("First name of the entrant")]
+    [JsonPropertyName("FirstName")]
+    [JsonProperty(nameof(FirstName))]
+    [GraphQLName("FirstName")]
+    [GraphQLDescription("First name of the entrant")]
+    public string? FirstName { get; set; }
+
+    [Description("Last name of the entrant")]
+    [JsonPropertyName("LastName")]
+    [JsonProperty(nameof(LastName))]
+    [GraphQLName("LastName")]
+    [GraphQLDescription("Last name of the entrant")]
+    public string? LastName { get; set; }
+
+    [Required]
+    [Description("Lottery tier the entrant is entered in")]
+    [JsonPropertyName("LotteryClass")]
+    [JsonProperty(nameof(LotteryClass), Required = Required.Always)]
+    [GraphQLName("LotteryClass")]
+    [GraphQLDescription("Lottery tier the entrant is entered in")]
+    public required LotteryClass LotteryClass { get; set; }
+
+    [Required]
+    [Description("Status of the lottery entrant")]
+    [JsonPropertyName("Status")]
+    [JsonProperty(nameof(Status), Required = Required.Always)]
+    [GraphQLName("Status")]
+    [GraphQLDescription("Status of the lottery entrant")]
+    public required LotteryEntrantStatus Status { get; set; }
 }
 
 [GraphQLName("RegularSet")]

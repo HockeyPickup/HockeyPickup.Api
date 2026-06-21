@@ -14,6 +14,8 @@ public class Session
     public int? RegularSetId { get; set; }
     public int? BuyDayMinimum { get; set; }
     public decimal? Cost { get; set; }
+    public bool LotteryEnabled { get; set; } = true;
+    public int LotteryEntryWindowMinutes { get; set; } = 30;
 
     // Navigation properties
     [ForeignKey("RegularSetId")]
@@ -22,6 +24,30 @@ public class Session
     public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
     public virtual ICollection<CurrentSessionRoster> CurrentSessionRoster { get; set; } = new List<CurrentSessionRoster>();
     public virtual ICollection<BuyingQueue> BuyingQueues { get; set; } = new List<BuyingQueue>();
+    public virtual ICollection<SessionLotteryEntrant> LotteryEntrants { get; set; } = new List<SessionLotteryEntrant>();
+}
+
+public class SessionLotteryEntrant
+{
+    [Key]
+    public int LotteryEntrantId { get; set; }
+    public int SessionId { get; set; }
+    public string UserId { get; set; } = null!;
+    public LotteryClass LotteryClass { get; set; }
+    public decimal Weight { get; set; } = 1.0m;
+    public LotteryEntrantStatus Status { get; set; }
+    public int? DrawOrder { get; set; }
+    public DateTime? DrawDateTime { get; set; }
+    public string? FailureReason { get; set; }
+    public DateTime CreateDateTime { get; set; }
+    public DateTime UpdateDateTime { get; set; }
+
+    // Navigation properties
+    [ForeignKey(nameof(SessionId))]
+    public virtual Session? Session { get; set; }
+
+    [ForeignKey(nameof(UserId))]
+    public virtual AspNetUser? User { get; set; }
 }
 
 public class RegularSet

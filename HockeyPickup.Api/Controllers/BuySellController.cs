@@ -23,11 +23,13 @@ public class BuySellController : ControllerBase
 {
     private readonly IBuySellService _BuySellService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILotteryService _lotteryService;
 
-    public BuySellController(IBuySellService BuySellService, IHttpContextAccessor httpContextAccessor)
+    public BuySellController(IBuySellService BuySellService, IHttpContextAccessor httpContextAccessor, ILotteryService lotteryService)
     {
         _BuySellService = BuySellService;
         _httpContextAccessor = httpContextAccessor;
+        _lotteryService = lotteryService;
     }
 
     [Authorize]
@@ -197,6 +199,34 @@ public class BuySellController : ControllerBase
         var userId = _httpContextAccessor.GetUserId();
         var result = await _BuySellService.CanSellAsync(userId, sessionId);
         var response = ApiDataResponse<BuySellStatusResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
+    [HttpPost("lottery/enter")]
+    [Description("Enter the applicable lottery for a session")]
+    [Produces(typeof(ApiDataResponse<BuySellStatusResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellStatusResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<BuySellStatusResponse>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<BuySellStatusResponse>>> EnterLottery([FromBody] LotteryEnterRequest request)
+    {
+        var userId = _httpContextAccessor.GetUserId();
+        var result = await _lotteryService.EnterAsync(userId, request.SessionId);
+        var response = ApiDataResponse<BuySellStatusResponse>.FromServiceResult(result);
+        return result.IsSuccess ? Ok(response) : BadRequest(response);
+    }
+
+    [Authorize]
+    [HttpPost("lottery/withdraw")]
+    [Description("Withdraw from the lottery for a session")]
+    [Produces(typeof(ApiDataResponse<bool>))]
+    [ProducesResponseType(typeof(ApiDataResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiDataResponse<bool>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiDataResponse<bool>>> WithdrawLottery([FromBody] LotteryWithdrawRequest request)
+    {
+        var userId = _httpContextAccessor.GetUserId();
+        var result = await _lotteryService.WithdrawAsync(userId, request.SessionId);
+        var response = ApiDataResponse<bool>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
 }

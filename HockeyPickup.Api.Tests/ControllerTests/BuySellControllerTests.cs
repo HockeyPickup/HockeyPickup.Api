@@ -14,6 +14,7 @@ public class BuySellControllerTests
 {
     private readonly Mock<IBuySellService> _mockBuySellService;
     private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly Mock<ILotteryService> _mockLotteryService;
     private readonly BuySellController _controller;
     private const string TestUserId = "testUser123";
     private readonly DateTime _testDate = DateTime.UtcNow;
@@ -22,6 +23,7 @@ public class BuySellControllerTests
     {
         _mockBuySellService = new Mock<IBuySellService>();
         _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        _mockLotteryService = new Mock<ILotteryService>();
 
         // Setup HttpContext to return test user ID
         var mockHttpContext = new Mock<HttpContext>();
@@ -31,7 +33,7 @@ public class BuySellControllerTests
         mockHttpContext.Setup(x => x.User).Returns(mockPrincipal.Object);
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
 
-        _controller = new BuySellController(_mockBuySellService.Object, _mockHttpContextAccessor.Object);
+        _controller = new BuySellController(_mockBuySellService.Object, _mockHttpContextAccessor.Object, _mockLotteryService.Object);
     }
 
     private BuySellResponse CreateTestBuySellResponse(int buySellId = 1)
@@ -477,5 +479,56 @@ public class BuySellControllerTests
         var badRequestResult = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
         var response = badRequestResult.Value.Should().BeOfType<ApiDataResponse<BuySellStatusResponse>>().Subject;
         response.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EnterLottery_Success_ReturnsOk()
+    {
+        var request = new LotteryEnterRequest { SessionId = 1 };
+        _mockLotteryService.Setup(s => s.EnterAsync(TestUserId, 1))
+            .ReturnsAsync(ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse { IsAllowed = false, Reason = "in", BuyActionState = BuyActionState.InLottery }));
+
+        var result = await _controller.EnterLottery(request);
+
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<ApiDataResponse<BuySellStatusResponse>>().Subject;
+        response.Data!.BuyActionState.Should().Be(BuyActionState.InLottery);
+    }
+
+    [Fact]
+    public async Task EnterLottery_Failure_ReturnsBadRequest()
+    {
+        var request = new LotteryEnterRequest { SessionId = 1 };
+        _mockLotteryService.Setup(s => s.EnterAsync(TestUserId, 1))
+            .ReturnsAsync(ServiceResult<BuySellStatusResponse>.CreateFailure("not eligible"));
+
+        var result = await _controller.EnterLottery(request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task WithdrawLottery_Success_ReturnsOk()
+    {
+        var request = new LotteryWithdrawRequest { SessionId = 1 };
+        _mockLotteryService.Setup(s => s.WithdrawAsync(TestUserId, 1))
+            .ReturnsAsync(ServiceResult<bool>.CreateSuccess(true));
+
+        var result = await _controller.WithdrawLottery(request);
+
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeOfType<ApiDataResponse<bool>>();
+    }
+
+    [Fact]
+    public async Task WithdrawLottery_Failure_ReturnsBadRequest()
+    {
+        var request = new LotteryWithdrawRequest { SessionId = 1 };
+        _mockLotteryService.Setup(s => s.WithdrawAsync(TestUserId, 1))
+            .ReturnsAsync(ServiceResult<bool>.CreateFailure("no entry"));
+
+        var result = await _controller.WithdrawLottery(request);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using HockeyPickup.Api.Data.Entities;
 using Newtonsoft.Json;
 
 namespace HockeyPickup.Api.Models.Responses;
@@ -30,4 +31,25 @@ public class BuySellStatusResponse
     [GraphQLName("TimeUntilAllowed")]
     [GraphQLDescription("Time until action is allowed (if applicable)")]
     public TimeSpan? TimeUntilAllowed { get; set; }
+
+    [Description("The buy action the front end should present for this user/session")]
+    [JsonPropertyName("BuyActionState")]
+    [JsonProperty(nameof(BuyActionState))]
+    [GraphQLName("BuyActionState")]
+    [GraphQLDescription("The buy action the front end should present for this user/session")]
+    public BuyActionState BuyActionState { get; set; } = BuyActionState.NotEligible;
+
+    [Description("The lottery tier that applies (when entering/in a lottery)")]
+    [JsonPropertyName("LotteryClass")]
+    [JsonProperty(nameof(LotteryClass))]
+    [GraphQLName("LotteryClass")]
+    [GraphQLDescription("The lottery tier that applies (when entering/in a lottery)")]
+    public LotteryClass? LotteryClass { get; set; }
+
+    [Description("Time until the applicable lottery draw (when entering/in a lottery)")]
+    [JsonPropertyName("TimeUntilDraw")]
+    [JsonProperty(nameof(TimeUntilDraw))]
+    [GraphQLName("TimeUntilDraw")]
+    [GraphQLDescription("Time until the applicable lottery draw (when entering/in a lottery)")]
+    public TimeSpan? TimeUntilDraw { get; set; }
 }
