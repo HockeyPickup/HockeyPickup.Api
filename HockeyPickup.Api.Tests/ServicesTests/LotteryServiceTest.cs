@@ -25,6 +25,7 @@ public class LotteryServiceTests
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<ILogger<LotteryService>> _mockLogger;
     private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<ISubscriptionHandler> _mockSubscriptionHandler;
     private readonly ReverseShuffler _shuffler = new();
     private readonly LotteryService _service;
 
@@ -54,6 +55,7 @@ public class LotteryServiceTests
         _mockConfiguration = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<LotteryService>>();
         _mockUserRepository = new Mock<IUserRepository>();
+        _mockSubscriptionHandler = new Mock<ISubscriptionHandler>();
 
         _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
         _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("comms");
@@ -62,7 +64,7 @@ public class LotteryServiceTests
 
         _service = new LotteryService(_userManager.Object, _mockSessionRepository.Object, _mockLotteryRepository.Object,
             _mockBuySellService.Object, _mockServiceBus.Object, _mockConfiguration.Object, _mockLogger.Object,
-            _shuffler, _mockUserRepository.Object);
+            _shuffler, _mockUserRepository.Object, _mockSubscriptionHandler.Object);
     }
 
     private static AspNetUser CreateUser(string id = "user1") => new()
@@ -116,7 +118,7 @@ public class LotteryServiceTests
     };
 
     private void SetupBuySuccess() => _mockBuySellService
-        .Setup(x => x.ProcessBuyRequestAsync(It.IsAny<string>(), It.IsAny<BuyRequest>(), true))
+        .Setup(x => x.ProcessBuyRequestAsync(It.IsAny<string>(), It.IsAny<BuyRequest>(), true, It.IsAny<bool>()))
         .ReturnsAsync(ServiceResult<BuySellResponse>.CreateSuccess(BuyResponse()));
 
     private static UserDetailedResponse User(string id, bool active, NotificationPreference pref, string email) => new()
@@ -217,8 +219,8 @@ public class LotteryServiceTests
         _mockLotteryRepository.Setup(x => x.PersistDrawOrderAsync(1, LotteryClass.Standard, It.IsAny<IReadOnlyList<(int, int)>>(), It.IsAny<DateTime>()))
             .Callback<int, LotteryClass, IReadOnlyList<(int, int)>, DateTime>((_, _, ordered, _) => { callOrder.Add("persist"); capturedOrder = ordered; })
             .Returns(Task.CompletedTask);
-        _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync(It.IsAny<string>(), It.IsAny<BuyRequest>(), true))
-            .Callback<string, BuyRequest, bool>((userId, _, _) => callOrder.Add("buy:" + userId))
+        _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync(It.IsAny<string>(), It.IsAny<BuyRequest>(), true, It.IsAny<bool>()))
+            .Callback<string, BuyRequest, bool, bool>((userId, _, _, _) => callOrder.Add("buy:" + userId))
             .ReturnsAsync(ServiceResult<BuySellResponse>.CreateSuccess(BuyResponse()));
 
         string? activity = null;
@@ -237,6 +239,27 @@ public class LotteryServiceTests
         _mockLotteryRepository.Verify(x => x.MarkDrawnAsync(10), Times.Once);
         activity.Should().Be("Lottery Draw Results (Standard): FirstuserB LastuserB, FirstuserA LastuserA");
         _mockServiceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), "LotteryDrawCompleted", It.IsAny<string>(), "comms", It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleDraw_Completed_SuppressesPerPickBuyBroadcast_AndPushesRosterOnce()
+    {
+        var session = CreateSession();
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync(session);
+        _mockLotteryRepository.Setup(x => x.ClaimForDrawingAsync(1, LotteryClass.Standard)).ReturnsAsync(2);
+        _mockLotteryRepository.Setup(x => x.GetEntrantsAsync(1, LotteryClass.Standard, LotteryEntrantStatus.Drawing))
+            .ReturnsAsync(new List<SessionLotteryEntrant> { CreateEntrant(10, "userA"), CreateEntrant(20, "userB") });
+        _mockLotteryRepository.Setup(x => x.PersistDrawOrderAsync(It.IsAny<int>(), It.IsAny<LotteryClass>(), It.IsAny<IReadOnlyList<(int, int)>>(), It.IsAny<DateTime>())).Returns(Task.CompletedTask);
+        _mockSessionRepository.Setup(x => x.AddActivityAsync(1, It.IsAny<string>())).ReturnsAsync(session);
+        SetupBuySuccess();
+
+        var result = await _service.HandleDrawMessageAsync(new LotteryDrawMessage { SessionId = 1, LotteryClass = LotteryClass.Standard, ExpectedDrawDateTimePacific = session.LotteryDrawStandard });
+
+        result.Should().Be(LotteryDrawOutcome.Completed);
+        // Each per-entrant buy suppresses its own broadcast (broadcast: false)...
+        _mockBuySellService.Verify(x => x.ProcessBuyRequestAsync(It.IsAny<string>(), It.IsAny<BuyRequest>(), true, false), Times.Exactly(2));
+        // ...and the draw pushes a single roster update after all picks complete.
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(session), Times.Once);
     }
 
     [Fact]
@@ -282,9 +305,9 @@ public class LotteryServiceTests
         _mockSessionRepository.Setup(x => x.AddActivityAsync(1, It.IsAny<string>())).ReturnsAsync(session);
 
         // userB (drawn first) fails; userA succeeds.
-        _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync("userB", It.IsAny<BuyRequest>(), true))
+        _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync("userB", It.IsAny<BuyRequest>(), true, It.IsAny<bool>()))
             .ReturnsAsync(ServiceResult<BuySellResponse>.CreateFailure("already rostered"));
-        _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync("userA", It.IsAny<BuyRequest>(), true))
+        _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync("userA", It.IsAny<BuyRequest>(), true, It.IsAny<bool>()))
             .ReturnsAsync(ServiceResult<BuySellResponse>.CreateSuccess(BuyResponse()));
 
         var result = await _service.HandleDrawMessageAsync(new LotteryDrawMessage { SessionId = 1, LotteryClass = LotteryClass.Standard, ExpectedDrawDateTimePacific = session.LotteryDrawStandard });
@@ -355,6 +378,29 @@ public class LotteryServiceTests
         result.Data.LotteryClass.Should().Be(LotteryClass.Preferred);
         _mockLotteryRepository.Verify(x => x.CreateOrReactivateEntrantAsync(1, "user1", LotteryClass.Preferred, 1.0m, "Firstuser1 Lastuser1 entered the Preferred lottery"), Times.Once);
         _mockServiceBus.Verify(x => x.SendAsync(It.IsAny<ServiceBusCommsMessage>(), "LotteryEntered", It.IsAny<string>(), "comms", It.IsAny<CancellationToken>(), It.IsAny<DateTimeOffset?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Enter_Success_BroadcastsSessionUpdate()
+    {
+        var session = CreateSession();
+        _mockBuySellService.Setup(x => x.CanBuyAsync("user1", 1, false)).ReturnsAsync(
+            ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+            {
+                IsAllowed = false,
+                Reason = "enter",
+                BuyActionState = BuyActionState.EnterLottery,
+                LotteryClass = LotteryClass.Standard,
+                TimeUntilDraw = TimeSpan.FromMinutes(10)
+            }));
+        _userManager.Setup(x => x.FindByIdAsync("user1")).ReturnsAsync(CreateUser());
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(1)).ReturnsAsync(session);
+        _mockLotteryRepository.Setup(x => x.CreateOrReactivateEntrantAsync(1, "user1", LotteryClass.Standard, 1.0m, It.IsAny<string>()))
+            .ReturnsAsync(CreateEntrant(1, "user1"));
+
+        await _service.EnterAsync("user1", 1);
+
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(session), Times.Once);
     }
 
     [Fact]

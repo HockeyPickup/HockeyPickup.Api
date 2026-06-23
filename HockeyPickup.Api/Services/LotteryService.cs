@@ -35,6 +35,7 @@ public class LotteryService : ILotteryService
     private readonly ILogger<LotteryService> _logger;
     private readonly IRandomShuffler _shuffler;
     private readonly IUserRepository _userRepository;
+    private readonly ISubscriptionHandler _subscriptionHandler;
 
     private static readonly TimeSpan StuckDrawingThreshold = TimeSpan.FromMinutes(10);
 
@@ -47,7 +48,8 @@ public class LotteryService : ILotteryService
         IConfiguration configuration,
         ILogger<LotteryService> logger,
         IRandomShuffler shuffler,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ISubscriptionHandler subscriptionHandler)
     {
         _userManager = userManager;
         _sessionRepository = sessionRepository;
@@ -58,6 +60,7 @@ public class LotteryService : ILotteryService
         _logger = logger;
         _shuffler = shuffler;
         _userRepository = userRepository;
+        _subscriptionHandler = subscriptionHandler;
     }
 
     public async Task<ServiceResult<BuySellStatusResponse>> EnterAsync(string userId, int sessionId)
@@ -84,6 +87,9 @@ public class LotteryService : ILotteryService
             await _lotteryRepository.CreateOrReactivateEntrantAsync(sessionId, userId, lotteryClass, 1.0m, message);
 
             await SendLotteryEnteredServiceBusMessageAsync(session, buyer, lotteryClass);
+
+            // Push the updated entrant list to live subscribers.
+            await BroadcastSessionUpdateAsync(sessionId);
 
             return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
             {
@@ -118,6 +124,9 @@ public class LotteryService : ILotteryService
             var withdrawn = await _lotteryRepository.WithdrawEntrantAsync(sessionId, userId, message);
             if (withdrawn == null)
                 return ServiceResult<bool>.CreateFailure("You do not have an active lottery entry to withdraw");
+
+            // Push the updated entrant list to live subscribers.
+            await BroadcastSessionUpdateAsync(sessionId);
 
             return ServiceResult<bool>.CreateSuccess(true, "You have withdrawn from the lottery");
         }
@@ -295,7 +304,8 @@ public class LotteryService : ILotteryService
 
         foreach (var entrant in ordered)
         {
-            var result = await _buySellService.ProcessBuyRequestAsync(entrant.UserId, new BuyRequest { SessionId = session.SessionId }, bypassLotteryGate: true);
+            // Suppress the per-buy broadcast; the draw pushes a single update after all picks.
+            var result = await _buySellService.ProcessBuyRequestAsync(entrant.UserId, new BuyRequest { SessionId = session.SessionId }, bypassLotteryGate: true, broadcast: false);
             if (result.IsSuccess)
             {
                 await _lotteryRepository.MarkDrawnAsync(entrant.LotteryEntrantId);
@@ -307,7 +317,18 @@ public class LotteryService : ILotteryService
             }
         }
 
+        // Push the filled roster to live subscribers once, after the whole draw completes.
+        await BroadcastSessionUpdateAsync(session.SessionId);
+
         await SendLotteryDrawCompletedServiceBusMessageAsync(session, lotteryClass, drawnNames, entrantEmails);
+    }
+
+    // Re-fetch the full session and push it to live WebSocket subscribers so the entrant list
+    // and roster update without a manual refresh.
+    private async Task BroadcastSessionUpdateAsync(int sessionId)
+    {
+        var session = await _sessionRepository.GetSessionAsync(sessionId);
+        await _subscriptionHandler.HandleUpdate(session);
     }
 
     private async Task SendLotteryEnteredServiceBusMessageAsync(SessionDetailedResponse session, AspNetUser entrant, LotteryClass lotteryClass)
