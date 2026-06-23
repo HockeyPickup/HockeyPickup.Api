@@ -60,6 +60,12 @@ internal sealed class FakeWebSocket : WebSocket
         return new WebSocketReceiveResult(bytes.Length, WebSocketMessageType.Text, true);
     };
 
+    public static Func<ArraySegment<byte>, WebSocketReceiveResult> TextFragment(byte[] chunk, bool endOfMessage) => buffer =>
+    {
+        Array.Copy(chunk, 0, buffer.Array!, buffer.Offset, chunk.Length);
+        return new WebSocketReceiveResult(chunk.Length, WebSocketMessageType.Text, endOfMessage);
+    };
+
     public static Func<ArraySegment<byte>, WebSocketReceiveResult> Binary() =>
         _ => new WebSocketReceiveResult(0, WebSocketMessageType.Binary, true);
 
@@ -392,6 +398,30 @@ public class WebSocketMiddlewareTests
         handler.Verify(h => h.HandleSubscription(It.IsAny<string>(), "sub-1", "123"), Times.Once);
         // ...and the connection is cleaned up when the loop ends
         handler.Verify(h => h.Cleanup(It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ReassemblesFragmentedSubscribeMessage()
+    {
+        // Arrange - a subscribe message split across two frames, as happens when the (large)
+        // subscription query exceeds the receive buffer.
+        var handler = Handler();
+        var bytes = Encoding.UTF8.GetBytes(
+            """{"id":"sub-1","type":"subscribe","payload":{"operationName":"SessionUpdated","variables":{"SessionId":42}}}""");
+        var mid = bytes.Length / 2;
+        var socket = new FakeWebSocket(new[]
+        {
+            FakeWebSocket.TextFragment(bytes[..mid], endOfMessage: false),
+            FakeWebSocket.TextFragment(bytes[mid..], endOfMessage: true)
+        });
+        var (context, _) = BuildContext(socket);
+        var middleware = CreateMiddleware(new[] { handler.Object }, new ConcurrentDictionary<string, WebSocketConnection>());
+
+        // Act
+        await middleware.InvokeAsync(context.Object);
+
+        // Assert - the fragments were reassembled and the subscription registered
+        handler.Verify(h => h.HandleSubscription(It.IsAny<string>(), "sub-1", "42"), Times.Once);
     }
 
     [Fact]

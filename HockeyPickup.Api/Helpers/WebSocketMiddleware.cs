@@ -181,12 +181,24 @@ public class WebSocketMiddleware
             {
                 try
                 {
-                    var result = await connection.Socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    // graphql-ws subscribe frames carry the full subscription query and routinely
+                    // exceed the receive buffer, so reassemble every fragment before parsing.
+                    using var messageStream = new MemoryStream();
+                    WebSocketReceiveResult result;
+                    do
+                    {
+                        result = await connection.Socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                        if (result.MessageType == WebSocketMessageType.Close)
+                            break;
+                        messageStream.Write(buffer, 0, result.Count);
+                    }
+                    while (!result.EndOfMessage);
+
                     connection.UpdateActivity();
 
                     if (result.MessageType == WebSocketMessageType.Text)
                     {
-                        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        var message = Encoding.UTF8.GetString(messageStream.GetBuffer(), 0, (int) messageStream.Length);
                         Console.WriteLine($"Raw message: {message}");
                         var options = new JsonSerializerOptions
                         {
