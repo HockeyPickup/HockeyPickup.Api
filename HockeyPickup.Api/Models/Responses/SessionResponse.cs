@@ -486,6 +486,15 @@ public class LotteryEntrantResponse
     [GraphQLDescription("Last name of the entrant")]
     public string? LastName { get; set; }
 
+    [Description("Profile photo url of the entrant")]
+    [MaxLength(256)]
+    [DataType(DataType.Text)]
+    [JsonPropertyName("PhotoUrl")]
+    [JsonProperty(nameof(PhotoUrl), Required = Required.Default)]
+    [GraphQLName("PhotoUrl")]
+    [GraphQLDescription("Profile photo url of the entrant")]
+    public string? PhotoUrl { get; set; }
+
     [Required]
     [Description("Lottery tier the entrant is entered in")]
     [JsonPropertyName("LotteryClass")]
@@ -501,6 +510,21 @@ public class LotteryEntrantResponse
     [GraphQLName("Status")]
     [GraphQLDescription("Status of the lottery entrant")]
     public required LotteryEntrantStatus Status { get; set; }
+
+    [Description("Pick order assigned during the draw (1-based); null until drawn")]
+    [JsonPropertyName("DrawOrder")]
+    [JsonProperty(nameof(DrawOrder), Required = Required.Default)]
+    [GraphQLName("DrawOrder")]
+    [GraphQLDescription("Pick order assigned during the draw (1-based); null until drawn")]
+    public int? DrawOrder { get; set; }
+
+    [Description("Date and time the entrant was drawn; null until drawn")]
+    [DataType(DataType.DateTime)]
+    [JsonPropertyName("DrawDateTime")]
+    [JsonProperty(nameof(DrawDateTime), Required = Required.Default)]
+    [GraphQLName("DrawDateTime")]
+    [GraphQLDescription("Date and time the entrant was drawn; null until drawn")]
+    public DateTime? DrawDateTime { get; set; }
 }
 
 [GraphQLName("RegularSet")]

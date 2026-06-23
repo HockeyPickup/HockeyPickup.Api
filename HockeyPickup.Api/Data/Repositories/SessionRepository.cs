@@ -432,8 +432,11 @@ public class SessionRepository : ISessionRepository
             UserId = e.UserId,
             FirstName = e.User?.FirstName,
             LastName = e.User?.LastName,
+            PhotoUrl = e.User?.PhotoUrl,
             LotteryClass = e.LotteryClass,
-            Status = e.Status
+            Status = e.Status,
+            DrawOrder = e.DrawOrder,
+            DrawDateTime = e.DrawDateTime
         }).ToList();
     }
 
