@@ -1179,10 +1179,11 @@ public partial class DetailedSessionRepositoryTests : IDisposable
         var mapMethod = typeof(SessionRepository)
             .GetMethod("MapLotteryEntrants",
                 BindingFlags.NonPublic | BindingFlags.Static);
+        var drawTime = new DateTime(2026, 2, 25, 7, 30, 0, DateTimeKind.Utc);
         var entrants = new List<SessionLotteryEntrant>
         {
-            new() { LotteryEntrantId = 1, SessionId = 1, UserId = "u1", LotteryClass = LotteryClass.Preferred, Status = LotteryEntrantStatus.Entered, User = new AspNetUser { Id = "u1", FirstName = "Jane", LastName = "Doe" } },
-            new() { LotteryEntrantId = 2, SessionId = 1, UserId = "u2", LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Drawn, User = null }, // no user loaded -> null names
+            new() { LotteryEntrantId = 1, SessionId = 1, UserId = "u1", LotteryClass = LotteryClass.Preferred, Status = LotteryEntrantStatus.Drawn, DrawOrder = 1, DrawDateTime = drawTime, User = new AspNetUser { Id = "u1", FirstName = "Jane", LastName = "Doe", PhotoUrl = "https://example.com/u1.jpg" } },
+            new() { LotteryEntrantId = 2, SessionId = 1, UserId = "u2", LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Entered, User = null }, // no user loaded -> null names/photo, not drawn -> null order/time
         };
 
         // Act
@@ -1191,14 +1192,20 @@ public partial class DetailedSessionRepositoryTests : IDisposable
         // Assert
         result.Should().HaveCount(2);
         result[0].LotteryClass.Should().Be(LotteryClass.Preferred);
-        result[0].Status.Should().Be(LotteryEntrantStatus.Entered);
+        result[0].Status.Should().Be(LotteryEntrantStatus.Drawn);
         result[0].UserId.Should().Be("u1");
         result[0].FirstName.Should().Be("Jane");
         result[0].LastName.Should().Be("Doe");
+        result[0].PhotoUrl.Should().Be("https://example.com/u1.jpg");
+        result[0].DrawOrder.Should().Be(1);
+        result[0].DrawDateTime.Should().Be(drawTime);
         result[1].LotteryEntrantId.Should().Be(2);
-        result[1].Status.Should().Be(LotteryEntrantStatus.Drawn);
+        result[1].Status.Should().Be(LotteryEntrantStatus.Entered);
         result[1].FirstName.Should().BeNull();
         result[1].LastName.Should().BeNull();
+        result[1].PhotoUrl.Should().BeNull();
+        result[1].DrawOrder.Should().BeNull();
+        result[1].DrawDateTime.Should().BeNull();
     }
 
     [Fact]
