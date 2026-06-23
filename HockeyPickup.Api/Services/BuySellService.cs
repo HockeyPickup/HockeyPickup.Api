@@ -11,7 +11,7 @@ namespace HockeyPickup.Api.Services;
 
 public interface IBuySellService
 {
-    Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false);
+    Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false, bool broadcast = true);
     Task<ServiceResult<BuySellResponse>> ProcessSellRequestAsync(string userId, SellRequest request);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentSentAsync(string userId, int buySellId, PaymentMethodType paymentMethod);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentReceivedAsync(string userId, int buySellId);
@@ -67,7 +67,7 @@ public class BuySellService : IBuySellService
         _lotteryEligibility = lotteryEligibility;
     }
 
-    public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false)
+    public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false, bool broadcast = true)
     {
         try
         {
@@ -173,6 +173,11 @@ public class BuySellService : IBuySellService
                     // Send a message to Service Bus that a player added themselves to buyer queue
                     await SendBuySellServiceBusCommsMessageAsync("AddedToBuyQueue", session.SessionId, session.SessionDate, buyer, null, null);
                 }
+
+                // Push the updated session to live subscribers. Suppressed during a lottery draw,
+                // which buys on each entrant's behalf and broadcasts once after all picks complete.
+                if (broadcast)
+                    await BroadcastSessionUpdateAsync(request.SessionId);
 
                 return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
             }
@@ -297,6 +302,9 @@ public class BuySellService : IBuySellService
                     await SendBuySellServiceBusCommsMessageAsync("AddedToSellQueue", session.SessionId, session.SessionDate, null, seller, null);
                 }
 
+                // Push the updated session to live subscribers.
+                await BroadcastSessionUpdateAsync(request.SessionId);
+
                 return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
             }
             finally
@@ -332,6 +340,8 @@ public class BuySellService : IBuySellService
             var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} confirmed PAYMENT sent";
             var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
 
+            await BroadcastSessionUpdateAsync(buySell.SessionId);
+
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
         catch (Exception ex)
@@ -360,6 +370,8 @@ public class BuySellService : IBuySellService
 
             var message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} confirmed PAYMENT received";
             var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+            await BroadcastSessionUpdateAsync(buySell.SessionId);
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
@@ -391,6 +403,8 @@ public class BuySellService : IBuySellService
             var message = $"{buySell.Buyer.FirstName} {buySell.Buyer.LastName} unconfirmed PAYMENT sent";
             var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
 
+            await BroadcastSessionUpdateAsync(buySell.SessionId);
+
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
         catch (Exception ex)
@@ -419,6 +433,8 @@ public class BuySellService : IBuySellService
 
             var message = $"{buySell.Seller.FirstName} {buySell.Seller.LastName} unconfirmed PAYMENT received";
             var result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
+
+            await BroadcastSessionUpdateAsync(buySell.SessionId);
 
             return ServiceResult<BuySellResponse>.CreateSuccess(await MapBuySellToResponse(result), message);
         }
@@ -508,6 +524,8 @@ public class BuySellService : IBuySellService
             // Send a message to Service Bus that a player removed themselves from buying
             await SendBuySellServiceBusCommsMessageAsync("CancelledBuyQueuePosition", session.SessionId, session.SessionDate, buySell.Buyer, null, null);
 
+            await BroadcastSessionUpdateAsync(session.SessionId);
+
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
         catch (Exception ex)
@@ -550,6 +568,8 @@ public class BuySellService : IBuySellService
 
             // Send a message to Service Bus that a player removed themselves from selling
             await SendBuySellServiceBusCommsMessageAsync("CancelledSellQueuePosition", session.SessionId, session.SessionDate, null, buySell.Seller, null);
+
+            await BroadcastSessionUpdateAsync(session.SessionId);
 
             return ServiceResult<bool>.CreateSuccess(true, message);
         }
@@ -824,6 +844,14 @@ public class BuySellService : IBuySellService
             _logger.LogError(ex, msg);
             return ServiceResult<BuySellStatusResponse>.CreateFailure(msg);
         }
+    }
+
+    // Re-fetch the full session and push it to live WebSocket subscribers so the roster,
+    // buy/sell queue, and activity feed update without a manual refresh.
+    private async Task BroadcastSessionUpdateAsync(int sessionId)
+    {
+        var session = await _sessionRepository.GetSessionAsync(sessionId);
+        await _subscriptionHandler.HandleUpdate(session);
     }
 
     private async Task<BuySellResponse> MapBuySellToResponse(BuySell buySell)

@@ -267,6 +267,62 @@ public class BuySellServiceTests
     }
 
     [Fact]
+    public async Task ProcessBuyRequestAsync_Success_BroadcastsSessionUpdate()
+    {
+        // Arrange
+        var userId = "testUser";
+        var request = new BuyRequest { SessionId = 1, Note = "Test buy" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.FindMatchingSellBuySellAsync(request.SessionId)).ReturnsAsync((BuySell?) null);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId)).ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.GetQueuePositionAsync(It.IsAny<int>())).ReturnsAsync(1);
+        _mockUserRepository.Setup(x => x.GetUserAsync(userId)).ReturnsAsync(CreateTestUserResponse(userId));
+        _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
+        _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
+        _mockBuySellRepository.Setup(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(CreateTestBuySell(buyerId: userId));
+
+        // Act
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, request);
+
+        // Assert - the updated session is pushed to live subscribers
+        result.IsSuccess.Should().BeTrue();
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(session), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessBuyRequestAsync_WithBroadcastFalse_DoesNotBroadcast()
+    {
+        // Arrange - the lottery draw buys on each entrant's behalf with broadcast: false
+        var userId = "testUser";
+        var request = new BuyRequest { SessionId = 1, Note = "Test buy" };
+        var user = CreateTestUser(userId);
+        var session = CreateTestSessionDetailedResponse();
+
+        _mockSessionRepository.Setup(x => x.GetSessionAsync(request.SessionId)).ReturnsAsync(session);
+        _userManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _userManager.Setup(x => x.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+        _mockBuySellRepository.Setup(x => x.FindMatchingSellBuySellAsync(request.SessionId)).ReturnsAsync((BuySell?) null);
+        _mockBuySellRepository.Setup(x => x.GetUserBuySellsAsync(request.SessionId, userId)).ReturnsAsync(new List<BuySell>());
+        _mockBuySellRepository.Setup(x => x.GetQueuePositionAsync(It.IsAny<int>())).ReturnsAsync(1);
+        _mockUserRepository.Setup(x => x.GetUserAsync(userId)).ReturnsAsync(CreateTestUserResponse(userId));
+        _mockConfiguration.Setup(x => x["ServiceBusCommsQueueName"]).Returns("testqueue");
+        _mockConfiguration.Setup(x => x["BaseUrl"]).Returns("https://test.com");
+        _mockBuySellRepository.Setup(x => x.CreateBuySellAsync(It.IsAny<BuySell>(), It.IsAny<string>())).ReturnsAsync(CreateTestBuySell(buyerId: userId));
+
+        // Act
+        var result = await _buySellService.ProcessBuyRequestAsync(userId, request, bypassLotteryGate: true, broadcast: false);
+
+        // Assert - no live push; the draw broadcasts once after all picks
+        result.IsSuccess.Should().BeTrue();
+        _mockSubscriptionHandler.Verify(x => x.HandleUpdate(It.IsAny<object>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ProcessBuyRequestAsync_Fails_WhenSessionInPast()
     {
         // Arrange
