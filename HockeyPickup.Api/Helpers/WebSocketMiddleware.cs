@@ -342,7 +342,7 @@ public class WebSocketService : IWebSocketService
                 type = "next",
                 id = subscriptionId,
                  payload
-            });
+            }, ApiJsonSerializer.Options);
             var bytes = Encoding.UTF8.GetBytes(message);
             await connection.Socket.SendAsync(
                 new ArraySegment<byte>(bytes),
