@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace HockeyPickup.Api.Helpers;
 
@@ -337,12 +338,17 @@ public class WebSocketService : IWebSocketService
         if (_connections.TryGetValue(socketId, out var connection) &&
             connection.Socket.State == WebSocketState.Open)
         {
-            var message = JsonSerializer.Serialize(new
+            // Player ratings are Admin/SubAdmin-only, but a broadcast reaches every subscriber
+            // regardless of role and a single payload can't be redacted per-recipient. Strip every
+            // Rating from the payload here; admin clients re-apply the ratings they already loaded.
+            var envelope = JsonSerializer.SerializeToNode(new
             {
                 type = "next",
                 id = subscriptionId,
-                 payload
+                payload
             }, ApiJsonSerializer.Options);
+            RedactRatings(envelope);
+            var message = envelope!.ToJsonString(ApiJsonSerializer.Options);
             var bytes = Encoding.UTF8.GetBytes(message);
             await connection.Socket.SendAsync(
                 new ArraySegment<byte>(bytes),
@@ -350,6 +356,27 @@ public class WebSocketService : IWebSocketService
                 true,
                 CancellationToken.None
             );
+        }
+    }
+
+    // Recursively zero every "Rating" property anywhere in the payload tree.
+    private static void RedactRatings(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (var key in obj.Select(p => p.Key).ToList())
+                {
+                    if (key == "Rating")
+                        obj[key] = 0;
+                    else
+                        RedactRatings(obj[key]);
+                }
+                break;
+            case JsonArray array:
+                foreach (var item in array)
+                    RedactRatings(item);
+                break;
         }
     }
 

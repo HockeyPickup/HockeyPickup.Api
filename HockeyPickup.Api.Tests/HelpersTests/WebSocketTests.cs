@@ -218,6 +218,40 @@ public class WebSocketServiceTests
     }
 
     [Fact]
+    public async Task SendMessageToSocket_StripsEveryRatingFromThePayload()
+    {
+        // Arrange - a payload with nested Rating fields (objects + arrays + scalars)
+        var socket = new FakeWebSocket();
+        var connections = new ConcurrentDictionary<string, WebSocketConnection>();
+        connections["s1"] = new WebSocketConnection(socket, string.Empty);
+        var service = new WebSocketService(connections);
+        var payload = new
+        {
+            data = new
+            {
+                SessionUpdated = new
+                {
+                    Cost = 27m,
+                    CurrentRosters = new[]
+                    {
+                        new { UserId = "u1", Rating = 5.5m },
+                        new { UserId = "u2", Rating = 9.1m },
+                    },
+                },
+            },
+        };
+
+        // Act
+        await service.SendMessageToSocket("s1", payload, "sub1");
+
+        // Assert - ratings zeroed, everything else intact
+        var sent = socket.SentMessages.Should().ContainSingle().Subject;
+        sent.Should().Contain("\"Rating\":0");
+        sent.Should().NotContain("5.5").And.NotContain("9.1");
+        sent.Should().Contain("\"Cost\":27").And.Contain("\"UserId\":\"u1\"");
+    }
+
+    [Fact]
     public async Task SendMessageToSocket_WhenSocketNotOpen_DoesNotSend()
     {
         // Arrange
