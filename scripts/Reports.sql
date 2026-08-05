@@ -75,6 +75,7 @@ order by year(sessiondate), month(sessiondate)
 /* Number of sessions by year */
 select year(sessiondate) as Year, count(sessionid) as '# of Sessions' from Sessions
 where note not like '%cancelled%'
+AND SessionDate <= GETDATE()  -- Only count past games, not future scheduled ones
 group by year(sessiondate)
 order by year(sessiondate)
 
@@ -88,9 +89,9 @@ ORDER BY COUNT(SellerUserId) DESC
 
 /* Top Sellers - Adjust year and day variables */
 DECLARE @SellerYear INT
-SET @SellerYear = 2024
+SET @SellerYear = 2026
 DECLARE @SellerWeekday nvarchar(10)
-SET @SellerWeekday = 'Wednesday'
+SET @SellerWeekday = 'Friday'
 
 SELECT T1.FirstName, T1.LastName, T1.SellerCount, T2.SessionCount, CAST((CAST(T1.SellerCount AS decimal) / CAST(T2.SessionCount AS decimal)) AS decimal(18,4)) * 100 AS SellingPercentage, T2.Year, T2.Weekday FROM
 (SELECT SellerUserId, FirstName, LastName, COUNT(SellerUserId) AS SellerCount from BuySells
@@ -331,7 +332,7 @@ WHERE (COALESCE(TimestampListed, TimestampSold) < SessionDate)  -- Either listin
 ORDER BY SessionDate DESC, COALESCE(TimestampListed, TimestampSold) DESC;
 
 /* Top players by attendance */
-DECLARE @Year INT = 2025;
+DECLARE @Year INT = 2026;
 
 SELECT 
     u.FirstName,
@@ -346,6 +347,7 @@ WHERE
     AND YEAR(s.SessionDate) = @Year  -- Filter by the specified year
     AND s.SessionDate <= GETDATE()  -- Only count past games, not future scheduled ones
     AND (s.Note IS NULL OR s.Note NOT LIKE '%cancelled%')  -- Exclude cancelled sessions
+    AND s.SessionDate <= GETDATE()  -- Only count past games, not future scheduled ones
 GROUP BY 
     u.FirstName, 
     u.LastName,
