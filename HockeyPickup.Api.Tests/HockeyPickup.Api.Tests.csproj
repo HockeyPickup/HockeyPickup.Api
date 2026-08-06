@@ -17,7 +17,7 @@
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.19.2" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
-    <PackageReference Include="HotChocolate.Types" Version="16.5.0" />
+    <PackageReference Include="HotChocolate.Types" Version="16.6.0" />
     <PackageReference Include="coverlet.collector" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
