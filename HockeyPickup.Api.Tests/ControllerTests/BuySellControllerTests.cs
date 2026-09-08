@@ -531,4 +531,48 @@ public class BuySellControllerTests
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
+
+    // Uses a real ClaimsPrincipal rather than the shared mock so the OriginalAdmin role claim is discoverable.
+    private static IHttpContextAccessor CreateImpersonatedAccessor(string adminId)
+    {
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, TestUserId),
+            new Claim(ClaimTypes.Role, $"OriginalAdmin:{adminId}")
+        });
+        return new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) } };
+    }
+
+    [Fact]
+    public async Task Buy_WhileImpersonating_PassesOriginalAdminToService()
+    {
+        // Arrange
+        var controller = new BuySellController(_mockBuySellService.Object, CreateImpersonatedAccessor("admin-9"), _mockLotteryService.Object);
+        var buyRequest = new BuyRequest { SessionId = 1, Note = "Test buy" };
+        _mockBuySellService.Setup(s => s.ProcessBuyRequestAsync(TestUserId, buyRequest, false, true, "admin-9"))
+            .ReturnsAsync(ServiceResult<BuySellResponse>.CreateSuccess(CreateTestBuySellResponse()));
+
+        // Act
+        var result = await controller.Buy(buyRequest);
+
+        // Assert
+        result.Result.Should().BeOfType<CreatedAtActionResult>();
+        _mockBuySellService.Verify(s => s.ProcessBuyRequestAsync(TestUserId, buyRequest, false, true, "admin-9"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CanBuy_WhileImpersonating_PassesOriginalAdminToService()
+    {
+        // Arrange
+        var controller = new BuySellController(_mockBuySellService.Object, CreateImpersonatedAccessor("admin-9"), _mockLotteryService.Object);
+        _mockBuySellService.Setup(s => s.CanBuyAsync(TestUserId, 1, false, "admin-9"))
+            .ReturnsAsync(ServiceResult<BuySellStatusResponse>.CreateSuccess(CreateTestBuySellStatusResponse()));
+
+        // Act
+        var result = await controller.CanBuy(1);
+
+        // Assert
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockBuySellService.Verify(s => s.CanBuyAsync(TestUserId, 1, false, "admin-9"), Times.Once);
+    }
 }

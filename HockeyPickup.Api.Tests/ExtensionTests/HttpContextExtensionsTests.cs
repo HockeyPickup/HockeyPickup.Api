@@ -112,4 +112,64 @@ public partial class HttpContextExtensionsTests
 
         httpContextAccessor.Object.GetUserIdOrNull().Should().Be("user-123");
     }
+
+    [Fact]
+    public void GetImpersonatingAdminId_NullHttpContext_ReturnsNull()
+    {
+        // Arrange
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext) null!);
+
+        // Act & Assert
+        httpContextAccessor.Object.GetImpersonatingAdminId().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetImpersonatingAdminId_NullUser_ReturnsNull()
+    {
+        // Arrange
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        var mockHttpContext = new Mock<HttpContext>();
+        mockHttpContext.Setup(x => x.User).Returns((ClaimsPrincipal) null!);
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+
+        // Act & Assert
+        httpContextAccessor.Object.GetImpersonatingAdminId().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetImpersonatingAdminId_NoOriginalAdminClaim_ReturnsNull()
+    {
+        // Arrange - an ordinary (non-impersonated) token carries only real roles
+        var httpContextAccessor = CreateAccessorWithRoles("Admin", "PreferredPlus");
+
+        // Act & Assert
+        httpContextAccessor.GetImpersonatingAdminId().Should().BeNull();
+    }
+
+    [Fact]
+    public void GetImpersonatingAdminId_OriginalAdminClaim_ReturnsAdminId()
+    {
+        // Arrange - shape minted by ImpersonationService on the impersonation token
+        var httpContextAccessor = CreateAccessorWithRoles("Preferred", "OriginalAdmin:admin-123", "ImpersonationStartTime:2026-09-08T00:00:00.0000000Z");
+
+        // Act & Assert
+        httpContextAccessor.GetImpersonatingAdminId().Should().Be("admin-123");
+    }
+
+    [Fact]
+    public void GetImpersonatingAdminId_OriginalAdminClaimWithoutId_ReturnsNull()
+    {
+        // Arrange
+        var httpContextAccessor = CreateAccessorWithRoles("OriginalAdmin:");
+
+        // Act & Assert
+        httpContextAccessor.GetImpersonatingAdminId().Should().BeNull();
+    }
+
+    private static IHttpContextAccessor CreateAccessorWithRoles(params string[] roles)
+    {
+        var identity = new ClaimsIdentity(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        return new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) } };
+    }
 }

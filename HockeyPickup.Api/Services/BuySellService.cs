@@ -11,7 +11,7 @@ namespace HockeyPickup.Api.Services;
 
 public interface IBuySellService
 {
-    Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false, bool broadcast = true);
+    Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false, bool broadcast = true, string? impersonatingAdminId = null);
     Task<ServiceResult<BuySellResponse>> ProcessSellRequestAsync(string userId, SellRequest request);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentSentAsync(string userId, int buySellId, PaymentMethodType paymentMethod);
     Task<ServiceResult<BuySellResponse>> ConfirmPaymentReceivedAsync(string userId, int buySellId);
@@ -22,7 +22,7 @@ public interface IBuySellService
     Task<ServiceResult<IEnumerable<BuySellResponse>>> GetUserBuySellsAsync(string userId);
     Task<ServiceResult<bool>> CancelBuyAsync(string userId, int buySellId);
     Task<ServiceResult<bool>> CancelSellAsync(string userId, int buySellId);
-    Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId, bool bypassLotteryGate = false);
+    Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId, bool bypassLotteryGate = false, string? impersonatingAdminId = null);
     Task<ServiceResult<BuySellStatusResponse>> CanSellAsync(string userId, int sessionId);
 }
 
@@ -67,12 +67,12 @@ public class BuySellService : IBuySellService
         _lotteryEligibility = lotteryEligibility;
     }
 
-    public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false, bool broadcast = true)
+    public async Task<ServiceResult<BuySellResponse>> ProcessBuyRequestAsync(string userId, BuyRequest request, bool bypassLotteryGate = false, bool broadcast = true, string? impersonatingAdminId = null)
     {
         try
         {
             // First check if the user can buy
-            var canBuyResult = await CanBuyAsync(userId, request.SessionId, bypassLotteryGate);
+            var canBuyResult = await CanBuyAsync(userId, request.SessionId, bypassLotteryGate, impersonatingAdminId);
             if (!canBuyResult.IsSuccess)
             {
                 return ServiceResult<BuySellResponse>.CreateFailure(canBuyResult.Message);
@@ -581,7 +581,7 @@ public class BuySellService : IBuySellService
         }
     }
 
-    public async Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId, bool bypassLotteryGate = false)
+    public async Task<ServiceResult<BuySellStatusResponse>> CanBuyAsync(string userId, int sessionId, bool bypassLotteryGate = false, string? impersonatingAdminId = null)
     {
         try
         {
@@ -674,6 +674,24 @@ public class BuySellService : IBuySellService
                     Reason = "Admins can buy spots regardless of time window",
                     BuyActionState = BuyActionState.BuyNow
                 });
+            }
+
+            // An Admin impersonating a player gets the same window/lottery bypass on that player's behalf, so
+            // the commissioner can seat someone who asked well in advance. Deliberately scoped to buying only -
+            // no other Admin capability is granted by the impersonation token. The role is re-checked here rather
+            // than trusted from the claim, so revoking an Admin also revokes any outstanding impersonation token.
+            if (!string.IsNullOrEmpty(impersonatingAdminId))
+            {
+                var impersonatingAdmin = await _userManager.FindByIdAsync(impersonatingAdminId);
+                if (impersonatingAdmin != null && await _userManager.IsInRoleAsync(impersonatingAdmin, "Admin"))
+                {
+                    return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                    {
+                        IsAllowed = true,
+                        Reason = "Admins can buy spots regardless of time window while impersonating",
+                        BuyActionState = BuyActionState.BuyNow
+                    });
+                }
             }
 
             // Lottery gate: placed after the Admin early-return and after the roster/active checks.

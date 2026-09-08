@@ -220,7 +220,7 @@ public class LotteryServiceTests
             .Callback<int, LotteryClass, IReadOnlyList<(int, int)>, DateTime>((_, _, ordered, _) => { callOrder.Add("persist"); capturedOrder = ordered; })
             .Returns(Task.CompletedTask);
         _mockBuySellService.Setup(x => x.ProcessBuyRequestAsync(It.IsAny<string>(), It.IsAny<BuyRequest>(), true, It.IsAny<bool>()))
-            .Callback<string, BuyRequest, bool, bool>((userId, _, _, _) => callOrder.Add("buy:" + userId))
+            .Callback<string, BuyRequest, bool, bool, string?>((userId, _, _, _, _) => callOrder.Add("buy:" + userId))
             .ReturnsAsync(ServiceResult<BuySellResponse>.CreateSuccess(BuyResponse()));
 
         string? activity = null;

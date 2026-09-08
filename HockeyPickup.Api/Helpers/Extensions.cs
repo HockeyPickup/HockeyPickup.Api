@@ -40,6 +40,23 @@ public static class HttpContextExtensions
         var userId = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return string.IsNullOrEmpty(userId) ? null : userId;
     }
+
+    // Claim value prefix minted by ImpersonationService on the impersonation token. The claim is signed
+    // into the JWT, so its presence proves an Admin started this impersonation session.
+    private const string OriginalAdminClaimPrefix = "OriginalAdmin:";
+
+    // Returns the Id of the Admin behind an active impersonation session, or null when the caller is
+    // acting as themselves. Callers must still confirm that Id is currently in the Admin role before
+    // granting it anything.
+    public static string? GetImpersonatingAdminId(this IHttpContextAccessor httpContextAccessor)
+    {
+        var claim = httpContextAccessor.HttpContext?.User?.FindFirst(c => c.Type == ClaimTypes.Role && c.Value.StartsWith(OriginalAdminClaimPrefix));
+        if (claim == null)
+            return null;
+
+        var adminId = claim.Value.Substring(OriginalAdminClaimPrefix.Length);
+        return string.IsNullOrEmpty(adminId) ? null : adminId;
+    }
 }
 
 public static class StringExtensions

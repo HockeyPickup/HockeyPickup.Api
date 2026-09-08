@@ -41,7 +41,8 @@ public class BuySellController : ControllerBase
     public async Task<ActionResult<ApiDataResponse<BuySellResponse>>> Buy([FromBody] BuyRequest request)
     {
         var userId = _httpContextAccessor.GetUserId();
-        var result = await _BuySellService.ProcessBuyRequestAsync(userId, request);
+        // Carry the impersonating Admin through so an Admin acting as this player keeps the Admin buy bypass.
+        var result = await _BuySellService.ProcessBuyRequestAsync(userId, request, impersonatingAdminId: _httpContextAccessor.GetImpersonatingAdminId());
         var response = ApiDataResponse<BuySellResponse>.FromServiceResult(result);
         return result.IsSuccess
             ? CreatedAtAction(nameof(GetBuySell), new { BuySellId = result.Data.BuySellId }, response)
@@ -183,7 +184,7 @@ public class BuySellController : ControllerBase
     public async Task<ActionResult<ApiDataResponse<BuySellStatusResponse>>> CanBuy(int sessionId)
     {
         var userId = _httpContextAccessor.GetUserId();
-        var result = await _BuySellService.CanBuyAsync(userId, sessionId);
+        var result = await _BuySellService.CanBuyAsync(userId, sessionId, impersonatingAdminId: _httpContextAccessor.GetImpersonatingAdminId());
         var response = ApiDataResponse<BuySellStatusResponse>.FromServiceResult(result);
         return result.IsSuccess ? Ok(response) : BadRequest(response);
     }
