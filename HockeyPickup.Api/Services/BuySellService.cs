@@ -139,7 +139,7 @@ public class BuySellService : IBuySellService
                     result = await _buySellRepository.UpdateBuySellAsync(buySell, message);
 
                     // Add buyer as playing to SessionRoster
-                    session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buyer.PositionPreference, buySell.BuySellId);
+                    session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buyer.PositionPreference.ToSkaterPosition(), buySell.BuySellId);
 
                     // Send a message to Service Bus that a player bought their spot from a seller
                     await SendBuySellServiceBusCommsMessageAsync("BoughtSpotFromSeller", session.SessionId, session.SessionDate, buyer, seller, matchingSell.TeamAssignment);
@@ -264,7 +264,7 @@ public class BuySellService : IBuySellService
                     session = await _sessionRepository.UpdatePlayerStatusAsync(request.SessionId, userId, false, DateTime.UtcNow, result.BuySellId);
 
                     // Add buyer as playing to SessionRoster
-                    session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buySell.Buyer.PositionPreference, buySell.BuySellId);
+                    session = await _sessionRepository.AddOrUpdatePlayerToRosterAsync(request.SessionId, buySell.BuyerUserId, sellerRoster.TeamAssignment, buySell.Buyer.PositionPreference.ToSkaterPosition(), buySell.BuySellId);
 
                     // Send a message to Service Bus that a player sold their spot to a buyer
                     await SendBuySellServiceBusCommsMessageAsync("SoldSpotToBuyer", session.SessionId, session.SessionDate, buySell.Buyer, seller, matchingBuy.TeamAssignment);

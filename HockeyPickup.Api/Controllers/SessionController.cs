@@ -99,6 +99,20 @@ public class SessionController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    [HttpPost("add-roster-player")]
+    [Description("Adds a player (skater or goalie) to the Session Roster, bypassing Buy/Sell")]
+    [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiDataResponse<SessionDetailedResponse>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiDataResponse<SessionDetailedResponse>>> AddRosterPlayer([FromBody] AddRosterPlayerRequest request)
+    {
+        var result = await _sessionService.AddRosterPlayer(request);
+        var response = ApiDataResponse<SessionDetailedResponse>.FromServiceResult(result);
+        return result.IsSuccess ? CreatedAtAction(nameof(AddRosterPlayer), new { id = result.Data.SessionId }, response) : BadRequest(response);
+    }
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("delete-roster-player/{sessionId}/{userId}")]
     [Description("Removes a player from the Session Roster")]
     [Produces(typeof(ApiDataResponse<SessionDetailedResponse>))]

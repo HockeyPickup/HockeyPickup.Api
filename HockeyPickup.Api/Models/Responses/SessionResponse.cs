@@ -74,6 +74,14 @@ public class SessionBasicResponse
     [GraphQLName("Cost")]
     [GraphQLDescription("Cost of the session")]
     public decimal? Cost{ get; set; }
+
+    [Required]
+    [Description("Goalies playing in the session (roster rows with Position = Goalie), ordered by when they joined")]
+    [JsonPropertyName("Goalies")]
+    [JsonProperty(nameof(Goalies), Required = Required.Always)]
+    [GraphQLName("Goalies")]
+    [GraphQLDescription("Goalies playing in the session (roster rows with Position = Goalie), ordered by when they joined")]
+    public ICollection<SessionGoalie> Goalies { get; set; } = new List<SessionGoalie>();
 }
 
 [GraphQLName("SessionDetailed")]

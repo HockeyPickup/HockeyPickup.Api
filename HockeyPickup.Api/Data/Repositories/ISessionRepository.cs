@@ -13,8 +13,10 @@ public interface ISessionRepository
     Task<SessionDetailedResponse> AddActivityAsync(int sessionId, string activity);
     Task<SessionDetailedResponse> UpdatePlayerPositionAsync(int sessionId, string userId, PositionPreference position);
     Task<SessionDetailedResponse> UpdatePlayerTeamAsync(int sessionId, string userId, TeamAssignment team);
+    Task<SessionDetailedResponse> UpdatePlayerPositionAndTeamAsync(int sessionId, string userId, PositionPreference position, TeamAssignment team);
     Task<bool> DeleteSessionAsync(int sessionId);
     Task<SessionDetailedResponse> DeletePlayerFromRosterAsync(int sessionId, string userId);
     Task<SessionDetailedResponse> UpdatePlayerStatusAsync(int sessionId, string userId, bool isPlaying, DateTime? leftDateTime, int? lastBuySellId);
+    Task<SessionDetailedResponse> AddRosterPlayerAsync(int sessionId, string userId, TeamAssignment team, PositionPreference position);
     Task<SessionDetailedResponse> AddOrUpdatePlayerToRosterAsync(int sessionId, string userId, TeamAssignment teamAssignment, PositionPreference positionPreference, int? lastBuySellId);
 }

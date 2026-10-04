@@ -22,8 +22,8 @@ public class UpdateRosterPositionRequest
     public required string UserId { get; set; } = string.Empty;
 
     [Required]
-    [Description("New position (0: TBD, 1: Forward, 2: Defense)")]
-    [Range(0, 2)]
+    [Description("New position (0: TBD, 1: Forward, 2: Defense, 3: Goalie)")]
+    [Range(0, 3)]
     [JsonPropertyName("NewPosition")]
     [JsonProperty(nameof(NewPosition), Required = Required.Always)]
     [System.Text.Json.Serialization.JsonConverter(typeof(EnumDisplayNameConverter<PositionPreference>))]
