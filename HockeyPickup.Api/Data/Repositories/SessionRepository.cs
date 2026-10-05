@@ -133,6 +133,73 @@ public class SessionRepository : ISessionRepository
         return session;
     }
 
+    public async Task<SessionDetailedResponse> UpdatePlayerPositionAndTeamAsync(int sessionId, string userId, PositionPreference position, TeamAssignment team)
+    {
+        // Position and team change together in one SaveChanges so a goalie can never be half-applied with a team
+        var rosterEntry = await _context.SessionRosters.FirstOrDefaultAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+        if (rosterEntry == null)
+        {
+            throw new KeyNotFoundException($"Player not found in session roster");
+        }
+
+        rosterEntry.Position = position;
+        rosterEntry.TeamAssignment = team;
+
+        await _context.SaveChangesAsync();
+        _context.DetachChangeTracker();
+
+        // Fetch and return updated session details
+        var session = await GetSessionAsync(sessionId);
+
+        return session;
+    }
+
+    public async Task<SessionDetailedResponse> AddRosterPlayerAsync(int sessionId, string userId, TeamAssignment team, PositionPreference position)
+    {
+        // Admin add bypasses Buy/Sell: no BuySell row, no LastBuySellId
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Re-check inside the transaction so a concurrent add (or buy) can't produce a duplicate row
+                var exists = await _context.SessionRosters!.AnyAsync(sr => sr.SessionId == sessionId && sr.UserId == userId);
+                if (exists)
+                {
+                    throw new InvalidOperationException("Player already has a roster entry for this session");
+                }
+
+                await _context.SessionRosters.AddAsync(new SessionRoster
+                {
+                    SessionId = sessionId,
+                    UserId = userId,
+                    TeamAssignment = team,
+                    IsPlaying = true,
+                    IsRegular = false,
+                    Position = position,
+                    JoinedDateTime = DateTime.UtcNow,
+                    LastBuySellId = null,
+                    LeftDateTime = null
+                });
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                // Drop the pending insert so an execution-strategy retry starts clean
+                _context.DetachChangeTracker();
+                throw;
+            }
+        });
+
+        _context.DetachChangeTracker();
+
+        return await GetSessionAsync(sessionId);
+    }
+
     public async Task<SessionDetailedResponse> UpdatePlayerStatusAsync(int sessionId, string userId, bool isPlaying, DateTime? leftDateTime, int? lastBuySellId)
     {
         // Find and update the roster entry
@@ -219,7 +286,13 @@ public class SessionRepository : ISessionRepository
 
     public async Task<IEnumerable<SessionBasicResponse>> GetBasicSessionsAsync()
     {
-        return await _context.Sessions
+        return await GetBasicSessionsQuery().ToListAsync();
+    }
+
+    // Exposed so tests can assert the translated SQL stays a single query (goalies via a correlated LEFT JOIN, no N+1)
+    public IQueryable<SessionBasicResponse> GetBasicSessionsQuery()
+    {
+        return _context.Sessions
             .Select(s => new SessionBasicResponse
             {
                 SessionId = s.SessionId,
@@ -229,9 +302,22 @@ public class SessionRepository : ISessionRepository
                 SessionDate = s.SessionDate,
                 RegularSetId = s.RegularSetId,
                 BuyDayMinimum = s.BuyDayMinimum,
-                Cost = s.Cost != 0 ? s.Cost : _cost
+                Cost = s.Cost != 0 ? s.Cost : _cost,
+                Goalies = s.CurrentSessionRoster
+                    .Where(r => r.Position == (int) PositionPreference.Goalie && r.IsPlaying)
+                    .OrderBy(r => r.JoinedDateTime)
+                    .Select(r => new SessionGoalie
+                    {
+                        UserId = r.UserId,
+                        FirstName = r.FirstName,
+                        LastName = r.LastName,
+                        PhotoUrl = r.PhotoUrl,
+                        IsPlaying = r.IsPlaying,
+                        JoinedDateTime = r.JoinedDateTime
+                    })
+                    .ToList()
             })
-            .OrderByDescending(s => s.SessionDate).ToListAsync();
+            .OrderByDescending(s => s.SessionDate);
     }
 
     public async Task<IEnumerable<SessionDetailedResponse>> GetDetailedSessionsAsync()
@@ -293,6 +379,8 @@ public class SessionRepository : ISessionRepository
     {
         if (session == null) return null;
 
+        var currentRosters = MapCurrentRoster(session.CurrentSessionRoster);
+
         return new SessionDetailedResponse
         {
             SessionId = session.SessionId,
@@ -309,7 +397,8 @@ public class SessionRepository : ISessionRepository
             ActivityLogs = MapActivityLogs(session.ActivityLogs),
             LotteryEntrants = MapLotteryEntrants(session.LotteryEntrants),
             RegularSet = MapRegularSet(session.RegularSet),
-            CurrentRosters = MapCurrentRoster(session.CurrentSessionRoster),
+            CurrentRosters = currentRosters,
+            Goalies = MapGoalies(currentRosters),
             BuyingQueues = MapBuyingQueue(session.BuyingQueues)
         };
     }
@@ -339,6 +428,23 @@ public class SessionRepository : ISessionRepository
             JoinedDateTime = r.JoinedDateTime,
             PhotoUrl = r.PhotoUrl
         }).ToList();
+    }
+
+    // Derived from the already-mapped roster so it always agrees with CurrentRosters
+    private static List<SessionGoalie> MapGoalies(List<RosterPlayer> currentRosters)
+    {
+        return currentRosters
+            .Where(r => r.Position == PositionPreference.Goalie && r.IsPlaying)
+            .OrderBy(r => r.JoinedDateTime)
+            .Select(r => new SessionGoalie
+            {
+                UserId = r.UserId,
+                FirstName = r.FirstName,
+                LastName = r.LastName,
+                PhotoUrl = r.PhotoUrl,
+                IsPlaying = r.IsPlaying,
+                JoinedDateTime = r.JoinedDateTime
+            }).ToList();
     }
 
     private static PlayerStatus ParsePlayerStatus(string status) => status switch

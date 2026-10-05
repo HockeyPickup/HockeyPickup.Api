@@ -108,6 +108,13 @@ public static class IntExtensions
     }
 }
 
+public static class PositionExtensions
+{
+    // Buying a spot always makes you a skater: a Goalie preference lands on the roster as TBD, never as a goalie.
+    public static PositionPreference ToSkaterPosition(this PositionPreference position) =>
+        position == PositionPreference.Goalie ? PositionPreference.TBD : position;
+}
+
 [ExcludeFromCodeCoverage]
 public static class EnumExtensions
 {

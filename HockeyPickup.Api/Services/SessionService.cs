@@ -16,6 +16,7 @@ public interface ISessionService
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterTeam(int sessionId, string userId, TeamAssignment newTeamAssignment);
     Task<ServiceResult<SessionDetailedResponse>> UpdateRosterPlayingStatus(int sessionId, string userId, bool isPlaying, string note);
     Task<ServiceResult<SessionDetailedResponse>> DeleteRosterPlayer(int sessionId, string userId);
+    Task<ServiceResult<SessionDetailedResponse>> AddRosterPlayer(AddRosterPlayerRequest request);
     Task<ServiceResult<bool>> DeleteSessionAsync(int sessionId);
 }
 
@@ -165,9 +166,22 @@ public class SessionService : ISessionService
                 return ServiceResult<SessionDetailedResponse>.CreateFailure("New position is the same as the current position");
             }
 
-            await _sessionRepository.UpdatePlayerPositionAsync(sessionId, userId, newPosition);
+            if (newPosition == PositionPreference.Goalie)
+            {
+                // Goalies never carry a team: set the position and clear the team in one repository call
+                await _sessionRepository.UpdatePlayerPositionAndTeamAsync(sessionId, userId, newPosition, TeamAssignment.TBD);
+            }
+            else
+            {
+                await _sessionRepository.UpdatePlayerPositionAsync(sessionId, userId, newPosition);
+            }
 
             var msg = $"{user.FirstName} {user.LastName} changed position from {currentRoster.Position.ParsePositionName()} to {newPosition.ParsePositionName()}";
+            if (currentRoster.Position == PositionPreference.Goalie)
+            {
+                // A former goalie stays TBD until an admin puts them on Light or Dark
+                msg += " (assign a team)";
+            }
 
             var updatedSession = await _sessionRepository.AddActivityAsync(sessionId, msg);
             await _subscriptionHandler.HandleUpdate(updatedSession);
@@ -201,6 +215,11 @@ public class SessionService : ISessionService
             if (currentRoster == null)
             {
                 return ServiceResult<SessionDetailedResponse>.CreateFailure("User is not part of this session's current roster");
+            }
+
+            if (currentRoster.Position == PositionPreference.Goalie)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Goalies are not assigned to a team");
             }
 
             if (currentRoster.TeamAssignment == (TeamAssignment) newTeamAssignment)
@@ -324,6 +343,68 @@ public class SessionService : ISessionService
         {
             _logger.LogError(ex, $"Error deleting player from roster for session: {sessionId}, user: {userId}");
             return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred deleting player from roster: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult<SessionDetailedResponse>> AddRosterPlayer(AddRosterPlayerRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(request.UserId);
+            if (user == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("User not found");
+            }
+
+            var session = await _sessionRepository.GetSessionAsync(request.SessionId);
+            if (session == null)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("Session not found");
+            }
+
+            var name = $"{user.FirstName} {user.LastName}";
+            var existingRoster = session.CurrentRosters?.FirstOrDefault(r => r.UserId == request.UserId);
+            if (existingRoster != null)
+            {
+                // Never reactivate a not-playing row here: it is linked to the BuySell that took them off
+                return ServiceResult<SessionDetailedResponse>.CreateFailure(existingRoster.IsPlaying
+                    ? $"{name} is already on the roster for this session"
+                    : $"{name} has a not-playing roster entry for this session; use playing status instead");
+            }
+
+            var isGoalie = request.Position == PositionPreference.Goalie;
+            if (!isGoalie && request.TeamAssignment != TeamAssignment.Light && request.TeamAssignment != TeamAssignment.Dark)
+            {
+                return ServiceResult<SessionDetailedResponse>.CreateFailure("A skater must be assigned to Light or Dark");
+            }
+
+            // Goalies are never on a team, whatever was requested
+            var team = isGoalie ? TeamAssignment.TBD : request.TeamAssignment;
+
+            if (!user.Active)
+            {
+                // Allowed: legacy goalies and lapsed players still show up at the rink
+                _logger.LogInformation($"Adding inactive user {request.UserId} to roster for session {request.SessionId}");
+            }
+
+            await _sessionRepository.AddRosterPlayerAsync(request.SessionId, request.UserId, team, request.Position);
+
+            var msg = isGoalie
+                ? $"{name} added to roster as Goalie"
+                : $"{name} added to roster as {request.Position.ParsePositionName()} on {team.GetDisplayName()}";
+
+            var updatedSession = await _sessionRepository.AddActivityAsync(request.SessionId, msg);
+            await _subscriptionHandler.HandleUpdate(updatedSession);
+
+            // Send a message to Service Bus that a player was added to the roster (same message for skaters and goalies)
+            await SendSessionServiceBusCommsMessageAsync("AddedToRoster", null, request.SessionId, session.SessionDate, user);
+
+            return ServiceResult<SessionDetailedResponse>.CreateSuccess(updatedSession, msg);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error adding player to roster for session: {request.SessionId}, user: {request.UserId}");
+            return ServiceResult<SessionDetailedResponse>.CreateFailure($"An error occurred adding player to roster: {ex.GetRelevantMessage()}");
         }
     }
 

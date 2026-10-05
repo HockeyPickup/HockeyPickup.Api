@@ -72,13 +72,19 @@ public class CalendarService : ICalendarService
                 var url = $"{baseUrl.TrimEnd('/')}/session/{session.SessionId}";
                 var uri = new Uri(url);
 
+                // Goalies come from the roster, never from the note
+                var goalies = session.Goalies.OrderBy(g => g.JoinedDateTime).Select(g => $"{g.FirstName} {g.LastName}").ToList();
+
                 var iCalEvent = new CalendarEvent
                 {
                     Summary = siteTitle,
-                    Description = string.Format("{0}{1}",
+                    Description = string.Format("{0}{1}{2}",
                         url,
                         !string.IsNullOrEmpty(session.Note) ?
                             Environment.NewLine + Environment.NewLine + session.Note :
+                            string.Empty,
+                        goalies.Count > 0 ?
+                            Environment.NewLine + Environment.NewLine + "Goalies: " + string.Join(", ", goalies) :
                             string.Empty),
                     DtStart = new CalDateTime(session.SessionDate, TIMEZONE),
                     DtEnd = new CalDateTime(session.SessionDate.AddHours(1), TIMEZONE),
