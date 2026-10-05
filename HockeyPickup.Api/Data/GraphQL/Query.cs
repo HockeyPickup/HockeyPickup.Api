@@ -1,5 +1,6 @@
 using HockeyPickup.Api.Models.Responses;
 using HockeyPickup.Api.Data.Repositories;
+using HockeyPickup.Api.Helpers;
 using HotChocolate.Authorization;
 
 namespace HockeyPickup.Api.Data.GraphQL;
@@ -48,6 +49,15 @@ public class Query
     public async Task<SessionDetailedResponse> GetSession([GraphQLName("SessionId")][GraphQLDescription("The Id of the session to retrieve")] int SessionId, [Service] ISessionRepository sessionRepository)
     {
         return await sessionRepository.GetSessionAsync(SessionId);
+    }
+
+    [Authorize]
+    [GraphQLDescription("Retrieves everything the signed-in user's home page needs in one request.")]
+    [GraphQLType(typeof(DashboardResponse))]
+    [GraphQLName("Dashboard")]
+    public async Task<DashboardResponse> GetDashboard([Service] ISessionRepository sessionRepository)
+    {
+        return await sessionRepository.GetDashboardAsync(_httpContextAccessor.GetUserId());
     }
 
     [Authorize]
