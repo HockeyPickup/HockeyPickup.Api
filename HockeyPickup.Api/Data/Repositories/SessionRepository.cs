@@ -320,6 +320,139 @@ public class SessionRepository : ISessionRepository
             .OrderByDescending(s => s.SessionDate);
     }
 
+    // How many of the nearest live sessions get roster detail; the dashboard's previews never render more
+    public const int DashboardDetailSessionLimit = 8;
+
+    // The Api has no cancelled flag; a session is cancelled when its note says so (same rule as the App and CalendarService)
+    private static bool IsCancelled(string? note) => note?.Contains("cancelled", StringComparison.OrdinalIgnoreCase) ?? false;
+
+    public async Task<DashboardResponse> GetDashboardAsync(string userId)
+    {
+        var now = TimeZoneUtils.GetCurrentPacificTime();
+
+        var upcoming = (await GetBasicSessionsQuery().Where(s => s.SessionDate > now).ToListAsync())
+            .OrderBy(s => s.SessionDate)
+            .ToList();
+
+        var detailBasics = upcoming.Where(s => !IsCancelled(s.Note)).Take(DashboardDetailSessionLimit).ToList();
+        var detailIds = detailBasics.Select(s => s.SessionId).ToList();
+
+        // Flat, narrow reads keyed by session instead of a full GetSessionAsync per session
+        var rosters = (await _context.CurrentSessionRosters
+            .Where(r => detailIds.Contains(r.SessionId))
+            .OrderByDescending(r => r.IsRegular).ThenByDescending(r => r.Position).ThenBy(r => r.JoinedDateTime).ThenBy(r => r.FirstName)
+            .Select(r => new
+            {
+                r.SessionId,
+                r.PhotoUrl,
+                r.JoinedDateTime,
+                Player = new DashboardRosterPlayer
+                {
+                    UserId = r.UserId,
+                    FirstName = r.FirstName,
+                    LastName = r.LastName,
+                    TeamAssignment = (TeamAssignment) r.TeamAssignment,
+                    Position = (PositionPreference) r.Position,
+                    CurrentPosition = r.CurrentPosition,
+                    IsPlaying = r.IsPlaying
+                }
+            })
+            .ToListAsync())
+            .ToLookup(r => r.SessionId);
+
+        var buySells = (await SelectDashboardBuySells(_context.BuySells.Where(b => detailIds.Contains(b.SessionId))).ToListAsync())
+            .ToLookup(b => b.SessionId);
+
+        var queues = (await _context.SessionBuyingQueues
+            .Where(q => detailIds.Contains(q.SessionId))
+            .OrderBy(q => q.BuySellId)
+            .Select(q => new
+            {
+                q.SessionId,
+                Entry = new DashboardQueueEntry
+                {
+                    BuySellId = q.BuySellId,
+                    BuyerUserId = q.BuyerUserId,
+                    SellerUserId = q.SellerUserId,
+                    QueueStatus = q.QueueStatus
+                }
+            })
+            .ToListAsync())
+            .ToLookup(q => q.SessionId, q => q.Entry);
+
+        // Same rule as the App's pending payments: a completed transaction one side has not settled
+        var pendingPayments = await SelectDashboardBuySells(_context.BuySells.Where(b =>
+                (b.BuyerUserId == userId && !b.PaymentSent && b.SellerUserId != null) ||
+                (b.SellerUserId == userId && !b.PaymentReceived && b.BuyerUserId != null)))
+            .ToListAsync();
+
+        var pastStarts = await _context.CurrentSessionRosters
+            .Where(r => r.UserId == userId && r.Position == (int) PositionPreference.Goalie && r.IsPlaying)
+            .Join(_context.Sessions, r => r.SessionId, s => s.SessionId, (r, s) => s)
+            .Where(s => s.SessionDate <= now)
+            .Select(s => new { s.SessionId, s.SessionDate, s.Note })
+            .Distinct()
+            .ToListAsync();
+
+        return new DashboardResponse
+        {
+            UpcomingSessions = upcoming,
+            Sessions = detailBasics.Select(s => new DashboardSessionResponse
+            {
+                SessionId = s.SessionId,
+                CreateDateTime = s.CreateDateTime,
+                UpdateDateTime = s.UpdateDateTime,
+                Note = s.Note,
+                SessionDate = s.SessionDate,
+                RegularSetId = s.RegularSetId,
+                BuyDayMinimum = s.BuyDayMinimum,
+                Cost = s.Cost,
+                // Built like MapGoalies (stable sort over roster order) rather than copied from the list, so goalies
+                // who joined at the same instant come out in the same order as on the session page
+                Goalies = rosters[s.SessionId]
+                    .Where(r => r.Player.Position == PositionPreference.Goalie && r.Player.IsPlaying)
+                    .OrderBy(r => r.JoinedDateTime)
+                    .Select(r => new SessionGoalie
+                    {
+                        UserId = r.Player.UserId,
+                        FirstName = r.Player.FirstName,
+                        LastName = r.Player.LastName,
+                        PhotoUrl = r.PhotoUrl,
+                        IsPlaying = r.Player.IsPlaying,
+                        JoinedDateTime = r.JoinedDateTime
+                    }).ToList(),
+                CurrentRosters = rosters[s.SessionId].Select(r => r.Player).ToList(),
+                BuySells = buySells[s.SessionId].ToList(),
+                BuyingQueues = queues[s.SessionId].ToList()
+            }).ToList(),
+            PendingPayments = pendingPayments,
+            GoalieStartsByYear = pastStarts
+                .Where(s => !IsCancelled(s.Note))
+                .GroupBy(s => s.SessionDate.Year)
+                .OrderBy(g => g.Key)
+                .Select(g => new GoalieStartsYear { Year = g.Key, Starts = g.Count() })
+                .ToList()
+        };
+    }
+
+    private static IQueryable<DashboardBuySell> SelectDashboardBuySells(IQueryable<BuySell> buySells)
+    {
+        return buySells
+            .OrderBy(b => b.BuySellId)
+            .Select(b => new DashboardBuySell
+            {
+                BuySellId = b.BuySellId,
+                SessionId = b.SessionId,
+                BuyerUserId = b.BuyerUserId,
+                SellerUserId = b.SellerUserId,
+                PaymentSent = b.PaymentSent,
+                PaymentReceived = b.PaymentReceived,
+                Price = b.Price ?? 0m,
+                Buyer = b.Buyer == null ? null : new DashboardCounterparty { Id = b.Buyer.Id, FirstName = b.Buyer.FirstName, LastName = b.Buyer.LastName },
+                Seller = b.Seller == null ? null : new DashboardCounterparty { Id = b.Seller.Id, FirstName = b.Seller.FirstName, LastName = b.Seller.LastName }
+            });
+    }
+
     public async Task<IEnumerable<SessionDetailedResponse>> GetDetailedSessionsAsync()
     {
         var sessions = await _context.Sessions

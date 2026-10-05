@@ -8,6 +8,7 @@ public interface ISessionRepository
     Task<IEnumerable<SessionBasicResponse>> GetBasicSessionsAsync();
     Task<IEnumerable<SessionDetailedResponse>> GetDetailedSessionsAsync();
     Task<SessionDetailedResponse> GetSessionAsync(int sessionId);
+    Task<DashboardResponse> GetDashboardAsync(string userId);
     Task<SessionDetailedResponse> CreateSessionAsync(Session session);
     Task<SessionDetailedResponse> UpdateSessionAsync(Session session);
     Task<SessionDetailedResponse> AddActivityAsync(int sessionId, string activity);

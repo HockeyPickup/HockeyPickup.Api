@@ -5,6 +5,7 @@ using HockeyPickup.Api.Data.Repositories;
 using HockeyPickup.Api.Models.Responses;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Security.Claims;
 
 namespace HockeyPickup.Api.Tests.GraphQLTests;
 
@@ -350,5 +351,50 @@ public class GraphQLTests
         // Assert
         result.Should().BeEmpty();
         userRepositoryMock.Verify(r => r.GetUserPaymentMethodsAsync("user1"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDashboard_UsesSignedInUserId()
+    {
+        // Arrange
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        httpContextAccessorMock.Setup(x => x.HttpContext).Returns(new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "user1") }, "test"))
+        });
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var expected = new DashboardResponse
+        {
+            UpcomingSessions = new List<SessionBasicResponse>(),
+            Sessions = new List<DashboardSessionResponse>(),
+            PendingPayments = new List<DashboardBuySell>(),
+            GoalieStartsByYear = new List<GoalieStartsYear> { new() { Year = 2025, Starts = 3 } }
+        };
+        sessionRepositoryMock.Setup(repo => repo.GetDashboardAsync("user1")).ReturnsAsync(expected);
+        var query = new Query(httpContextAccessorMock.Object, new Mock<ILogger<Query>>().Object);
+
+        // Act
+        var result = await query.GetDashboard(sessionRepositoryMock.Object);
+
+        // Assert
+        result.Should().BeSameAs(expected);
+        sessionRepositoryMock.Verify(r => r.GetDashboardAsync("user1"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetDashboard_WithoutSignedInUser_Throws()
+    {
+        // Arrange
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        httpContextAccessorMock.Setup(x => x.HttpContext).Returns(new DefaultHttpContext());
+        var sessionRepositoryMock = new Mock<ISessionRepository>();
+        var query = new Query(httpContextAccessorMock.Object, new Mock<ILogger<Query>>().Object);
+
+        // Act
+        var act = () => query.GetDashboard(sessionRepositoryMock.Object);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        sessionRepositoryMock.Verify(r => r.GetDashboardAsync(It.IsAny<string>()), Times.Never);
     }
 }

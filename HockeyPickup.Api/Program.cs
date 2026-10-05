@@ -70,6 +70,7 @@ public class Program
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ApiResponse>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<ApiDataResponse<object>>());
             o.DocumentProcessors.Add(new CustomModelDocumentProcessor<UserStatsResponse>());
+            o.DocumentProcessors.Add(new CustomModelDocumentProcessor<DashboardResponse>());
         });
         builder.Services.AddSwaggerGen(o =>
         {
@@ -89,6 +90,7 @@ public class Program
             o.DocumentFilter<CustomModelDocumentFilter<ApiResponse>>();
             o.DocumentFilter<CustomModelDocumentFilter<ApiDataResponse<object>>>();
             o.DocumentFilter<CustomModelDocumentFilter<UserStatsResponse>>();
+            o.DocumentFilter<CustomModelDocumentFilter<DashboardResponse>>();
 
             o.SwaggerDoc("v1", new OpenApiInfo()
             {
