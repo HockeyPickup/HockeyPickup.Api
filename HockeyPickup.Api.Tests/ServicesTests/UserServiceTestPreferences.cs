@@ -537,6 +537,38 @@ public partial class UserServiceTest
     }
 
     [Fact]
+    public async Task AdminUpdateUserAsync_NoRating_KeepsExistingRating()
+    {
+        // Arrange: an admin edit that doesn't touch the rating must not reset it
+        var user = new AspNetUser
+        {
+            Id = "test-user-id",
+            FirstName = "Original",
+            Rating = 3.5m
+        };
+
+        var request = new AdminUserUpdateRequest
+        {
+            UserId = user.Id,
+            Active = true
+        };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(request.UserId))
+            .ReturnsAsync(user);
+
+        _mockUserManager.Setup(x => x.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _service.AdminUpdateUserAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        user.Rating.Should().Be(3.5m);
+        user.Active.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task AdminUpdateUserAsync_UpdateFails_ReturnsFailure()
     {
         // Arrange
