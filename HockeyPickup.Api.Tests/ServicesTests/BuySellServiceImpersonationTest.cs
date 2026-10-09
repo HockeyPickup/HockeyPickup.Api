@@ -163,6 +163,114 @@ public class BuySellServiceImpersonationTests
             It.IsAny<SessionLotteryEntrant?>(), It.IsAny<DateTime>()), Times.Never);
     }
 
+    // Session 12 hours out with a 1-day buy minimum: every tier's lottery entry window has opened.
+    private static SessionDetailedResponse CreateLotterySessionWithOpenEntryWindow()
+    {
+        var session = CreateSessionWithClosedBuyWindow(lotteryEnabled: true);
+        session.SessionDate = TimeZoneUtils.GetCurrentPacificTime().AddHours(12);
+        return session;
+    }
+
+    private void SetupEligibility(BuyActionState state, LotteryClass? chosenClass = null, TimeSpan? timeUntilDraw = null, SessionLotteryEntrant? entrant = null)
+    {
+        _mockLotteryRepository.Setup(x => x.GetEntrantAsync(1, BuyerId)).ReturnsAsync(entrant);
+        _mockLotteryEligibility.Setup(x => x.Resolve(It.IsAny<SessionDetailedResponse>(), It.IsAny<AspNetUser>(), entrant, It.IsAny<DateTime>()))
+            .Returns(new LotteryEligibility { State = state, ChosenClass = chosenClass, TimeUntilDraw = timeUntilDraw, Reason = "unused" });
+    }
+
+    [Fact]
+    public async Task CanBuyAsync_ImpersonatingAdmin_EntryWindowOpen_OffersEnterLotteryAlongsideBuy()
+    {
+        // Arrange
+        SetupBuyer(CreateLotterySessionWithOpenEntryWindow(), CreateBuyer());
+        SetupImpersonator();
+        SetupEligibility(BuyActionState.EnterLottery, LotteryClass.Standard, TimeSpan.FromMinutes(20));
+
+        // Act
+        var result = await _service.CanBuyAsync(BuyerId, 1, impersonatingAdminId: AdminId);
+
+        // Assert - the Admin buy override is unchanged; the player's lottery action rides alongside it
+        result.Data.IsAllowed.Should().BeTrue();
+        result.Data.BuyActionState.Should().Be(BuyActionState.BuyNow);
+        result.Data.Reason.Should().Be("Admins can buy spots regardless of time window while impersonating");
+        result.Data.LotteryActionState.Should().Be(BuyActionState.EnterLottery);
+        result.Data.LotteryClass.Should().Be(LotteryClass.Standard);
+        result.Data.TimeUntilDraw.Should().Be(TimeSpan.FromMinutes(20));
+    }
+
+    [Fact]
+    public async Task CanBuyAsync_ImpersonatingAdmin_PlayerAlreadyEntered_OffersInLottery()
+    {
+        // Arrange
+        var entrant = new SessionLotteryEntrant { SessionId = 1, UserId = BuyerId, LotteryClass = LotteryClass.Standard, Status = LotteryEntrantStatus.Entered };
+        SetupBuyer(CreateLotterySessionWithOpenEntryWindow(), CreateBuyer());
+        SetupImpersonator();
+        SetupEligibility(BuyActionState.InLottery, LotteryClass.Standard, TimeSpan.FromMinutes(5), entrant);
+
+        // Act
+        var result = await _service.CanBuyAsync(BuyerId, 1, impersonatingAdminId: AdminId);
+
+        // Assert
+        result.Data.IsAllowed.Should().BeTrue();
+        result.Data.BuyActionState.Should().Be(BuyActionState.BuyNow);
+        result.Data.LotteryActionState.Should().Be(BuyActionState.InLottery);
+        result.Data.LotteryClass.Should().Be(LotteryClass.Standard);
+        result.Data.TimeUntilDraw.Should().Be(TimeSpan.FromMinutes(5));
+    }
+
+    [Fact]
+    public async Task CanBuyAsync_ImpersonatingAdmin_LotteryAlreadyDrawn_OffersNoLotteryAction()
+    {
+        // Arrange - after the draw the player's own state is a direct buy; there's no lottery left to enter
+        SetupBuyer(CreateLotterySessionWithOpenEntryWindow(), CreateBuyer());
+        SetupImpersonator();
+        SetupEligibility(BuyActionState.BuyNow);
+
+        // Act
+        var result = await _service.CanBuyAsync(BuyerId, 1, impersonatingAdminId: AdminId);
+
+        // Assert
+        result.Data.IsAllowed.Should().BeTrue();
+        result.Data.BuyActionState.Should().Be(BuyActionState.BuyNow);
+        result.Data.LotteryActionState.Should().BeNull();
+        result.Data.LotteryClass.Should().BeNull();
+        result.Data.TimeUntilDraw.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CanBuyAsync_ImpersonatingAdmin_NonLotterySession_EntryWindowOpen_OffersNoLotteryAction()
+    {
+        // Arrange
+        var session = CreateLotterySessionWithOpenEntryWindow();
+        session.LotteryEnabled = false;
+        SetupBuyer(session, CreateBuyer());
+        SetupImpersonator();
+
+        // Act
+        var result = await _service.CanBuyAsync(BuyerId, 1, impersonatingAdminId: AdminId);
+
+        // Assert
+        result.Data.BuyActionState.Should().Be(BuyActionState.BuyNow);
+        result.Data.LotteryActionState.Should().BeNull();
+        _mockLotteryRepository.Verify(x => x.GetEntrantAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CanBuyAsync_NotImpersonating_EntryWindowOpen_LeavesLotteryActionStateNull()
+    {
+        // Arrange - a plain player gets the lottery state in BuyActionState itself, as before
+        SetupBuyer(CreateLotterySessionWithOpenEntryWindow(), CreateBuyer());
+        SetupEligibility(BuyActionState.EnterLottery, LotteryClass.Standard, TimeSpan.FromMinutes(20));
+
+        // Act
+        var result = await _service.CanBuyAsync(BuyerId, 1);
+
+        // Assert
+        result.Data.IsAllowed.Should().BeFalse();
+        result.Data.BuyActionState.Should().Be(BuyActionState.EnterLottery);
+        result.Data.LotteryActionState.Should().BeNull();
+    }
+
     [Fact]
     public async Task CanBuyAsync_ImpersonatorNoLongerAdmin_FallsThroughToWindowCheck()
     {

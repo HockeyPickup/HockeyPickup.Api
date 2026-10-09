@@ -52,4 +52,11 @@ public class BuySellStatusResponse
     [GraphQLName("TimeUntilDraw")]
     [GraphQLDescription("Time until the applicable lottery draw (when entering/in a lottery)")]
     public TimeSpan? TimeUntilDraw { get; set; }
+
+    [Description("The player's own lottery action (EnterLottery/InLottery) offered alongside an impersonating Admin's buy override")]
+    [JsonPropertyName("LotteryActionState")]
+    [JsonProperty(nameof(LotteryActionState))]
+    [GraphQLName("LotteryActionState")]
+    [GraphQLDescription("The player's own lottery action (EnterLottery/InLottery) offered alongside an impersonating Admin's buy override")]
+    public BuyActionState? LotteryActionState { get; set; }
 }
