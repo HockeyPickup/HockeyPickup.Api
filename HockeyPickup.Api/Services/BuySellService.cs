@@ -685,12 +685,30 @@ public class BuySellService : IBuySellService
                 var impersonatingAdmin = await _userManager.FindByIdAsync(impersonatingAdminId);
                 if (impersonatingAdmin != null && await _userManager.IsInRoleAsync(impersonatingAdmin, "Admin"))
                 {
-                    return ServiceResult<BuySellStatusResponse>.CreateSuccess(new BuySellStatusResponse
+                    var status = new BuySellStatusResponse
                     {
                         IsAllowed = true,
                         Reason = "Admins can buy spots regardless of time window while impersonating",
                         BuyActionState = BuyActionState.BuyNow
-                    });
+                    };
+
+                    // Also surface the player's own lottery action, so the Admin can enter (or withdraw) them during
+                    // their entry window instead of only buying outright. Nothing to offer before the player's own
+                    // entry window opens, so the lottery isn't consulted then. Enter/Withdraw re-check eligibility
+                    // as the player, without the bypass.
+                    if (session.LotteryEnabled && currentPacificTime >= session.LotteryEntryOpenFor(buyer.TierOf()))
+                    {
+                        var entrant = await _lotteryRepository.GetEntrantAsync(sessionId, userId);
+                        var eligibility = _lotteryEligibility.Resolve(session, buyer, entrant, currentPacificTime);
+                        if (eligibility.State is BuyActionState.EnterLottery or BuyActionState.InLottery)
+                        {
+                            status.LotteryActionState = eligibility.State;
+                            status.LotteryClass = eligibility.ChosenClass;
+                            status.TimeUntilDraw = eligibility.TimeUntilDraw;
+                        }
+                    }
+
+                    return ServiceResult<BuySellStatusResponse>.CreateSuccess(status);
                 }
             }
 
